@@ -1,0 +1,266 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+# Root-run installer for a single-server Ubuntu/Debian deployment.
+# Every value below can be overridden in the environment.
+APP_USER="${APP_USER:-armory}"
+APP_GROUP="${APP_GROUP:-armory}"
+APP_HOME="${APP_HOME:-/var/lib/armory}"
+DEPLOY_DIR="${DEPLOY_DIR:-/var/www/Armory}"
+REPO_URL="${REPO_URL:-git@github.com:understyx/Armory.git}"
+GIT_BRANCH="${GIT_BRANCH:-master}"
+DB_HOST="${DB_HOST:-127.0.0.1}"
+DB_PORT="${DB_PORT:-3306}"
+DB_NAME="${DB_NAME:-armory}"
+DB_USER="${DB_USER:-armory}"
+DB_PASSWORD="${DB_PASSWORD:-armory}"
+SERVER_NAME="${SERVER_NAME:-_}"
+APP_URL="${APP_URL:-http://localhost}"
+IMPORT_ITEMS="${IMPORT_ITEMS:-1}"
+
+umask 027
+
+log() {
+    printf '\n==> %s\n' "$*"
+}
+
+fail() {
+    printf 'Error: %s\n' "$*" >&2
+    exit 1
+}
+
+if [[ "$EUID" -ne 0 ]]; then
+    fail "Run this installer as root (for example: sudo --preserve-env=SSH_AUTH_SOCK bash bin/install-server)."
+fi
+
+if [[ ! -f /etc/os-release ]]; then
+    fail "This installer requires Ubuntu or Debian."
+fi
+
+# shellcheck disable=SC1091
+source /etc/os-release
+case "${ID:-}" in
+    ubuntu|debian) ;;
+    *) fail "Unsupported operating system: ${ID:-unknown}. This installer requires Ubuntu or Debian." ;;
+esac
+
+[[ "$APP_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || fail "APP_USER is not a valid Linux user name."
+[[ "$APP_GROUP" =~ ^[a-z_][a-z0-9_-]*$ ]] || fail "APP_GROUP is not a valid Linux group name."
+[[ "$DB_USER" =~ ^[A-Za-z0-9_]+$ ]] || fail "DB_USER may contain only letters, numbers, and underscores."
+[[ "$DB_NAME" =~ ^[A-Za-z0-9_]+$ ]] || fail "DB_NAME may contain only letters, numbers, and underscores."
+[[ "$DB_PORT" =~ ^[0-9]+$ ]] || fail "DB_PORT must be numeric."
+[[ "$IMPORT_ITEMS" == "0" || "$IMPORT_ITEMS" == "1" ]] || fail "IMPORT_ITEMS must be 0 or 1."
+[[ "$DEPLOY_DIR" == /var/www/* ]] || fail "DEPLOY_DIR must be an absolute path below /var/www."
+[[ "$DB_PASSWORD" != *$'\n'* ]] || fail "DB_PASSWORD must not contain a newline."
+
+export DEBIAN_FRONTEND=noninteractive
+
+log "Installing system packages"
+apt-get update
+apt-get install -y ca-certificates curl git mariadb-server nginx unzip
+
+if ! command -v php >/dev/null 2>&1; then
+    apt-get install -y php-cli
+fi
+
+PHP_VERSION="${PHP_VERSION:-$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')}"
+[[ "$PHP_VERSION" =~ ^[0-9]+\.[0-9]+$ ]] || fail "Could not determine the PHP version."
+
+apt-get install -y \
+    "php${PHP_VERSION}-cli" \
+    "php${PHP_VERSION}-curl" \
+    "php${PHP_VERSION}-fpm" \
+    "php${PHP_VERSION}-intl" \
+    "php${PHP_VERSION}-mbstring" \
+    "php${PHP_VERSION}-mysql" \
+    "php${PHP_VERSION}-xml" \
+    "php${PHP_VERSION}-zip"
+
+apt-get install -y composer
+
+if ! php -r 'exit(version_compare(PHP_VERSION, "8.2.0", ">=") ? 0 : 1);'; then
+    fail "PHP 8.2 or newer is required; the active CLI is $(php -r 'echo PHP_VERSION;')."
+fi
+
+for extension in curl intl mbstring pdo_mysql xml zip; do
+    php -r "exit(extension_loaded('$extension') ? 0 : 1);" \
+        || fail "The PHP $extension extension is not enabled for the CLI."
+done
+
+systemctl enable --now mariadb "php${PHP_VERSION}-fpm" nginx
+
+log "Creating the ${APP_USER} system account"
+if ! getent group "$APP_GROUP" >/dev/null; then
+    groupadd --system "$APP_GROUP"
+fi
+
+if ! id "$APP_USER" >/dev/null 2>&1; then
+    useradd \
+        --system \
+        --gid "$APP_GROUP" \
+        --home-dir "$APP_HOME" \
+        --create-home \
+        --shell /usr/sbin/nologin \
+        "$APP_USER"
+fi
+
+if ! id -nG www-data | tr ' ' '\n' | grep -Fxq "$APP_GROUP"; then
+    usermod --append --groups "$APP_GROUP" www-data
+fi
+
+install -d -o "$APP_USER" -g "$APP_GROUP" -m 0750 "$APP_HOME"
+install -d -m 0755 "$(dirname "$DEPLOY_DIR")"
+
+log "Checking out the application"
+if [[ -d "$DEPLOY_DIR/.git" ]]; then
+    printf 'Using the existing Git checkout at %s.\n' "$DEPLOY_DIR"
+elif [[ -e "$DEPLOY_DIR" ]]; then
+    fail "$DEPLOY_DIR exists but is not a Git checkout. Move it aside or choose another DEPLOY_DIR."
+else
+    git clone --branch "$GIT_BRANCH" --single-branch "$REPO_URL" "$DEPLOY_DIR"
+fi
+
+chown -R "$APP_USER:$APP_GROUP" "$DEPLOY_DIR"
+
+sql_escape() {
+    local value="$1"
+    value="${value//\\/\\\\}"
+    value="${value//\'/\'\'}"
+    printf '%s' "$value"
+}
+
+DB_PASSWORD_SQL="$(sql_escape "$DB_PASSWORD")"
+
+log "Creating the MariaDB database and account"
+mariadb --protocol=socket <<SQL
+CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD_SQL}';
+ALTER USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD_SQL}';
+CREATE USER IF NOT EXISTS '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASSWORD_SQL}';
+ALTER USER '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASSWORD_SQL}';
+GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';
+GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'127.0.0.1';
+FLUSH PRIVILEGES;
+SQL
+
+dotenv_quote() {
+    local value="$1"
+    value="${value//\\/\\\\}"
+    value="${value//\"/\\\"}"
+    value="${value//\$/\\\$}"
+    value="${value//$'\n'/\\n}"
+    printf '"%s"' "$value"
+}
+
+set_env_value() {
+    local file="$1"
+    local key="$2"
+    local value="$3"
+    local temporary_file
+
+    temporary_file="$(mktemp)"
+    awk -v key="$key" '$0 !~ "^" key "=" { print }' "$file" > "$temporary_file"
+    printf '%s=%s\n' "$key" "$value" >> "$temporary_file"
+    cat "$temporary_file" > "$file"
+    rm -f "$temporary_file"
+}
+
+log "Writing the production environment"
+ENV_FILE="$DEPLOY_DIR/.env.local"
+if [[ ! -e "$ENV_FILE" ]]; then
+    touch "$ENV_FILE"
+fi
+chown "$APP_USER:$APP_GROUP" "$ENV_FILE"
+chmod 0640 "$ENV_FILE"
+
+set_env_value "$ENV_FILE" APP_ENV prod
+set_env_value "$ENV_FILE" APP_DEBUG 0
+set_env_value "$ENV_FILE" DEFAULT_URI "$(dotenv_quote "$APP_URL")"
+set_env_value "$ENV_FILE" DB_HOST "$(dotenv_quote "$DB_HOST")"
+set_env_value "$ENV_FILE" DB_PORT "$DB_PORT"
+set_env_value "$ENV_FILE" DB_NAME "$(dotenv_quote "$DB_NAME")"
+set_env_value "$ENV_FILE" DB_USER "$(dotenv_quote "$DB_USER")"
+set_env_value "$ENV_FILE" DB_PASSWORD "$(dotenv_quote "$DB_PASSWORD")"
+
+if ! grep -q '^APP_SECRET=.' "$ENV_FILE"; then
+    set_env_value "$ENV_FILE" APP_SECRET "\"$(php -r 'echo bin2hex(random_bytes(32));')\""
+fi
+
+install -d -o "$APP_USER" -g "$APP_GROUP" -m 0750 "$APP_HOME/.cache/composer"
+install -d -o "$APP_USER" -g "$APP_GROUP" -m 2770 "$DEPLOY_DIR/var"
+
+as_app_user() {
+    runuser -u "$APP_USER" -- env \
+        APP_ENV=prod \
+        APP_DEBUG=0 \
+        COMPOSER_HOME="$APP_HOME/.cache/composer" \
+        HOME="$APP_HOME" \
+        "$@"
+}
+
+log "Installing the application"
+cd "$DEPLOY_DIR"
+as_app_user composer install \
+    --no-dev \
+    --no-interaction \
+    --optimize-autoloader \
+    --prefer-dist
+as_app_user php bin/console doctrine:migrations:migrate --no-interaction
+
+if [[ "$IMPORT_ITEMS" == "1" ]]; then
+    as_app_user php bin/console app:import-items
+fi
+
+as_app_user php bin/console asset-map:compile
+as_app_user php bin/console cache:clear
+
+chown -R "$APP_USER:$APP_GROUP" "$DEPLOY_DIR/var"
+find "$DEPLOY_DIR/var" -type d -exec chmod 2770 {} +
+find "$DEPLOY_DIR/var" -type f -exec chmod 0660 {} +
+
+PHP_FPM_SOCKET="/run/php/php${PHP_VERSION}-fpm.sock"
+NGINX_SITE="/etc/nginx/sites-available/armory"
+
+log "Configuring Nginx"
+cat > "$NGINX_SITE" <<NGINX
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${SERVER_NAME};
+
+    root ${DEPLOY_DIR}/public;
+    index index.php;
+
+    location / {
+        try_files \$uri /index.php\$is_args\$args;
+    }
+
+    location ~ ^/index\\.php(/|\$) {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:${PHP_FPM_SOCKET};
+        fastcgi_param SCRIPT_FILENAME \$document_root/index.php;
+        internal;
+    }
+
+    location ~ \\.php\$ {
+        return 404;
+    }
+
+    location ~ /\\.(?!well-known).* {
+        deny all;
+    }
+}
+NGINX
+
+ln -sfn "$NGINX_SITE" /etc/nginx/sites-enabled/armory
+rm -f /etc/nginx/sites-enabled/default
+nginx -t
+systemctl restart "php${PHP_VERSION}-fpm" nginx
+
+log "Installation complete"
+printf 'Application: %s\n' "$APP_URL"
+printf 'Directory:   %s\n' "$DEPLOY_DIR"
+printf 'Linux user:  %s\n' "$APP_USER"
+printf 'Database:    %s\n' "$DB_NAME"
+printf '\nAdd TLS with Certbot before exposing a production login publicly.\n'

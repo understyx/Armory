@@ -34,6 +34,32 @@ The item importer reads `data/items.sql` by default. A different SQL dump can be
 
 ## Production deployment
 
+### Automated Ubuntu/Debian installation
+
+Run the server installer as root from an existing checkout. It also works as a
+standalone script copied to a fresh Ubuntu or Debian server. The SSH agent used
+for the GitHub checkout must be available to `sudo`:
+
+```bash
+sudo --preserve-env=SSH_AUTH_SOCK \
+  SERVER_NAME=armory.example.com \
+  APP_URL=https://armory.example.com \
+  bash bin/install-server
+```
+
+By default it creates the `armory` system account, checks out
+`git@github.com:understyx/Armory.git` into `/var/www/Armory`, provisions an
+`armory` MariaDB database and account, installs the application, and configures
+Nginx with PHP-FPM. If `/var/www/Armory` is already a Git checkout, it is reused.
+
+Configuration can be overridden with environment variables including
+`DEPLOY_DIR`, `GIT_BRANCH`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `SERVER_NAME`,
+`APP_URL`, and `IMPORT_ITEMS=0`. The default database password is `armory`; set a
+strong `DB_PASSWORD` for an internet-facing deployment. The installer configures
+HTTP only, so add TLS (for example, with Certbot) after DNS points at the server.
+
+### Manual installation
+
 1. Clone the repository and configure the web server to serve the `public/` directory.
 2. Set these environment variables outside Git:
    - `APP_ENV=prod`
