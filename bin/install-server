@@ -288,8 +288,11 @@ if [[ "$IMPORT_ITEMS" == "1" ]]; then
     as_app_user php bin/console app:import-items
 fi
 
-as_app_user php bin/console asset-map:compile
-as_app_user php bin/console cache:clear
+log "Compiling production assets"
+as_app_user php bin/console asset-map:compile --env=prod --no-debug
+
+log "Clearing the production cache"
+as_app_user php bin/console cache:clear --env=prod --no-debug
 
 chown -R "$APP_USER:$APP_GROUP" "$DEPLOY_DIR/var"
 find "$DEPLOY_DIR/var" -type d -exec chmod 2770 {} +
