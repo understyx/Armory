@@ -10,6 +10,7 @@ APP_HOME="${APP_HOME:-/var/lib/armory}"
 DEPLOY_DIR="${DEPLOY_DIR:-/var/www/Armory}"
 REPO_URL="${REPO_URL:-git@github.com:understyx/Armory.git}"
 GIT_BRANCH="${GIT_BRANCH:-master}"
+GIT_SSH_KEY="${GIT_SSH_KEY:-}"
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_PORT="${DB_PORT:-3306}"
 DB_NAME="${DB_NAME:-armory}"
@@ -47,6 +48,13 @@ case "${ID:-}" in
     *) fail "Unsupported operating system: ${ID:-unknown}. This installer requires Ubuntu or Debian." ;;
 esac
 
+if [[ -z "$GIT_SSH_KEY" && -n "${SUDO_USER:-}" && "$SUDO_USER" != "root" ]]; then
+    SUDO_USER_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+    if [[ -n "$SUDO_USER_HOME" && -r "$SUDO_USER_HOME/.ssh/id_ed25519" ]]; then
+        GIT_SSH_KEY="$SUDO_USER_HOME/.ssh/id_ed25519"
+    fi
+fi
+
 [[ "$APP_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || fail "APP_USER is not a valid Linux user name."
 [[ "$APP_GROUP" =~ ^[a-z_][a-z0-9_-]*$ ]] || fail "APP_GROUP is not a valid Linux group name."
 [[ "$DB_USER" =~ ^[A-Za-z0-9_]+$ ]] || fail "DB_USER may contain only letters, numbers, and underscores."
@@ -55,6 +63,13 @@ esac
 [[ "$IMPORT_ITEMS" == "0" || "$IMPORT_ITEMS" == "1" ]] || fail "IMPORT_ITEMS must be 0 or 1."
 [[ "$DEPLOY_DIR" == /var/www/* ]] || fail "DEPLOY_DIR must be an absolute path below /var/www."
 [[ "$DB_PASSWORD" != *$'\n'* ]] || fail "DB_PASSWORD must not contain a newline."
+
+if [[ -n "$GIT_SSH_KEY" ]]; then
+    [[ "$GIT_SSH_KEY" == /* ]] || fail "GIT_SSH_KEY must be an absolute path."
+    [[ "$GIT_SSH_KEY" =~ ^[A-Za-z0-9_./-]+$ ]] \
+        || fail "GIT_SSH_KEY contains unsupported characters."
+    [[ -r "$GIT_SSH_KEY" ]] || fail "Cannot read Git deploy key: $GIT_SSH_KEY"
+fi
 
 if [[ -n "$TLS_CERTIFICATE" && -z "$TLS_CERTIFICATE_KEY" ]] \
     || [[ -z "$TLS_CERTIFICATE" && -n "$TLS_CERTIFICATE_KEY" ]]; then
@@ -151,6 +166,14 @@ fi
 install -d -o "$APP_USER" -g "$APP_GROUP" -m 0750 "$APP_HOME"
 install -d -m 0755 "$(dirname "$DEPLOY_DIR")"
 
+git_remote() {
+    if [[ -n "$GIT_SSH_KEY" ]]; then
+        GIT_SSH_COMMAND="ssh -i ${GIT_SSH_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" git "$@"
+    else
+        git "$@"
+    fi
+}
+
 log "Checking out the application"
 if [[ -d "$DEPLOY_DIR/.git" ]]; then
     printf 'Updating the existing Git checkout at %s.\n' "$DEPLOY_DIR"
@@ -164,12 +187,12 @@ if [[ -d "$DEPLOY_DIR/.git" ]]; then
         fail "The existing checkout has tracked local changes. Commit or discard them before deployment."
     fi
 
-    git -c safe.directory="$DEPLOY_DIR" -C "$DEPLOY_DIR" fetch --prune origin "$GIT_BRANCH"
+    git_remote -c safe.directory="$DEPLOY_DIR" -C "$DEPLOY_DIR" fetch --prune origin "$GIT_BRANCH"
     git -c safe.directory="$DEPLOY_DIR" -C "$DEPLOY_DIR" merge --ff-only FETCH_HEAD
 elif [[ -e "$DEPLOY_DIR" ]]; then
     fail "$DEPLOY_DIR exists but is not a Git checkout. Move it aside or choose another DEPLOY_DIR."
 else
-    git clone --branch "$GIT_BRANCH" --single-branch "$REPO_URL" "$DEPLOY_DIR"
+    git_remote clone --branch "$GIT_BRANCH" --single-branch "$REPO_URL" "$DEPLOY_DIR"
 fi
 
 chown -R "$APP_USER:$APP_GROUP" "$DEPLOY_DIR"

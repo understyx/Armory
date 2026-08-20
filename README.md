@@ -36,12 +36,14 @@ The item importer reads `data/items.sql` by default. A different SQL dump can be
 
 ### Automated Ubuntu/Debian installation
 
-Run the server installer as root from an existing checkout. It also works as a
-standalone script copied to a fresh Ubuntu or Debian server. The SSH agent used
-for the GitHub checkout must be available to `sudo`:
+Run the server installer with `sudo` from an existing checkout. It also works as
+a standalone script copied to a fresh Ubuntu or Debian server. The installer
+automatically uses the invoking sudo user's `~/.ssh/id_ed25519` when present. A
+different private key can be selected explicitly with `GIT_SSH_KEY`:
 
 ```bash
-sudo --preserve-env=SSH_AUTH_SOCK \
+sudo \
+  GIT_SSH_KEY=/home/ubuntu/.ssh/id_ed25519 \
   SERVER_NAME=armory.example.com \
   APP_URL=https://armory.example.com \
   TLS_CERTIFICATE=/etc/letsencrypt/live/example.com/fullchain.pem \
@@ -57,13 +59,18 @@ fetches `GIT_BRANCH` and applies a fast-forward update. It stops without changin
 the checkout if tracked files have local modifications or the branch has
 diverged. Ignored deployment files such as `.env.local` are preserved.
 
+The key's public half must be registered with GitHub, either on the user account
+or in the repository's **Settings → Deploy keys** page. Read-only repository
+access is sufficient. If no key is selected or auto-detected, Git uses the
+invoking environment's normal SSH agent and configuration instead.
+
 Configuration can be overridden with environment variables including
-`DEPLOY_DIR`, `GIT_BRANCH`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `SERVER_NAME`,
-`APP_URL`, `TLS_CERTIFICATE`, `TLS_CERTIFICATE_KEY`, and `IMPORT_ITEMS=0`. The
-default database password is `armory`; set a strong `DB_PASSWORD` for an
-internet-facing deployment. `SERVER_NAME` must be the site's exact hostname so
-that Nginx selects it ahead of any wildcard virtual host. It is derived from
-`APP_URL` when only `APP_URL` is provided.
+`DEPLOY_DIR`, `GIT_BRANCH`, `GIT_SSH_KEY`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`,
+`SERVER_NAME`, `APP_URL`, `TLS_CERTIFICATE`, `TLS_CERTIFICATE_KEY`, and
+`IMPORT_ITEMS=0`. The default database password is `armory`; set a strong
+`DB_PASSWORD` for an internet-facing deployment. `SERVER_NAME` must be the site's
+exact hostname so that Nginx selects it ahead of any wildcard virtual host. It is
+derived from `APP_URL` when only `APP_URL` is provided.
 
 When both TLS paths are provided, the installer creates an exact-name HTTPS
 virtual host and redirects HTTP to HTTPS. The certificate may be an existing
