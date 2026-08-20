@@ -280,6 +280,8 @@ as_app_user composer install \
     --no-interaction \
     --optimize-autoloader \
     --prefer-dist
+
+log "Running database migrations"
 as_app_user php bin/console doctrine:migrations:migrate --no-interaction
 
 if [[ "$IMPORT_ITEMS" == "1" ]]; then

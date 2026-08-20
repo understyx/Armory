@@ -58,6 +58,8 @@ Nginx with PHP-FPM. If `/var/www/Armory` is already a Git checkout, the installe
 fetches `GIT_BRANCH` and applies a fast-forward update. It stops without changing
 the checkout if tracked files have local modifications or the branch has
 diverged. Ignored deployment files such as `.env.local` are preserved.
+After installing the locked Composer dependencies, every run applies all pending
+Doctrine migrations before compiling assets and clearing the production cache.
 
 The key's public half must be registered with GitHub, either on the user account
 or in the repository's **Settings → Deploy keys** page. Read-only repository
