@@ -2,6 +2,8 @@
 
 namespace App\Tests\Controller;
 
+use App\Entity\CharacterSnapshot;
+use App\Repository\CharacterSnapshotRepository;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 class HomeControllerTest extends WebTestCase
@@ -9,6 +11,10 @@ class HomeControllerTest extends WebTestCase
     public function testCharactersSearchPageIsPublic(): void
     {
         $client = static::createClient();
+        $repository = $this->createMock(CharacterSnapshotRepository::class);
+        $repository->method('findRecentlyViewed')->willReturn([]);
+        static::getContainer()->set(CharacterSnapshotRepository::class, $repository);
+
         $client->request('GET', '/characters');
 
         self::assertResponseIsSuccessful();
@@ -23,5 +29,30 @@ class HomeControllerTest extends WebTestCase
         $client->request('GET', '/characters?character=Understyx&realm=Icecrown');
 
         self::assertResponseRedirects('/characters/Understyx/Icecrown');
+    }
+
+    public function testLandingPageShowsTenMostRecentlySearchedCharacters(): void
+    {
+        $client = static::createClient();
+        $characters = array_map(
+            static fn(int $number): CharacterSnapshot => (new CharacterSnapshot())
+                ->setName('Character'.$number)
+                ->setRealm('Icecrown'),
+            range(1, 10)
+        );
+
+        $repository = $this->createMock(CharacterSnapshotRepository::class);
+        $repository->expects(self::once())
+            ->method('findRecentlyViewed')
+            ->with(10)
+            ->willReturn($characters);
+        static::getContainer()->set(CharacterSnapshotRepository::class, $repository);
+
+        $client->request('GET', '/');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('#recent-searches-title', 'Recently searched');
+        self::assertSelectorCount(10, '.recent-searches-list li');
+        self::assertSelectorExists('a[href="/characters/Character1/Icecrown"]');
     }
 }

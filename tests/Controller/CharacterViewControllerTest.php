@@ -43,6 +43,20 @@ class CharacterViewControllerTest extends KernelTestCase
         $snapshot->setEnchantsStatus('All items enchanted');
         $snapshot->setGemsStatus('All gem slots filled');
         $snapshot->setKillStats([]);
+        $snapshot->setPvpStats(['totalKills' => 0, 'killsToday' => 0, 'arenaTeams' => []]);
+        $snapshot->setMatchHistory(array_map(
+            static fn(int $matchNumber): array => [
+                'outcome' => 'Win',
+                'ratingChange' => '+10',
+                'team' => 'Test Team',
+                'teamUrl' => null,
+                'map' => 'Nagrand Arena',
+                'duration' => '01:00',
+                'startTime' => sprintf('Match %d', $matchNumber),
+                'gameId' => (string) $matchNumber,
+            ],
+            range(1, 11)
+        ));
         $snapshot->setScrapedAt(new \DateTimeImmutable());
 
         $snapshotRepo = $this->createMock(CharacterSnapshotRepository::class);
@@ -72,6 +86,12 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
         $this->assertStringContainsString('Understyx', $response->getContent());
         $this->assertStringContainsString('6000', $response->getContent());
+        $this->assertStringContainsString('Show all 11 matches', $response->getContent());
+        $this->assertSame(1, substr_count($response->getContent(), 'class="match-history-extra" hidden'));
+        $this->assertLessThan(
+            strpos($response->getContent(), 'Player vs Player & Arena Teams'),
+            strpos($response->getContent(), 'Professions')
+        );
     }
 
     public function testViewCharacterRendersSimpleNotFoundPage(): void

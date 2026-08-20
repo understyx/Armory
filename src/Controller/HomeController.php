@@ -2,6 +2,7 @@
 // src/Controller/HomeController.php
 namespace App\Controller;
 
+use App\Repository\CharacterSnapshotRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -14,7 +15,7 @@ class HomeController extends AbstractController
 
     #[Route('/', name: 'app_homepage', methods: ['GET'])]
     #[Route('/characters', name: 'app_characters', methods: ['GET'])]
-    public function index(Request $request): Response
+    public function index(Request $request, CharacterSnapshotRepository $snapshotRepository): Response
     {
         $characterName = trim($request->query->getString('character'));
         $realmName = $request->query->getString('realm', self::REALMS[0]);
@@ -32,6 +33,7 @@ class HomeController extends AbstractController
 
         return $this->render('home/index.html.twig', [
             'realms' => self::REALMS,
+            'recentCharacters' => $snapshotRepository->findRecentlyViewed(10),
         ]);
     }
 

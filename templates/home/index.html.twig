@@ -42,6 +42,25 @@
                     <span>Search</span>
                 </button>
             </form>
+
+            {% if recentCharacters is not empty %}
+                <section class="recent-searches" aria-labelledby="recent-searches-title">
+                    <h2 id="recent-searches-title" class="recent-searches-title">Recently searched</h2>
+                    <ul class="recent-searches-list">
+                        {% for character in recentCharacters %}
+                            <li>
+                                <a
+                                    class="recent-character-link"
+                                    href="{{ path('app_character_view', { characterName: character.name, realmName: character.realm }) }}"
+                                >
+                                    <span class="recent-character-name">{{ character.name }}</span>
+                                    <span class="recent-character-realm">{{ character.realm }}</span>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
         </section>
     </main>
 </body>

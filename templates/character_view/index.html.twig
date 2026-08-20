@@ -446,7 +446,65 @@
             {% endfor %}
         </div>
 
-        {# SECTION 3: PVP & ARENA TEAMS #}
+        {# SECTION 3: PROFESSIONS & KILL STATS #}
+        <div class="two-col-grid">
+            <div class="content-card section-card">
+                <div class="section-header">
+                    <h2>📜 Professions</h2>
+                </div>
+                {% if professions is not empty %}
+                    <div class="professions-grid">
+                        {% for profession in professions %}
+                            <div class="profession-card">
+                                <span class="prof-icon">🛠️</span>
+                                <span class="prof-name">{{ profession }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p style="color: var(--text-muted);">No professions learned.</p>
+                {% endif %}
+            </div>
+
+            <div class="content-card section-card">
+                <div class="section-header">
+                    <h2>⚔️ Kill Statistics</h2>
+                </div>
+                {% if killStats is not empty %}
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Category / Encounter</th>
+                                    <th>Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if killStats.stats is defined %}
+                                    {% for description, value in killStats.stats %}
+                                        <tr>
+                                            <td>{{ description }}</td>
+                                            <td><strong style="color: var(--accent-gold);">{{ value }}</strong></td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    {% for description, value in killStats %}
+                                        <tr>
+                                            <td>{{ description }}</td>
+                                            <td><strong style="color: var(--accent-gold);">{{ value }}</strong></td>
+                                        </tr>
+                                    {% endfor %}
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p style="color: var(--text-muted);">No kill statistics available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {# SECTION 4: PVP & ARENA TEAMS #}
         <div class="content-card section-card">
             <div class="section-header">
                 <h2>⚔️ Player vs Player & Arena Teams</h2>
@@ -512,14 +570,14 @@
             </div>
         </div>
 
-        {# SECTION 4: MATCH HISTORY #}
+        {# SECTION 5: MATCH HISTORY #}
         <div class="content-card section-card">
             <div class="section-header">
                 <h2>📜 Match History</h2>
             </div>
             {% if matchHistory is not empty %}
-                <div style="overflow-x: auto;">
-                    <table class="data-table">
+                <div class="table-scroll">
+                    <table class="data-table match-history-table">
                         <thead>
                             <tr>
                                 <th>Outcome</th>
@@ -531,17 +589,17 @@
                                 <th style="text-align: center;">Details</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="match-history-body">
                             {% for match in matchHistory %}
-                                <tr>
-                                    <td>
+                                <tr{% if loop.index > 10 %} class="match-history-extra" hidden{% endif %}>
+                                    <td data-label="Outcome">
                                         {% if 'win' in match.outcome|lower or 'victor' in match.outcome|lower %}
                                             <span class="outcome-badge outcome-win">WIN</span>
                                         {% else %}
                                             <span class="outcome-badge outcome-loss">LOSS</span>
                                         {% endif %}
                                     </td>
-                                    <td>
+                                    <td data-label="Personal rating">
                                         {% if '+' in match.ratingChange %}
                                             <span class="rating-change-pos">{{ match.ratingChange }}</span>
                                         {% elseif '-' in match.ratingChange %}
@@ -550,17 +608,17 @@
                                             <span>{{ match.ratingChange }}</span>
                                         {% endif %}
                                     </td>
-                                    <td>
+                                    <td data-label="Team">
                                         {% if match.teamUrl %}
                                             <a href="https://armory.warmane.com{{ match.teamUrl }}" target="_blank" style="color: var(--text-primary); text-decoration: none; font-weight: 600;">{{ match.team }}</a>
                                         {% else %}
                                             <span style="font-weight: 600;">{{ match.team }}</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ match.map }}</td>
-                                    <td>{{ match.duration }}</td>
-                                    <td style="color: var(--text-secondary); font-size: 0.85rem;">{{ match.startTime }}</td>
-                                    <td style="text-align: center;">
+                                    <td data-label="Map">{{ match.map }}</td>
+                                    <td data-label="Duration">{{ match.duration }}</td>
+                                    <td data-label="Date / time" style="color: var(--text-secondary); font-size: 0.85rem;">{{ match.startTime }}</td>
+                                    <td data-label="Details" style="text-align: center;">
                                         {% if match.gameId %}
                                             <button class="btn-details" onclick="openMatchDetails('{{ match.gameId }}', '{{ characterName }}', '{{ realmName }}')">View Details</button>
                                         {% else %}
@@ -572,65 +630,23 @@
                         </tbody>
                     </table>
                 </div>
+                {% if matchHistory|length > 10 %}
+                    <div class="match-history-actions">
+                        <button
+                            type="button"
+                            class="btn-expand-matches"
+                            aria-expanded="false"
+                            aria-controls="match-history-body"
+                            data-total="{{ matchHistory|length }}"
+                            onclick="toggleMatchHistory(this)"
+                        >
+                            Show all {{ matchHistory|length }} matches
+                        </button>
+                    </div>
+                {% endif %}
             {% else %}
                 <p style="color: var(--text-muted);">No recent arena/battleground match history recorded.</p>
             {% endif %}
-        </div>
-
-        {# SECTION 5: PROFESSIONS & KILL STATS #}
-        <div class="two-col-grid">
-            <div class="content-card section-card">
-                <div class="section-header">
-                    <h2>📜 Professions</h2>
-                </div>
-                {% if professions is not empty %}
-                    <div class="professions-grid">
-                        {% for profession in professions %}
-                            <div class="profession-card">
-                                <span class="prof-icon">🛠️</span>
-                                <span class="prof-name">{{ profession }}</span>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p style="color: var(--text-muted);">No professions learned.</p>
-                {% endif %}
-            </div>
-
-            <div class="content-card section-card">
-                <div class="section-header">
-                    <h2>⚔️ Kill Statistics</h2>
-                </div>
-                {% if killStats is not empty %}
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Category / Encounter</th>
-                                <th>Count</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if killStats.stats is defined %}
-                                {% for description, value in killStats.stats %}
-                                    <tr>
-                                        <td>{{ description }}</td>
-                                        <td><strong style="color: var(--accent-gold);">{{ value }}</strong></td>
-                                    </tr>
-                                {% endfor %}
-                            {% else %}
-                                {% for description, value in killStats %}
-                                    <tr>
-                                        <td>{{ description }}</td>
-                                        <td><strong style="color: var(--accent-gold);">{{ value }}</strong></td>
-                                    </tr>
-                                {% endfor %}
-                            {% endif %}
-                        </tbody>
-                    </table>
-                {% else %}
-                    <p style="color: var(--text-muted);">No kill statistics available.</p>
-                {% endif %}
-            </div>
         </div>
 
     </div>
@@ -661,6 +677,20 @@
             if (targetGlyphPane) targetGlyphPane.classList.add('active');
 
             if (btnElement) btnElement.classList.add('active');
+        }
+
+        function toggleMatchHistory(button) {
+            const isExpanded = button.getAttribute('aria-expanded') === 'true';
+            const extraMatches = document.querySelectorAll('.match-history-extra');
+
+            extraMatches.forEach(row => {
+                row.hidden = isExpanded;
+            });
+
+            button.setAttribute('aria-expanded', String(!isExpanded));
+            button.textContent = isExpanded
+                ? `Show all ${button.dataset.total} matches`
+                : 'Show latest 10 matches';
         }
 
         function openMatchDetails(gameId, charName, realmName) {
