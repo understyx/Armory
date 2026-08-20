@@ -18,3 +18,6 @@
 /public/assets/
 /assets/vendor/
 ###< symfony/asset-mapper ###
+
+# Kept locally as a standalone repository; the Symfony app only uses data/items.sql.
+/discordbot/

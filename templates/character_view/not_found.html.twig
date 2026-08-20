@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character not found — Armory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+</head>
+<body>
+    <main class="not-found-page">
+        <section class="not-found-card" aria-labelledby="not-found-title">
+            <p class="not-found-brand">Armory</p>
+            <h1 id="not-found-title">Character not found</h1>
+            <p>We couldn't find {{ characterName }} on {{ realmName }}.</p>
+            <a class="not-found-link" href="{{ path('app_characters') }}">Back to search</a>
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{# templates/home/dashboard.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block body %}
+<div class="example-wrapper">
+    <h1>Welcome to your Dashboard, {{ user.discordUsername }}!</h1>
+
+    <p>This is a protected page. You are logged in with Discord.</p>
+    <ul>
+        <li>Your email: {{ user.email }}</li>
+        <li>Your Discord ID: {{ user.discordId }}</li>
+    </ul>
+
+    <p><a href="{{ path('app_homepage') }}">Back to Home</a></p>
+    <p><a href="{{ path('app_logout') }}">Logout</a></p>
+</div>
+{% endblock %}

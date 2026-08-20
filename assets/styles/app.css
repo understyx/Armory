@@ -1,3 +1,1777 @@
+/* ==========================================================================
+   Warmane Armory — Modern Dark Theme Stylesheet
+   ========================================================================== */
+
+:root {
+    --bg-dark: #0b0c10;
+    --bg-card: #151720;
+    --bg-card-hover: #1c1e2b;
+    --bg-slot: #1a1c28;
+    --border-subtle: #262938;
+    --border-accent: #3a3f56;
+
+    --text-primary: #f0f2f8;
+    --text-secondary: #8e95ab;
+    --text-muted: #5e6478;
+
+    --accent-blue: #4a9eff;
+    --accent-gold: #f5c542;
+    --accent-green: #2ecc71;
+    --accent-red: #e74c3c;
+
+    --quality-0: #9d9d9d;
+    --quality-1: #ffffff;
+    --quality-2: #1eff00;
+    --quality-3: #0070dd;
+    --quality-4: #a335ee;
+    --quality-5: #ff8000;
+    --quality-6: #e6cc80;
+
+    --class-dk: #c41f3b;
+    --class-druid: #ff7d0a;
+    --class-hunter: #abd473;
+    --class-mage: #69ccf0;
+    --class-paladin: #f58cba;
+    --class-priest: #ffffff;
+    --class-rogue: #fff569;
+    --class-shaman: #0070de;
+    --class-warlock: #9482c9;
+    --class-warrior: #c79c6e;
+}
+
+* {
+    box-sizing: border-box;
+}
+
 body {
-    background-color: skyblue;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Landing page */
+.landing-page,
+.not-found-page {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background:
+        radial-gradient(circle at 50% 35%, rgba(74, 158, 255, 0.09), transparent 34rem),
+        var(--bg-dark);
+}
+
+.landing-content {
+    width: min(100%, 700px);
+    text-align: center;
+}
+
+.landing-title {
+    margin: 0 0 28px;
+    color: var(--text-primary);
+    font-size: clamp(3.25rem, 10vw, 5.5rem);
+    font-weight: 800;
+    letter-spacing: -0.06em;
+    line-height: 1;
+}
+
+.character-search {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(21, 23, 32, 0.94);
+    border: 1px solid var(--border-accent);
+    border-radius: 14px;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.38);
+}
+
+.character-search-input,
+.character-search-realm {
+    min-width: 0;
+    border: 0;
+    border-radius: 8px;
+    outline: 0;
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+}
+
+.character-search-input {
+    padding: 13px 14px;
+    font-size: 1rem;
+}
+
+.character-search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.character-search-realm {
+    padding: 0 34px 0 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.character-search-realm option {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.character-search:focus-within {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.12), 0 18px 60px rgba(0, 0, 0, 0.38);
+}
+
+.character-search-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent-blue);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.character-search-button:hover {
+    background: #328cf5;
+}
+
+.character-search-button:active {
+    transform: translateY(1px);
+}
+
+/* Character not found */
+.not-found-card {
+    width: min(100%, 480px);
+    padding: 40px 32px;
+    text-align: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.38);
+}
+
+.not-found-brand {
+    margin: 0 0 28px;
+    color: var(--accent-blue);
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.not-found-card h1 {
+    margin: 0 0 12px;
+    font-size: clamp(1.8rem, 6vw, 2.4rem);
+    letter-spacing: -0.035em;
+}
+
+.not-found-card > p:not(.not-found-brand) {
+    margin: 0 0 28px;
+    color: var(--text-secondary);
+}
+
+.not-found-link {
+    display: inline-flex;
+    padding: 10px 16px;
+    border: 1px solid var(--border-accent);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-weight: 600;
+    text-decoration: none;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.not-found-link:hover {
+    border-color: var(--accent-blue);
+    background: rgba(74, 158, 255, 0.08);
+}
+
+@media (max-width: 620px) {
+    .character-search {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .character-search-input {
+        grid-column: 1 / -1;
+        border-bottom: 1px solid var(--border-subtle);
+        border-radius: 0;
+    }
+
+    .character-search-button {
+        min-height: 46px;
+    }
+}
+
+.armory-wrapper {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 24px 16px;
+}
+
+/* Header Card */
+.header-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.char-main-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.char-name-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.char-name {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.realm-badge {
+    background: var(--bg-slot);
+    border: 1px solid var(--border-accent);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.expansion-badge {
+    background: rgba(74, 158, 255, 0.15);
+    border: 1px solid rgba(74, 158, 255, 0.4);
+    color: var(--accent-blue);
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.05em;
+}
+
+.char-details-sub {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.guild-name {
+    color: var(--accent-gold);
+    font-weight: 600;
+}
+
+.stats-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.stat-pill {
+    background: var(--bg-slot);
+    border: 1px solid var(--border-subtle);
+    padding: 12px 20px;
+    border-radius: 10px;
+    text-align: center;
+    min-width: 110px;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.stat-pill:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-accent);
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--accent-gold);
+}
+
+/* Actions & Timestamp */
+.header-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.scraped-time {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.stale-badge {
+    background: rgba(231, 76, 60, 0.15);
+    color: var(--accent-red);
+    border: 1px solid rgba(231, 76, 60, 0.3);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-left: 6px;
+}
+
+.btn-refresh {
+    background: linear-gradient(135deg, #2b3245 0%, #1c202e 100%);
+    border: 1px solid var(--border-accent);
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-refresh:hover {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+}
+
+/* Banner Alert */
+.alert-banner {
+    padding: 12px 18px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.alert-warning {
+    background: rgba(245, 197, 66, 0.1);
+    border: 1px solid rgba(245, 197, 66, 0.3);
+    color: var(--accent-gold);
+}
+
+/* Status Banner (Enchants/Gems) */
+.status-summary-bar {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.gear-audit-status {
+    margin: 16px 0 0;
+}
+
+.status-card {
+    flex: 1;
+    min-width: 280px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+.status-ok {
+    border-left: 4px solid var(--accent-green);
+}
+
+.status-warn {
+    border-left: 4px solid var(--accent-red);
+}
+
+/* Section Cards & Headers */
+.section-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* Gear Grid Layout */
+.gear-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+}
+
+.gear-slot-card {
+    background: var(--bg-slot);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.gear-slot-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-accent);
+    background: var(--bg-card-hover);
+}
+
+.gear-slot-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gear-slot-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 5px;
+    border: 2px solid var(--border-subtle);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.gear-slot-item-icon.q-0 { border-color: var(--quality-0); }
+.gear-slot-item-icon.q-1 { border-color: #d1d5db; }
+.gear-slot-item-icon.q-2 { border-color: var(--quality-2); box-shadow: 0 0 6px rgba(30, 255, 0, 0.4); }
+.gear-slot-item-icon.q-3 { border-color: var(--quality-3); box-shadow: 0 0 8px rgba(0, 112, 221, 0.5); }
+.gear-slot-item-icon.q-4 { border-color: var(--quality-4); box-shadow: 0 0 10px rgba(163, 53, 238, 0.6); }
+.gear-slot-item-icon.q-5 { border-color: var(--quality-5); box-shadow: 0 0 12px rgba(255, 128, 0, 0.7); }
+.gear-slot-item-icon.q-6 { border-color: var(--quality-6); box-shadow: 0 0 12px rgba(230, 204, 128, 0.7); }
+
+.slot-item-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-decoration: none;
+    display: block;
+}
+
+.slot-item-title:hover {
+    text-decoration: underline;
+}
+
+.slot-meta {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.slot-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Spec Switcher & Talent Trees (WotLK/TBC Style) */
+.spec-toggle-group {
+    display: flex;
+    gap: 8px;
+    background: var(--bg-slot);
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+}
+
+.spec-toggle-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.spec-toggle-btn:hover {
+    color: var(--text-primary);
+}
+
+.spec-toggle-btn.active {
+    background: var(--accent-blue);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.spec-pane {
+    display: none;
+    animation: fadeIn 0.25s ease-in-out;
+}
+
+.spec-pane.active {
+    display: block;
+}
+
+/* ==========================================================================
+   Talent Calculator - Classic WoW / WotLK Visual Talent Trees & Glyphs Layout
+   ========================================================================== */
+.talent-calculator-layout {
+    display: flex;
+    gap: 24px;
+    background: rgba(12, 14, 22, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+}
+
+.talent-trees-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.talent-trees-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+.talent-tree-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.talent-tree-grid-box {
+    background: rgba(5, 7, 12, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 10px 8px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.talent-tier-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    justify-items: center;
+    align-items: center;
+    height: 40px;
+}
+
+.talent-slot-cell {
+    width: 36px;
+    height: 36px;
+}
+
+.talent-slot-cell.empty-slot {
+    pointer-events: none;
+}
+
+.talent-icon-box {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    display: block;
+    overflow: visible;
+    text-decoration: none;
+    transition: all 0.15s ease-in-out;
+    box-sizing: border-box;
+}
+
+.talent-icon-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 3px;
+    display: block;
+    object-fit: cover;
+    transition: filter 0.15s ease, opacity 0.15s ease;
+}
+
+/* Status variants */
+.talent-icon-box.status-max {
+    border: 1px solid #ffd700;
+    box-shadow: 0 0 6px rgba(255, 215, 0, 0.4);
+}
+
+.talent-icon-box.status-active {
+    border: 1px solid #00ff66;
+    box-shadow: 0 0 6px rgba(0, 255, 102, 0.35);
+}
+
+.talent-icon-box.status-disabled {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.talent-icon-box.status-disabled .talent-icon-img {
+    filter: grayscale(100%) brightness(0.6) opacity(0.55);
+}
+
+.talent-icon-box:hover {
+    transform: scale(1.12);
+    z-index: 10;
+    border-color: #ffd700 !important;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.7) !important;
+}
+
+.talent-icon-box:hover .talent-icon-img {
+    filter: none !important;
+    opacity: 1 !important;
+}
+
+/* Rank Badge */
+.talent-rank-badge {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    font-family: monospace, sans-serif;
+    padding: 0 3px;
+    border-radius: 3px;
+    line-height: 1.2;
+    z-index: 2;
+    pointer-events: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.talent-rank-badge.status-max {
+    background: rgba(15, 15, 15, 0.95);
+    color: #ffd700;
+    border: 1px solid #ffd700;
+}
+
+.talent-rank-badge.status-active {
+    background: rgba(15, 15, 15, 0.95);
+    color: #00ff66;
+    border: 1px solid #00ff66;
+}
+
+.talent-rank-badge.status-disabled {
+    background: rgba(10, 10, 10, 0.85);
+    color: #888;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Tree Summary Footer (Bottom Row) */
+.talent-trees-footer {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 10px 16px;
+    background: rgba(8, 10, 16, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+}
+
+.tree-footer-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tree-footer-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+}
+
+.tree-footer-name {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.tree-footer-points {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--accent-gold);
+}
+
+/* Glyphs Sidebar (Right Column) */
+.glyphs-sidebar {
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-left: 18px;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glyph-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.glyph-section-header {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    font-family: Georgia, 'Times New Roman', serif;
+    letter-spacing: 0.4px;
+}
+
+.glyph-section-header.major-header {
+    color: #d4af37;
+    text-shadow: 0 0 8px rgba(212, 175, 55, 0.2);
+}
+
+.glyph-section-header.minor-header {
+    color: #cca43b;
+}
+
+.glyph-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.glyph-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    transition: color 0.15s ease;
+}
+
+.glyph-item:hover {
+    color: var(--text-primary);
+}
+
+.glyph-ring-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.glyph-ring-dot.gold-ring {
+    background: var(--accent-gold);
+    box-shadow: 0 0 6px rgba(245, 197, 66, 0.6);
+}
+
+.glyph-ring-dot.blue-ring {
+    background: var(--accent-blue);
+    box-shadow: 0 0 6px rgba(74, 158, 255, 0.6);
+}
+
+.glyph-ring-dot.empty-ring {
+    background: var(--text-muted);
+    opacity: 0.3;
+}
+
+.glyph-text.muted {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+@media (max-width: 992px) {
+    .talent-calculator-layout {
+        flex-direction: column;
+    }
+    .glyphs-sidebar {
+        width: 100%;
+        padding-left: 0;
+        border-left: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        padding-top: 16px;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 640px) {
+    .talent-trees-grid {
+        grid-template-columns: 1fr;
+    }
+    .glyphs-sidebar {
+        flex-direction: column;
+    }
+}
+
+.talent-code-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-slot);
+    border: 1px solid var(--border-subtle);
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.code-label {
+    color: var(--text-muted);
+}
+
+.talent-code-box code {
+    font-family: monospace;
+    color: var(--accent-blue);
+}
+
+/* WotLK Glyphs */
+.glyph-spec-pane {
+    display: none;
+    animation: fadeIn 0.25s ease-in-out;
+}
+
+.glyph-spec-pane.active {
+    display: block;
+}
+
+.glyph-spec-title {
+    font-size: 1.1rem;
+    color: var(--accent-gold);
+    margin-top: 0;
+    margin-bottom: 16px;
+}
+
+.glyphs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 600px) {
+    .glyphs-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.glyph-group {
+    background: var(--bg-slot);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.glyph-group-title {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 1rem;
+}
+
+.major-title { color: var(--accent-gold); }
+.minor-title { color: var(--accent-blue); }
+
+.glyph-sockets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.glyph-socket-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    padding: 10px 14px;
+    border-radius: 8px;
+    transition: transform 0.15s ease;
+}
+
+.glyph-socket-item:hover {
+    transform: translateX(4px);
+    border-color: var(--border-accent);
+}
+
+.glyph-ring {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.gold-ring {
+    border: 2px solid var(--accent-gold);
+    box-shadow: 0 0 6px rgba(245, 197, 66, 0.4);
+}
+
+.blue-ring {
+    border: 2px solid var(--accent-blue);
+    box-shadow: 0 0 6px rgba(74, 158, 255, 0.4);
+}
+
+.glyph-name {
+    font-weight: 600;
+    font-size: 0.92rem;
+}
+
+.empty-glyph {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+/* Two Column Grid for Professions & Kills */
+.two-col-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+@media (max-width: 768px) {
+    .two-col-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.professions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.profession-card {
+    background: var(--bg-slot);
+    border: 1px solid var(--border-subtle);
+    padding: 14px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    color: var(--accent-gold);
+}
+
+/* Quality Colors */
+.q-0 { color: var(--quality-0) !important; }
+.q-1 { color: var(--quality-1) !important; }
+.q-2 { color: var(--quality-2) !important; }
+.q-3 { color: var(--quality-3) !important; }
+.q-4 { color: var(--quality-4) !important; }
+.q-5 { color: var(--quality-5) !important; }
+.q-6 { color: var(--quality-6) !important; }
+
+/* Class Colors */
+.class-death-knight, .class-dk { color: var(--class-dk); }
+.class-druid { color: var(--class-druid); }
+.class-hunter { color: var(--class-hunter); }
+.class-mage { color: var(--class-mage); }
+.class-paladin { color: var(--class-paladin); }
+.class-priest { color: var(--class-priest); }
+.class-rogue { color: var(--class-rogue); }
+.class-shaman { color: var(--class-shaman); }
+.class-warlock { color: var(--class-warlock); }
+.class-warrior { color: var(--class-warrior); }
+
+/* Tables */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th, .data-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.data-table th {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.data-table td {
+    font-size: 0.95rem;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Cavernoftime Tooltip Fixes */
+#wowhead-tooltip {
+    background: #121319 !important;
+    border: 1px solid #33394a !important;
+    border-radius: 6px !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6) !important;
+}
+
+/* ==========================================================================
+   Equipment View & Paperdoll Layout
+   ========================================================================== */
+.gear-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.view-toggle-group {
+    display: flex;
+    gap: 6px;
+    background: var(--bg-slot);
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+}
+
+.view-toggle-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.view-toggle-btn:hover {
+    color: var(--text-primary);
+}
+
+.view-toggle-btn.active {
+    background: var(--accent-blue);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.equipment-view-pane {
+    display: none;
+    animation: fadeIn 0.25s ease-in-out;
+}
+
+.equipment-view-pane.active {
+    display: block;
+}
+
+/* Paperdoll Main Container */
+.paperdoll-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #0d0f16;
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 24px 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    user-select: none;
+    width: 100%;
+}
+
+.paperdoll-main-layout {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    max-width: 920px;
+    min-height: 510px;
+    position: relative;
+    overflow: hidden;
+    border: 2px solid var(--border-accent);
+    border-radius: 12px;
+    background: radial-gradient(circle at center, #1b2032 0%, #08090f 100%);
+    box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.85);
+}
+
+.paperdoll-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    z-index: 2;
+    padding: 12px 10px;
+}
+
+.paperdoll-column.left-column {
+    background: linear-gradient(to right, rgba(8, 9, 15, 0.96) 0%, rgba(8, 9, 15, 0.76) 72%, transparent 100%);
+}
+
+.paperdoll-column.right-column {
+    background: linear-gradient(to left, rgba(8, 9, 15, 0.96) 0%, rgba(8, 9, 15, 0.76) 72%, transparent 100%);
+}
+
+.paperdoll-center-lane {
+    width: 250px;
+    flex: 0 0 250px;
+    position: relative;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.paperdoll-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 52px;
+    width: 100%;
+}
+
+.paperdoll-row.left-row {
+    flex-direction: row;
+}
+
+.paperdoll-row.right-row {
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+.paperdoll-slot {
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.slot-icon-box {
+    width: 52px;
+    height: 52px;
+    background: var(--bg-slot);
+    border-radius: 6px;
+    border: 2px solid var(--border-subtle);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.slot-icon-box:hover {
+    transform: scale(1.08);
+    z-index: 10;
+}
+
+.slot-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.slot-fallback-symbol {
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.slot-empty {
+    border: 2px dashed rgba(255, 255, 255, 0.12);
+    background: rgba(15, 17, 26, 0.6);
+    opacity: 0.6;
+}
+
+.slot-empty .slot-fallback-symbol {
+    opacity: 0.4;
+    filter: grayscale(1);
+}
+
+/* Item Level Badge Overlay on Icon Box (matching screenshot) */
+.slot-ilvl-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: rgba(0, 0, 0, 0.85);
+    padding: 1px 4px;
+    border-radius: 3px;
+    line-height: 1;
+    z-index: 2;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.slot-ilvl-badge.q-0 { color: #9d9d9d; }
+.slot-ilvl-badge.q-1 { color: #ffffff; }
+.slot-ilvl-badge.q-2 { color: #1eff00; }
+.slot-ilvl-badge.q-3 { color: #0070dd; }
+.slot-ilvl-badge.q-4 { color: #a335ee; }
+.slot-ilvl-badge.q-5 { color: #ff8000; }
+.slot-ilvl-badge.q-6 { color: #e6cc80; }
+
+/* Slot Info Block (Name, Green Enchant, Gems) */
+.slot-info-block {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.slot-info-block.align-left {
+    text-align: left;
+    align-items: flex-start;
+}
+
+.slot-info-block.align-right {
+    text-align: right;
+    align-items: flex-end;
+}
+
+.slot-info-block.align-center {
+    text-align: center;
+    align-items: center;
+}
+
+.slot-item-name {
+    font-weight: 700;
+    font-size: 0.82rem;
+    line-height: 1.25;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+    display: block;
+    transition: filter 0.15s ease;
+}
+
+.slot-item-name:hover {
+    text-decoration: underline;
+    filter: brightness(1.2);
+}
+
+.slot-empty-title {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* Sub-line (Enchants & Gem icons) */
+.slot-sub-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    font-size: 0.74rem;
+    flex-wrap: wrap;
+}
+
+.slot-info-block.align-left .slot-sub-line {
+    justify-content: flex-start;
+}
+
+.slot-info-block.align-right .slot-sub-line {
+    justify-content: flex-end;
+}
+
+.slot-sub-line.center-sub {
+    justify-content: center;
+}
+
+.slot-enchant-text {
+    color: #00ff66;
+    font-weight: 600;
+    font-size: 0.74rem;
+    white-space: nowrap;
+    text-shadow: 0 0 4px rgba(0, 255, 102, 0.3);
+}
+
+.slot-enchant-missing {
+    color: #ff4d4d;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.slot-gems-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.gem-icon-link {
+    display: inline-flex;
+    text-decoration: none;
+}
+
+.gem-icon-img {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    border: 1px solid var(--border-subtle);
+    object-fit: cover;
+    display: block;
+    transition: transform 0.15s ease;
+}
+
+.gem-icon-img:hover {
+    transform: scale(1.2);
+    z-index: 5;
+}
+
+.gem-icon-img.q-3 { border-color: var(--quality-3); box-shadow: 0 0 4px rgba(0, 112, 221, 0.5); }
+.gem-icon-img.q-4 { border-color: var(--quality-4); box-shadow: 0 0 5px rgba(163, 53, 238, 0.6); }
+
+/* Slot Quality Glows & Borders */
+.slot-icon-box.q-0 { border-color: var(--quality-0); box-shadow: 0 0 8px rgba(157, 157, 157, 0.4); }
+.slot-icon-box.q-1 { border-color: #d1d5db; box-shadow: 0 0 8px rgba(255, 255, 255, 0.25); }
+.slot-icon-box.q-2 { border-color: var(--quality-2); box-shadow: 0 0 10px rgba(30, 255, 0, 0.5); }
+.slot-icon-box.q-3 { border-color: var(--quality-3); box-shadow: 0 0 12px rgba(0, 112, 221, 0.6); }
+.slot-icon-box.q-4 { border-color: var(--quality-4); box-shadow: 0 0 14px rgba(163, 53, 238, 0.7); }
+.slot-icon-box.q-5 { border-color: var(--quality-5); box-shadow: 0 0 16px rgba(255, 128, 0, 0.8); }
+.slot-icon-box.q-6 { border-color: var(--quality-6); box-shadow: 0 0 16px rgba(230, 204, 128, 0.8); }
+
+/* Full-layout character viewport */
+.paperdoll-viewport {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    border-radius: inherit;
+}
+
+.viewport-backdrop {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    position: relative;
+}
+
+.character-model-viewer {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    cursor: grab;
+}
+
+.character-model-viewer:active {
+    cursor: grabbing;
+}
+
+.character-model-viewer canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+}
+
+.character-model-status {
+    position: absolute;
+    top: 42%;
+    left: 50%;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: max-content;
+    max-width: calc(100% - 24px);
+    padding: 8px 11px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: rgba(8, 9, 15, 0.86);
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    text-align: center;
+    transform: translate(-50%, -50%);
+}
+
+.character-model-status.is-unavailable,
+.character-model-status.is-error {
+    color: var(--text-muted);
+}
+
+.model-loading-spinner {
+    width: 12px;
+    height: 12px;
+    flex: 0 0 auto;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--accent-blue);
+    border-radius: 50%;
+    animation: model-spin 0.8s linear infinite;
+}
+
+@keyframes model-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Paperdoll Bottom Row */
+.paperdoll-bottom-row {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 920px;
+}
+
+.paperdoll-bottom-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    max-width: 260px;
+    background: rgba(15, 17, 26, 0.7);
+    border: 1px solid var(--border-subtle);
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+    .paperdoll-main-layout {
+        flex-direction: column;
+        align-items: center;
+        min-height: 0;
+        overflow: visible;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+    .paperdoll-column {
+        width: 100%;
+        padding: 0;
+        background: transparent !important;
+    }
+    .paperdoll-column.left-column {
+        order: 1;
+    }
+    .paperdoll-column.right-column {
+        order: 3;
+    }
+    .paperdoll-center-lane {
+        display: none;
+    }
+    .paperdoll-viewport {
+        position: relative;
+        inset: auto;
+        order: 2;
+        width: 100%;
+        max-width: 320px;
+        height: 350px;
+        flex: 0 0 350px;
+        border: 2px solid var(--border-accent);
+        border-radius: 12px;
+        background: radial-gradient(circle at center, #1b2032 0%, #08090f 100%);
+        box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.85);
+    }
+    .paperdoll-bottom-row {
+        flex-direction: column;
+        align-items: center;
+    }
+    .paperdoll-bottom-card {
+        max-width: 100%;
+        width: 100%;
+    }
+}
+
+/* ==========================================================================
+   PvP & Arena Teams Styles
+   ========================================================================== */
+
+.pvp-header-summary {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.pvp-stat-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 10px 16px;
+}
+
+.pvp-stat-pill .icon {
+    font-size: 1.4rem;
+}
+
+.pvp-stat-pill .val {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent-gold);
+}
+
+.pvp-stat-pill .lbl {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.arena-teams-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.arena-team-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.arena-team-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-accent);
+}
+
+.arena-team-card.has-team {
+    border-color: rgba(74, 158, 255, 0.3);
+    background: linear-gradient(135deg, var(--bg-card) 0%, rgba(26, 28, 40, 0.9) 100%);
+}
+
+.arena-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bracket-badge {
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(74, 158, 255, 0.15);
+    color: var(--accent-blue);
+    letter-spacing: 0.08em;
+}
+
+.rank-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(245, 197, 66, 0.15);
+    color: var(--accent-gold);
+}
+
+.team-name-link {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.team-name-link:hover {
+    color: var(--accent-blue);
+    text-decoration: underline;
+}
+
+.no-team-label {
+    font-size: 1rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.arena-rating-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.rating-number {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--accent-gold);
+}
+
+.rating-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* Match History Table */
+.outcome-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-align: center;
+}
+
+.outcome-win {
+    background: rgba(46, 204, 113, 0.2);
+    color: var(--accent-green);
+    border: 1px solid rgba(46, 204, 113, 0.4);
+}
+
+.outcome-loss {
+    background: rgba(231, 76, 60, 0.2);
+    color: var(--accent-red);
+    border: 1px solid rgba(231, 76, 60, 0.4);
+}
+
+.rating-change-pos {
+    color: var(--accent-green);
+    font-weight: 700;
+}
+
+.rating-change-neg {
+    color: var(--accent-red);
+    font-weight: 700;
+}
+
+.btn-details {
+    background: rgba(74, 158, 255, 0.15);
+    color: var(--accent-blue);
+    border: 1px solid rgba(74, 158, 255, 0.3);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-details:hover {
+    background: var(--accent-blue);
+    color: #fff;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 16px;
+}
+
+.modal-content {
+    background: var(--bg-card);
+    border: 1px solid var(--border-accent);
+    border-radius: 14px;
+    width: min(100%, 900px);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--text-primary);
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
 }

@@ -1,0 +1,45 @@
+{# templates/security/login.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Log in!{% endblock %}
+
+{% block body %}
+    <div class="card app-card">
+        <div class="card-body p-4">
+            <h1 class="card-title text-center mb-4">Login</h1>
+
+            {% if error %}
+                <div class="alert alert-danger" role="alert">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+            {% endif %}
+
+            {% for message in app.flashes('success') %}
+                <div class="alert alert-success" role="alert">{{ message }}</div>
+            {% endfor %}
+            {% for message in app.flashes('error') %}
+                <div class="alert alert-danger" role="alert">{{ message }}</div>
+            {% endfor %}
+
+            <p class="text-center mb-3">Please log in using Discord:</p>
+
+            <a href="{{ path('connect_discord_start') }}" class="btn btn-discord btn-lg">
+                Login with Discord
+            </a>
+
+            {# Optional: Add a traditional email/password login form if you still want one #}
+            {# <form action="{{ path('app_login') }}" method="post" class="mt-4">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Email:</label>
+                    <input type="email" id="username" name="_username" value="{{ last_username }}" class="form-control" autocomplete="email" required autofocus>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password:</label>
+                    <input type="password" id="password" name="_password" class="form-control" autocomplete="current-password" required>
+                </div>
+
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+                <button type="submit" class="btn btn-primary btn-lg w-100">Login</button>
+            </form> #}
+        </div>
+    </div>
+{% endblock %}

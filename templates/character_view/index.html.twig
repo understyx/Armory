@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ characterName }} @ {{ realmName }} — Warmane Armory</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+    <script type="text/javascript" src="https://cdn.cavernoftime.com/api/tooltip.js"></script>
+    {% if characterModel %}
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+                integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+                crossorigin="anonymous"></script>
+        <script src="https://wow.zamimg.com/modelviewer/live/viewer/viewer.min.js"></script>
+    {% endif %}
+</head>
+<body>
+    <div class="armory-wrapper">
+
+        {# Flash Messages #}
+        {% for label, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert-banner alert-warning">
+                    ⚠️ {{ message }}
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        {% if warningMessage %}
+            <div class="alert-banner alert-warning">
+                ⚠️ {{ warningMessage }}
+            </div>
+        {% endif %}
+
+        {% set classCss = 'class-' ~ characterDetails.class|lower|replace({' ': '-'}) %}
+
+        {# Header Card #}
+        <div class="header-card">
+            <div class="char-main-info">
+                <div class="char-name-row">
+                    <h1 class="char-name {{ classCss }}">{{ characterName }}</h1>
+                    <span class="realm-badge">{{ realmName }}</span>
+                    {% if isWotlkServer %}
+                        <span class="expansion-badge">WotLK</span>
+                    {% endif %}
+                </div>
+                <div class="char-details-sub">
+                    <span>Level {{ characterDetails.level }} {{ characterDetails.race }} <strong class="{{ classCss }}">{{ characterDetails.class }}</strong></span>
+                    {% if guild %}
+                        <span>&bull; &lt;<span class="guild-name">{{ guild }}</span>&gt;</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-pill">
+                    <div class="stat-label">GearScore</div>
+                    <div class="stat-value">{{ gearScore }}</div>
+                </div>
+                <div class="stat-pill">
+                    <div class="stat-label">Avg iLvl</div>
+                    <div class="stat-value">{{ avgIlvl }}</div>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <form action="{{ path('app_character_refresh', {'characterName': characterName, 'realmName': realmName}) }}" method="POST">
+                    <button type="submit" class="btn-refresh">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.13 15.57a10 10 0 1 0 0.57-8.38l5.67-5.67"/></svg>
+                        Refresh Data
+                    </button>
+                </form>
+                {% if scrapedAt %}
+                    <div class="scraped-time">
+                        Updated {{ scrapedAt|date('Y-m-d H:i') }} UTC
+                        {% if isStale %}
+                            <span class="stale-badge">Outdated</span>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# SECTION 1: CHARACTER EQUIPMENT & ITEMS #}
+        <div class="content-card section-card">
+            <div class="section-header gear-section-header">
+                <h2>🛡️ Character Items & Gear</h2>
+            </div>
+
+            <div class="paperdoll-container">
+                <div class="paperdoll-main-layout">
+
+                    {# FULL-LAYOUT CHARACTER VIEWPORT #}
+                    <div class="paperdoll-viewport">
+                        <div class="viewport-backdrop {{ classCss }}">
+                            {% if characterModel %}
+                                <div
+                                    id="character-model-viewer"
+                                    class="character-model-viewer"
+                                    role="img"
+                                    aria-label="Interactive 3D model of {{ characterName }}"
+                                ></div>
+                                <div id="character-model-status" class="character-model-status" role="status">
+                                    <span class="model-loading-spinner" aria-hidden="true"></span>
+                                    Loading 3D model…
+                                </div>
+                            {% else %}
+                                <div class="character-model-status is-unavailable">
+                                    Refresh character data to load the 3D model.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {# LEFT COLUMN (8 slots) #}
+                    <div class="paperdoll-column left-column">
+                        {% for slotKey in ['head', 'neck', 'shoulder', 'back', 'chest', 'shirt', 'tabard', 'wrist'] %}
+                            {% set slot = paperdollSlots[slotKey] %}
+                            <div class="paperdoll-row left-row">
+                                <div class="paperdoll-slot" title="{{ slot.name }}{% if slot.item %}: {{ slot.item.name }}{% else %} (Empty){% endif %}">
+                                    {% if slot.item %}
+                                        <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
+                                           class="slot-icon-box q-{{ slot.item.quality|default(1) }}"
+                                           rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}{% if slot.item.transmog %}&amp;transmog={{ slot.item.transmog }}{% endif %}"
+                                           target="_blank">
+                                            {% if slot.item.icon_url %}
+                                                <img src="{{ slot.item.icon_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                            {% endif %}
+                                            <div class="slot-fallback-symbol" {% if slot.item.icon_url %}style="display:none;"{% endif %}>{{ slot.fallback }}</div>
+                                            <div class="slot-quality-glow"></div>
+                                            {% if slot.item.ilvl > 0 %}
+                                                <span class="slot-ilvl-badge q-{{ slot.item.quality|default(1) }}">{{ slot.item.ilvl }}</span>
+                                            {% endif %}
+                                        </a>
+                                    {% else %}
+                                        <div class="slot-icon-box slot-empty">
+                                            <div class="slot-fallback-symbol">{{ slot.fallback }}</div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="slot-info-block align-left">
+                                    {% if slot.item %}
+                                        <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
+                                           class="slot-item-name q-{{ slot.item.quality|default(1) }}"
+                                           target="_blank"
+                                           rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}">
+                                            {{ slot.item.name }}
+                                        </a>
+                                        <div class="slot-sub-line">
+                                            {% if slot.item.enchant_name %}
+                                                <span class="slot-enchant-text">{{ slot.item.enchant_name }}</span>
+                                            {% elseif slot.item.should_have_enchant %}
+                                                <span class="slot-enchant-missing">❌ No Enchant</span>
+                                            {% endif %}
+
+                                            {% if slot.item.gem_details is not empty %}
+                                                <div class="slot-gems-inline">
+                                                    {% for gem in slot.item.gem_details %}
+                                                        <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
+                                                            <img src="{{ gem.icon_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="this.src='https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_gem_37.jpg';" />
+                                                        </a>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="slot-empty-title">{{ slot.name }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="paperdoll-center-lane" aria-hidden="true"></div>
+
+                    {# RIGHT COLUMN (8 slots) #}
+                    <div class="paperdoll-column right-column">
+                        {% for slotKey in ['hands', 'waist', 'legs', 'feet', 'finger1', 'finger2', 'trinket1', 'trinket2'] %}
+                            {% set slot = paperdollSlots[slotKey] %}
+                            <div class="paperdoll-row right-row">
+                                <div class="slot-info-block align-right">
+                                    {% if slot.item %}
+                                        <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
+                                           class="slot-item-name q-{{ slot.item.quality|default(1) }}"
+                                           target="_blank"
+                                           rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}">
+                                            {{ slot.item.name }}
+                                        </a>
+                                        <div class="slot-sub-line">
+                                            {% if slot.item.enchant_name %}
+                                                <span class="slot-enchant-text">{{ slot.item.enchant_name }}</span>
+                                            {% elseif slot.item.should_have_enchant %}
+                                                <span class="slot-enchant-missing">❌ No Enchant</span>
+                                            {% endif %}
+
+                                            {% if slot.item.gem_details is not empty %}
+                                                <div class="slot-gems-inline">
+                                                    {% for gem in slot.item.gem_details %}
+                                                        <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
+                                                            <img src="{{ gem.icon_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="this.src='https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_gem_37.jpg';" />
+                                                        </a>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="slot-empty-title">{{ slot.name }}</span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="paperdoll-slot" title="{{ slot.name }}{% if slot.item %}: {{ slot.item.name }}{% else %} (Empty){% endif %}">
+                                    {% if slot.item %}
+                                        <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
+                                           class="slot-icon-box q-{{ slot.item.quality|default(1) }}"
+                                           rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}{% if slot.item.transmog %}&amp;transmog={{ slot.item.transmog }}{% endif %}"
+                                           target="_blank">
+                                            {% if slot.item.icon_url %}
+                                                <img src="{{ slot.item.icon_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                            {% endif %}
+                                            <div class="slot-fallback-symbol" {% if slot.item.icon_url %}style="display:none;"{% endif %}>{{ slot.fallback }}</div>
+                                            <div class="slot-quality-glow"></div>
+                                            {% if slot.item.ilvl > 0 %}
+                                                <span class="slot-ilvl-badge q-{{ slot.item.quality|default(1) }}">{{ slot.item.ilvl }}</span>
+                                            {% endif %}
+                                        </a>
+                                    {% else %}
+                                        <div class="slot-icon-box slot-empty">
+                                            <div class="slot-fallback-symbol">{{ slot.fallback }}</div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                </div>
+
+                {# BOTTOM ROW (3 slots) #}
+                <div class="paperdoll-bottom-row">
+                    {% for slotKey in ['mainhand', 'offhand', 'ranged'] %}
+                        {% set slot = paperdollSlots[slotKey] %}
+                        <div class="paperdoll-bottom-card">
+                            <div class="paperdoll-slot" title="{{ slot.name }}{% if slot.item %}: {{ slot.item.name }}{% else %} (Empty){% endif %}">
+                                {% if slot.item %}
+                                    <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
+                                       class="slot-icon-box q-{{ slot.item.quality|default(1) }}"
+                                       rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}{% if slot.item.transmog %}&amp;transmog={{ slot.item.transmog }}{% endif %}"
+                                       target="_blank">
+                                        {% if slot.item.icon_url %}
+                                            <img src="{{ slot.item.icon_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                        {% endif %}
+                                        <div class="slot-fallback-symbol" {% if slot.item.icon_url %}style="display:none;"{% endif %}>{{ slot.fallback }}</div>
+                                        <div class="slot-quality-glow"></div>
+                                        {% if slot.item.ilvl > 0 %}
+                                            <span class="slot-ilvl-badge q-{{ slot.item.quality|default(1) }}">{{ slot.item.ilvl }}</span>
+                                        {% endif %}
+                                    </a>
+                                {% else %}
+                                    <div class="slot-icon-box slot-empty">
+                                        <div class="slot-fallback-symbol">{{ slot.fallback }}</div>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="slot-info-block align-center">
+                                {% if slot.item %}
+                                    <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
+                                       class="slot-item-name q-{{ slot.item.quality|default(1) }}"
+                                       target="_blank"
+                                       rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}">
+                                        {{ slot.item.name }}
+                                    </a>
+                                    <div class="slot-sub-line center-sub">
+                                        {% if slot.item.enchant_name %}
+                                            <span class="slot-enchant-text">{{ slot.item.enchant_name }}</span>
+                                        {% elseif slot.item.should_have_enchant %}
+                                            <span class="slot-enchant-missing">❌ No Enchant</span>
+                                        {% endif %}
+
+                                        {% if slot.item.gem_details is not empty %}
+                                            <div class="slot-gems-inline">
+                                                {% for gem in slot.item.gem_details %}
+                                                    <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
+                                                        <img src="{{ gem.icon_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="this.src='https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_gem_37.jpg';" />
+                                                    </a>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="slot-empty-title">{{ slot.name }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {# Gear audit status #}
+            <div class="status-summary-bar gear-audit-status">
+                <div class="status-card {% if 'missing' in enchantsStatus %}status-warn{% else %}status-ok{% endif %}">
+                    <strong>Enchants:</strong> {{ enchantsStatus }}
+                </div>
+                <div class="status-card {% if 'missing' in gemsStatus %}status-warn{% else %}status-ok{% endif %}">
+                    <strong>Gems:</strong> {{ gemsStatus }}
+                </div>
+            </div>
+        </div>
+
+        {# SECTION 2: SPECIALIZATION & TALENT TREES #}
+        <div class="content-card section-card">
+            <div class="section-header spec-section-header">
+                <h2>⚔️ Specialization & Talent Trees</h2>
+                {% if parsedSpecs|length > 1 %}
+                    <div class="spec-toggle-group">
+                        {% for spec in parsedSpecs %}
+                            <button class="spec-toggle-btn {% if loop.first %}active{% endif %}" onclick="setSpec('{{ spec.specId }}', this)">
+                                {{ spec.specName }} ({{ spec.pointsSummary }})
+                            </button>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            {% for spec in parsedSpecs %}
+                <div id="spec-pane-{{ spec.specId }}" class="spec-pane {% if loop.first %}active{% endif %}">
+
+                    {# MAIN TALENT CALCULATOR LAYOUT (3 TREES + GLYPHS SIDEBAR) #}
+                    <div class="talent-calculator-layout">
+
+                        {# LEFT / CENTER: 3 TALENT TREES COLUMN #}
+                        <div class="talent-trees-container">
+                            <div class="talent-trees-grid">
+                                {% for tree in spec.trees %}
+                                    <div class="talent-tree-column">
+                                        <div class="talent-tree-grid-box">
+                                            {% if tree.tiers is not empty %}
+                                                {% for tier in tree.tiers %}
+                                                    <div class="talent-tier-row">
+                                                        {% for colIdx in 0..3 %}
+                                                            {% set talent = tier[colIdx] ?? null %}
+                                                            {% if talent %}
+                                                                <a href="{{ talent.href }}"
+                                                                   target="_blank"
+                                                                   rel="spell={{ talent.spellId }}"
+                                                                   class="talent-icon-box status-{{ talent.status }}"
+                                                                   title="Spell #{{ talent.spellId }}: {{ talent.pointsText }}">
+                                                                    {% if talent.iconUrl %}
+                                                                        <img src="{{ talent.iconUrl }}" alt="Talent" class="talent-icon-img" onerror="this.style.opacity='0';" />
+                                                                    {% endif %}
+                                                                    <div class="talent-rank-badge status-{{ talent.status }}">
+                                                                        {{ talent.pointsText }}
+                                                                    </div>
+                                                                </a>
+                                                            {% else %}
+                                                                <div class="talent-slot-cell empty-slot"></div>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                {# FALLBACK IF FULL GRID NOT AVAILABLE #}
+                                                <div class="fallback-tree-info">
+                                                    <h4>{{ tree.name }}</h4>
+                                                    <p>{{ tree.points }} Points Spent</p>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            {# TREE FOOTER SUMMARY ROW (MATCHING SCREENSHOT) #}
+                            <div class="talent-trees-footer">
+                                {% for tree in spec.trees %}
+                                    <div class="tree-footer-item">
+                                        {% if tree.iconUrl %}
+                                            <img src="{{ tree.iconUrl }}" alt="{{ tree.name }}" class="tree-footer-icon" onerror="this.style.display='none';" />
+                                        {% endif %}
+                                        <span class="tree-footer-name">{{ tree.name }}</span>
+                                        <span class="tree-footer-points">{{ tree.points }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        {# RIGHT SIDE: GLYPHS PANEL #}
+                        {% if isWotlkServer %}
+                            {% set specGlyphs = glyphs[spec.specId] ?? null %}
+                            <div class="glyphs-sidebar">
+                                {# MAJOR GLYPHS #}
+                                <div class="glyph-section major-section">
+                                    <h3 class="glyph-section-header major-header">Major Glyphs</h3>
+                                    <div class="glyph-items-list">
+                                        {% if specGlyphs and specGlyphs['Major Glyphs'] is defined and specGlyphs['Major Glyphs'] is not empty %}
+                                            {% for glyph in specGlyphs['Major Glyphs'] %}
+                                                <div class="glyph-item major-item">
+                                                    <span class="glyph-ring-dot gold-ring"></span>
+                                                    <span class="glyph-text">{{ glyph }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="glyph-item empty-glyph-item">
+                                                <span class="glyph-ring-dot empty-ring"></span>
+                                                <span class="glyph-text muted">No Major Glyphs</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                {# MINOR GLYPHS #}
+                                <div class="glyph-section minor-section">
+                                    <h3 class="glyph-section-header minor-header">Minor Glyphs</h3>
+                                    <div class="glyph-items-list">
+                                        {% if specGlyphs and specGlyphs['Minor Glyphs'] is defined and specGlyphs['Minor Glyphs'] is not empty %}
+                                            {% for glyph in specGlyphs['Minor Glyphs'] %}
+                                                <div class="glyph-item minor-item">
+                                                    <span class="glyph-ring-dot blue-ring"></span>
+                                                    <span class="glyph-text">{{ glyph }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="glyph-item empty-glyph-item">
+                                                <span class="glyph-ring-dot empty-ring"></span>
+                                                <span class="glyph-text muted">No Minor Glyphs</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                    {% if spec.digitString %}
+                        <div class="talent-code-box">
+                            <span class="code-label">Talent Distribution String:</span>
+                            <code>{{ spec.digitString }}</code>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+
+        {# SECTION 3: PVP & ARENA TEAMS #}
+        <div class="content-card section-card">
+            <div class="section-header">
+                <h2>⚔️ Player vs Player & Arena Teams</h2>
+            </div>
+
+            <div class="pvp-header-summary">
+                <div class="pvp-stat-pill">
+                    <span class="icon">🎖️</span>
+                    <div>
+                        <div class="val">{{ pvpStats.totalKills|default(0)|number_format }}</div>
+                        <div class="lbl">Honorable Kills</div>
+                    </div>
+                </div>
+                <div class="pvp-stat-pill">
+                    <span class="icon">⚔️</span>
+                    <div>
+                        <div class="val">{{ pvpStats.killsToday|default(0)|number_format }}</div>
+                        <div class="lbl">Kills Today</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arena-teams-grid">
+                {% set brackets = ['2v2', '3v3', '5v5'] %}
+                {% for b in brackets %}
+                    {% set teamInfo = null %}
+                    {% if pvpStats.arenaTeams is defined and pvpStats.arenaTeams is not empty %}
+                        {% for team in pvpStats.arenaTeams %}
+                            {% if team.bracket == b %}
+                                {% set teamInfo = team %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="arena-team-card {% if teamInfo %}has-team{% endif %}">
+                        <div class="arena-card-top">
+                            <span class="bracket-badge">{{ b }} Arena</span>
+                            {% if teamInfo and teamInfo.rank %}
+                                <span class="rank-badge">Rank #{{ teamInfo.rank }}</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if teamInfo %}
+                                {% if teamInfo.url %}
+                                    <a href="https://armory.warmane.com{{ teamInfo.url }}" target="_blank" class="team-name-link">{{ teamInfo.name }}</a>
+                                {% else %}
+                                    <span class="team-name-link">{{ teamInfo.name }}</span>
+                                {% endif %}
+                                <div class="arena-rating-row">
+                                    <span class="rating-number">{{ teamInfo.rating }}</span>
+                                    <span class="rating-label">Rating</span>
+                                </div>
+                            {% else %}
+                                <div class="no-team-label">No {{ b }} Team</div>
+                                <div class="arena-rating-row">
+                                    <span class="rating-number" style="color: var(--text-muted);">0</span>
+                                    <span class="rating-label">Rating</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# SECTION 4: MATCH HISTORY #}
+        <div class="content-card section-card">
+            <div class="section-header">
+                <h2>📜 Match History</h2>
+            </div>
+            {% if matchHistory is not empty %}
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Outcome</th>
+                                <th>Personal Rating</th>
+                                <th>Team</th>
+                                <th>Map</th>
+                                <th>Duration</th>
+                                <th>Date / Time</th>
+                                <th style="text-align: center;">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for match in matchHistory %}
+                                <tr>
+                                    <td>
+                                        {% if 'win' in match.outcome|lower or 'victor' in match.outcome|lower %}
+                                            <span class="outcome-badge outcome-win">WIN</span>
+                                        {% else %}
+                                            <span class="outcome-badge outcome-loss">LOSS</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if '+' in match.ratingChange %}
+                                            <span class="rating-change-pos">{{ match.ratingChange }}</span>
+                                        {% elseif '-' in match.ratingChange %}
+                                            <span class="rating-change-neg">{{ match.ratingChange }}</span>
+                                        {% else %}
+                                            <span>{{ match.ratingChange }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if match.teamUrl %}
+                                            <a href="https://armory.warmane.com{{ match.teamUrl }}" target="_blank" style="color: var(--text-primary); text-decoration: none; font-weight: 600;">{{ match.team }}</a>
+                                        {% else %}
+                                            <span style="font-weight: 600;">{{ match.team }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ match.map }}</td>
+                                    <td>{{ match.duration }}</td>
+                                    <td style="color: var(--text-secondary); font-size: 0.85rem;">{{ match.startTime }}</td>
+                                    <td style="text-align: center;">
+                                        {% if match.gameId %}
+                                            <button class="btn-details" onclick="openMatchDetails('{{ match.gameId }}', '{{ characterName }}', '{{ realmName }}')">View Details</button>
+                                        {% else %}
+                                            <span style="color: var(--text-muted); font-size: 0.8rem;">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p style="color: var(--text-muted);">No recent arena/battleground match history recorded.</p>
+            {% endif %}
+        </div>
+
+        {# SECTION 5: PROFESSIONS & KILL STATS #}
+        <div class="two-col-grid">
+            <div class="content-card section-card">
+                <div class="section-header">
+                    <h2>📜 Professions</h2>
+                </div>
+                {% if professions is not empty %}
+                    <div class="professions-grid">
+                        {% for profession in professions %}
+                            <div class="profession-card">
+                                <span class="prof-icon">🛠️</span>
+                                <span class="prof-name">{{ profession }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p style="color: var(--text-muted);">No professions learned.</p>
+                {% endif %}
+            </div>
+
+            <div class="content-card section-card">
+                <div class="section-header">
+                    <h2>⚔️ Kill Statistics</h2>
+                </div>
+                {% if killStats is not empty %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Category / Encounter</th>
+                                <th>Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if killStats.stats is defined %}
+                                {% for description, value in killStats.stats %}
+                                    <tr>
+                                        <td>{{ description }}</td>
+                                        <td><strong style="color: var(--accent-gold);">{{ value }}</strong></td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                {% for description, value in killStats %}
+                                    <tr>
+                                        <td>{{ description }}</td>
+                                        <td><strong style="color: var(--accent-gold);">{{ value }}</strong></td>
+                                    </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p style="color: var(--text-muted);">No kill statistics available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    {# Match Details Modal #}
+    <div id="match-details-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Match Breakdown (<span id="modal-match-id"></span>)</h3>
+                <button class="modal-close" onclick="closeMatchDetails()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-match-body">
+                <p style="color: var(--text-muted); text-align: center;">Loading match breakdown...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setSpec(specId, btnElement) {
+            document.querySelectorAll('.spec-pane').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.glyph-spec-pane').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.spec-toggle-btn').forEach(el => el.classList.remove('active'));
+
+            const targetSpecPane = document.getElementById('spec-pane-' + specId);
+            if (targetSpecPane) targetSpecPane.classList.add('active');
+
+            const targetGlyphPane = document.getElementById('glyph-pane-' + specId);
+            if (targetGlyphPane) targetGlyphPane.classList.add('active');
+
+            if (btnElement) btnElement.classList.add('active');
+        }
+
+        function openMatchDetails(gameId, charName, realmName) {
+            const modal = document.getElementById('match-details-modal');
+            const matchIdSpan = document.getElementById('modal-match-id');
+            const body = document.getElementById('modal-match-body');
+
+            matchIdSpan.textContent = gameId;
+            body.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Loading match details...</p>';
+            modal.style.display = 'flex';
+
+            const classMap = {
+                '1': 'Warrior', '2': 'Paladin', '3': 'Hunter', '4': 'Rogue',
+                '5': 'Priest', '6': 'Death Knight', '7': 'Shaman', '8': 'Mage',
+                '9': 'Warlock', '11': 'Druid'
+            };
+
+            fetch(`/character/${encodeURIComponent(charName)}/${encodeURIComponent(realmName)}/match-details/${encodeURIComponent(gameId)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data || data.length === 0) {
+                        body.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No player details available for this match.</p>';
+                        return;
+                    }
+
+                    let html = `
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th>Team</th>
+                                    <th>Damage</th>
+                                    <th>Healing</th>
+                                    <th>KBs</th>
+                                    <th>Deaths</th>
+                                    <th>MMR</th>
+                                    <th>Rating</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    data.forEach(p => {
+                        const className = classMap[p.class] || p.class || 'Unknown';
+                        const classClean = className.toLowerCase().replace(/\s+/g, '-');
+                        html += `
+                            <tr>
+                                <td>
+                                    <strong class="class-${classClean}">${p.charname}</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;"> (${className})</span>
+                                </td>
+                                <td>${p.teamnamerich || p.teamname || '-'}</td>
+                                <td><strong style="color: var(--accent-gold);">${(p.damage || 0).toLocaleString()}</strong></td>
+                                <td><strong style="color: var(--accent-green);">${(p.healing || 0).toLocaleString()}</strong></td>
+                                <td>${p.killingblows || 0}</td>
+                                <td>${p.deaths || 0}</td>
+                                <td>${p.mmr || 0}</td>
+                                <td>${p.prating || 0}</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += '</tbody></table>';
+                    body.innerHTML = html;
+                })
+                .catch(err => {
+                    body.innerHTML = '<p style="color: var(--accent-red); text-align: center;">Failed to load match details.</p>';
+                });
+        }
+
+        function closeMatchDetails() {
+            document.getElementById('match-details-modal').style.display = 'none';
+        }
+    </script>
+    {% if characterModel %}
+        <script id="character-model-data" type="application/json">{{ characterModel|json_encode|raw }}</script>
+        <script type="module">
+            const status = document.getElementById('character-model-status');
+            const viewer = document.getElementById('character-model-viewer');
+            const hideLoadingStatus = () => status?.remove();
+            const canvasObserver = new MutationObserver(() => {
+                if (viewer.querySelector('canvas')) {
+                    hideLoadingStatus();
+                    canvasObserver.disconnect();
+                }
+            });
+            canvasObserver.observe(viewer, { childList: true, subtree: true });
+
+            try {
+                const assetUrl = {{ path('app_modelviewer_asset', {
+                    environment: 'live',
+                    path: '__asset__'
+                })|json_encode|raw }};
+                window.CONTENT_PATH = new URL(assetUrl.replace('__asset__', ''), window.location.origin).href;
+
+                const character = JSON.parse(document.getElementById('character-model-data').textContent);
+                const { generateModels } = await import('https://cdn.jsdelivr.net/npm/wow-model-viewer@1.5.3/+esm');
+                await generateModels(1.88, '#character-model-viewer', character);
+                hideLoadingStatus();
+                canvasObserver.disconnect();
+            } catch (error) {
+                console.error('Unable to load the character model.', error);
+                canvasObserver.disconnect();
+                if (status?.isConnected) {
+                    status.classList.add('is-error');
+                    status.textContent = '3D model unavailable';
+                }
+            }
+        </script>
+    {% endif %}
+</body>
+</html>
