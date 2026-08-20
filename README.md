@@ -44,22 +44,31 @@ for the GitHub checkout must be available to `sudo`:
 sudo --preserve-env=SSH_AUTH_SOCK \
   SERVER_NAME=armory.example.com \
   APP_URL=https://armory.example.com \
+  TLS_CERTIFICATE=/etc/letsencrypt/live/example.com/fullchain.pem \
+  TLS_CERTIFICATE_KEY=/etc/letsencrypt/live/example.com/privkey.pem \
   bash bin/install-server
 ```
 
 By default it creates the `armory` system account, checks out
 `git@github.com:understyx/Armory.git` into `/var/www/Armory`, provisions an
 `armory` MariaDB database and account, installs the application, and configures
-Nginx with PHP-FPM. If `/var/www/Armory` is already a Git checkout, it is reused.
+Nginx with PHP-FPM. If `/var/www/Armory` is already a Git checkout, the installer
+fetches `GIT_BRANCH` and applies a fast-forward update. It stops without changing
+the checkout if tracked files have local modifications or the branch has
+diverged. Ignored deployment files such as `.env.local` are preserved.
 
 Configuration can be overridden with environment variables including
 `DEPLOY_DIR`, `GIT_BRANCH`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `SERVER_NAME`,
-`APP_URL`, and `IMPORT_ITEMS=0`. The default database password is `armory`; set a
-strong `DB_PASSWORD` for an internet-facing deployment. The installer configures
-HTTP only, so add TLS (for example, with Certbot) after DNS points at the server.
-`SERVER_NAME` must be the site's exact hostname so that Nginx selects it ahead of
-any wildcard virtual host. It is derived from `APP_URL` when only `APP_URL` is
-provided.
+`APP_URL`, `TLS_CERTIFICATE`, `TLS_CERTIFICATE_KEY`, and `IMPORT_ITEMS=0`. The
+default database password is `armory`; set a strong `DB_PASSWORD` for an
+internet-facing deployment. `SERVER_NAME` must be the site's exact hostname so
+that Nginx selects it ahead of any wildcard virtual host. It is derived from
+`APP_URL` when only `APP_URL` is provided.
+
+When both TLS paths are provided, the installer creates an exact-name HTTPS
+virtual host and redirects HTTP to HTTPS. The certificate may be an existing
+wildcard certificate, but it must cover `SERVER_NAME`. Without certificate paths,
+the installer creates an HTTP-only virtual host and requires an `http://` URL.
 
 ### Manual installation
 

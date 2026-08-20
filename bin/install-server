@@ -17,6 +17,8 @@ DB_USER="${DB_USER:-armory}"
 DB_PASSWORD="${DB_PASSWORD:-armory}"
 SERVER_NAME="${SERVER_NAME:-}"
 APP_URL="${APP_URL:-}"
+TLS_CERTIFICATE="${TLS_CERTIFICATE:-}"
+TLS_CERTIFICATE_KEY="${TLS_CERTIFICATE_KEY:-}"
 IMPORT_ITEMS="${IMPORT_ITEMS:-1}"
 
 umask 027
@@ -54,6 +56,11 @@ esac
 [[ "$DEPLOY_DIR" == /var/www/* ]] || fail "DEPLOY_DIR must be an absolute path below /var/www."
 [[ "$DB_PASSWORD" != *$'\n'* ]] || fail "DB_PASSWORD must not contain a newline."
 
+if [[ -n "$TLS_CERTIFICATE" && -z "$TLS_CERTIFICATE_KEY" ]] \
+    || [[ -z "$TLS_CERTIFICATE" && -n "$TLS_CERTIFICATE_KEY" ]]; then
+    fail "Set both TLS_CERTIFICATE and TLS_CERTIFICATE_KEY, or leave both unset."
+fi
+
 if [[ -z "$SERVER_NAME" && "$APP_URL" =~ ^https?://([^/:]+) ]]; then
     SERVER_NAME="${BASH_REMATCH[1]}"
 fi
@@ -66,7 +73,24 @@ fi
     || fail "SERVER_NAME must be one hostname without a scheme, path, wildcard, or spaces."
 
 if [[ -z "$APP_URL" ]]; then
-    APP_URL="http://${SERVER_NAME}"
+    if [[ -n "$TLS_CERTIFICATE" ]]; then
+        APP_URL="https://${SERVER_NAME}"
+    else
+        APP_URL="http://${SERVER_NAME}"
+    fi
+fi
+
+if [[ "$APP_URL" == https://* && -z "$TLS_CERTIFICATE" ]]; then
+    fail "APP_URL uses HTTPS, but TLS_CERTIFICATE and TLS_CERTIFICATE_KEY are not set."
+fi
+
+if [[ -n "$TLS_CERTIFICATE" ]]; then
+    [[ "$APP_URL" == https://* ]] \
+        || fail "APP_URL must use https:// when a TLS certificate is configured."
+    [[ "$TLS_CERTIFICATE" == /* && "$TLS_CERTIFICATE_KEY" == /* ]] \
+        || fail "TLS certificate paths must be absolute."
+    [[ -r "$TLS_CERTIFICATE" ]] || fail "Cannot read TLS certificate: $TLS_CERTIFICATE"
+    [[ -r "$TLS_CERTIFICATE_KEY" ]] || fail "Cannot read TLS certificate key: $TLS_CERTIFICATE_KEY"
 fi
 
 export DEBIAN_FRONTEND=noninteractive
@@ -129,7 +153,19 @@ install -d -m 0755 "$(dirname "$DEPLOY_DIR")"
 
 log "Checking out the application"
 if [[ -d "$DEPLOY_DIR/.git" ]]; then
-    printf 'Using the existing Git checkout at %s.\n' "$DEPLOY_DIR"
+    printf 'Updating the existing Git checkout at %s.\n' "$DEPLOY_DIR"
+
+    CURRENT_BRANCH="$(git -c safe.directory="$DEPLOY_DIR" -C "$DEPLOY_DIR" branch --show-current)"
+    if [[ "$CURRENT_BRANCH" != "$GIT_BRANCH" ]]; then
+        fail "The existing checkout is on branch '${CURRENT_BRANCH:-detached HEAD}', but GIT_BRANCH is '$GIT_BRANCH'."
+    fi
+
+    if [[ -n "$(git -c safe.directory="$DEPLOY_DIR" -C "$DEPLOY_DIR" status --porcelain --untracked-files=no)" ]]; then
+        fail "The existing checkout has tracked local changes. Commit or discard them before deployment."
+    fi
+
+    git -c safe.directory="$DEPLOY_DIR" -C "$DEPLOY_DIR" fetch --prune origin "$GIT_BRANCH"
+    git -c safe.directory="$DEPLOY_DIR" -C "$DEPLOY_DIR" merge --ff-only FETCH_HEAD
 elif [[ -e "$DEPLOY_DIR" ]]; then
     fail "$DEPLOY_DIR exists but is not a Git checkout. Move it aside or choose another DEPLOY_DIR."
 else
@@ -238,7 +274,52 @@ PHP_FPM_SOCKET="/run/php/php${PHP_VERSION}-fpm.sock"
 NGINX_SITE="/etc/nginx/sites-available/armory"
 
 log "Configuring Nginx"
-cat > "$NGINX_SITE" <<NGINX
+if [[ -n "$TLS_CERTIFICATE" ]]; then
+    cat > "$NGINX_SITE" <<NGINX
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${SERVER_NAME};
+
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+
+    server_name ${SERVER_NAME};
+
+    ssl_certificate ${TLS_CERTIFICATE};
+    ssl_certificate_key ${TLS_CERTIFICATE_KEY};
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    root ${DEPLOY_DIR}/public;
+    index index.php;
+
+    location / {
+        try_files \$uri /index.php\$is_args\$args;
+    }
+
+    location ~ ^/index\\.php(/|\$) {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:${PHP_FPM_SOCKET};
+        fastcgi_param SCRIPT_FILENAME \$document_root/index.php;
+        internal;
+    }
+
+    location ~ \\.php\$ {
+        return 404;
+    }
+
+    location ~ /\\.(?!well-known).* {
+        deny all;
+    }
+}
+NGINX
+else
+    cat > "$NGINX_SITE" <<NGINX
 server {
     listen 80;
     listen [::]:80;
@@ -267,6 +348,7 @@ server {
     }
 }
 NGINX
+fi
 
 ln -sfn "$NGINX_SITE" /etc/nginx/sites-enabled/armory
 rm -f /etc/nginx/sites-enabled/default
@@ -278,4 +360,6 @@ printf 'Application: %s\n' "$APP_URL"
 printf 'Directory:   %s\n' "$DEPLOY_DIR"
 printf 'Linux user:  %s\n' "$APP_USER"
 printf 'Database:    %s\n' "$DB_NAME"
-printf '\nAdd TLS with Certbot before exposing a production login publicly.\n'
+if [[ -z "$TLS_CERTIFICATE" ]]; then
+    printf '\nAdd TLS before exposing a production login publicly.\n'
+fi
