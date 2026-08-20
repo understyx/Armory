@@ -57,6 +57,9 @@ Configuration can be overridden with environment variables including
 `APP_URL`, and `IMPORT_ITEMS=0`. The default database password is `armory`; set a
 strong `DB_PASSWORD` for an internet-facing deployment. The installer configures
 HTTP only, so add TLS (for example, with Certbot) after DNS points at the server.
+`SERVER_NAME` must be the site's exact hostname so that Nginx selects it ahead of
+any wildcard virtual host. It is derived from `APP_URL` when only `APP_URL` is
+provided.
 
 ### Manual installation
 

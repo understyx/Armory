@@ -15,8 +15,8 @@ DB_PORT="${DB_PORT:-3306}"
 DB_NAME="${DB_NAME:-armory}"
 DB_USER="${DB_USER:-armory}"
 DB_PASSWORD="${DB_PASSWORD:-armory}"
-SERVER_NAME="${SERVER_NAME:-_}"
-APP_URL="${APP_URL:-http://localhost}"
+SERVER_NAME="${SERVER_NAME:-}"
+APP_URL="${APP_URL:-}"
 IMPORT_ITEMS="${IMPORT_ITEMS:-1}"
 
 umask 027
@@ -53,6 +53,21 @@ esac
 [[ "$IMPORT_ITEMS" == "0" || "$IMPORT_ITEMS" == "1" ]] || fail "IMPORT_ITEMS must be 0 or 1."
 [[ "$DEPLOY_DIR" == /var/www/* ]] || fail "DEPLOY_DIR must be an absolute path below /var/www."
 [[ "$DB_PASSWORD" != *$'\n'* ]] || fail "DB_PASSWORD must not contain a newline."
+
+if [[ -z "$SERVER_NAME" && "$APP_URL" =~ ^https?://([^/:]+) ]]; then
+    SERVER_NAME="${BASH_REMATCH[1]}"
+fi
+
+if [[ -z "$SERVER_NAME" ]]; then
+    fail "Set SERVER_NAME to the application's hostname (for example: armory.example.com)."
+fi
+
+[[ "$SERVER_NAME" =~ ^[A-Za-z0-9.-]+$ ]] \
+    || fail "SERVER_NAME must be one hostname without a scheme, path, wildcard, or spaces."
+
+if [[ -z "$APP_URL" ]]; then
+    APP_URL="http://${SERVER_NAME}"
+fi
 
 export DEBIAN_FRONTEND=noninteractive
 
