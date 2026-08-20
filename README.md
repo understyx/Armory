@@ -4,24 +4,33 @@ A Symfony 7.3 application for viewing and caching Warmane character data, includ
 
 ## Requirements
 
-- PHP 8.2–8.4 with the extensions required by Composer and the PDO driver for your database
+- PHP 8.2 or newer with the extensions required by Composer, including `pdo_mysql`
 - Composer 2
-- PostgreSQL 16 by default (the Doctrine configuration also supports SQLite for local development)
+- MariaDB 10.6+ or MySQL 8
 - A web server whose document root points to `public/`
 
 ## Local setup
 
+Run the interactive installer and accept the defaults to use the bundled MariaDB configuration:
+
 ```bash
-composer install
-cp .env .env.local
-# Edit .env.local with local database and Discord OAuth values.
-php bin/console doctrine:database:create --if-not-exists
-php bin/console doctrine:migrations:migrate --no-interaction
-php bin/console app:import-items
+bin/install
 symfony server:start
 ```
 
-The item importer reads `data/items.sql` by default. A different SQL dump can be passed as its first argument.
+The installer prompts for the database connection, application URL, and optional Discord OAuth credentials. It can start the bundled MariaDB container, installs PHP dependencies, creates the database, runs migrations, and optionally imports the item data. It stores local values in `.env.local`, which is ignored by Git.
+
+The default database block is:
+
+```dotenv
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=raidbot
+DB_PASSWORD=raidbot
+DB_NAME=raidbot
+```
+
+The item importer reads `data/items.sql` by default. A different SQL dump can be passed as its first argument to `php bin/console app:import-items`.
 
 ## Production deployment
 
@@ -31,7 +40,7 @@ The item importer reads `data/items.sql` by default. A different SQL dump can be
    - `APP_DEBUG=0`
    - `APP_SECRET` to a long random value
    - `DEFAULT_URI` to the public HTTPS origin
-   - `DATABASE_URL` to the production database DSN
+   - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` for MariaDB/MySQL
    - `OAUTH_DISCORD_ID` and `OAUTH_DISCORD_SECRET`
    - `MESSENGER_TRANSPORT_DSN` and `MAILER_DSN` if their defaults are not suitable
 3. Register `https://your-domain.example/connect/discord/check` as the Discord OAuth redirect URL.

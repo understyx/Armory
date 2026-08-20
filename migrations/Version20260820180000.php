@@ -16,8 +16,7 @@ final class Version20260820180000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('ALTER TABLE character_snapshots ADD COLUMN pvp_stats CLOB DEFAULT NULL');
-        $this->addSql('ALTER TABLE character_snapshots ADD COLUMN match_history CLOB DEFAULT NULL');
+        $this->addSql('ALTER TABLE character_snapshots ADD pvp_stats JSON DEFAULT NULL, ADD match_history JSON DEFAULT NULL');
     }
 
     public function down(Schema $schema): void

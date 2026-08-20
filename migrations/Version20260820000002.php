@@ -16,8 +16,8 @@ final class Version20260820000002 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('CREATE TABLE character_snapshots (
-            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        $this->addSql("CREATE TABLE character_snapshots (
+            id INT AUTO_INCREMENT NOT NULL,
             name VARCHAR(64) NOT NULL,
             realm VARCHAR(64) NOT NULL,
             level INTEGER NOT NULL,
@@ -26,16 +26,17 @@ final class Version20260820000002 extends AbstractMigration
             guild VARCHAR(128) DEFAULT NULL,
             gear_score INTEGER NOT NULL,
             avg_ilvl DOUBLE PRECISION NOT NULL,
-            professions CLOB NOT NULL,
-            specializations CLOB NOT NULL,
-            equipped_items CLOB NOT NULL,
-            talent_strings CLOB NOT NULL,
-            glyphs CLOB NOT NULL,
-            enchants_status CLOB NOT NULL,
-            gems_status CLOB NOT NULL,
-            kill_stats CLOB NOT NULL,
-            scraped_at DATETIME NOT NULL --(DC2Type:datetime_immutable)
-        )');
+            professions JSON NOT NULL,
+            specializations JSON NOT NULL,
+            equipped_items JSON NOT NULL,
+            talent_strings JSON NOT NULL,
+            glyphs JSON NOT NULL,
+            enchants_status LONGTEXT NOT NULL,
+            gems_status LONGTEXT NOT NULL,
+            kill_stats JSON NOT NULL,
+            scraped_at DATETIME NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+            PRIMARY KEY(id)
+        ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB");
         $this->addSql('CREATE UNIQUE INDEX UNIQ_CHAR_REALM ON character_snapshots (name, realm)');
     }
 

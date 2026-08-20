@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
+
+if [[ ! -t 0 ]]; then
+    echo "This installer is interactive and must be run from a terminal." >&2
+    exit 1
+fi
+
+for command_name in php composer; do
+    if ! command -v "$command_name" >/dev/null 2>&1; then
+        echo "Required command not found: $command_name" >&2
+        exit 1
+    fi
+done
+
+if ! php -r 'exit(version_compare(PHP_VERSION, "8.2.0", ">=") ? 0 : 1);'; then
+    echo "PHP 8.2 or newer is required." >&2
+    exit 1
+fi
+
+if ! php -r 'exit(extension_loaded("pdo_mysql") ? 0 : 1);'; then
+    echo "The PHP pdo_mysql extension is required." >&2
+    exit 1
+fi
+
+prompt_value() {
+    local label="$1"
+    local default_value="$2"
+    local entered_value
+
+    read -r -p "$label [$default_value]: " entered_value
+    printf '%s' "${entered_value:-$default_value}"
+}
+
+prompt_yes_no() {
+    local label="$1"
+    local default_answer="$2"
+    local answer
+
+    read -r -p "$label [$default_answer]: " answer
+    answer="${answer:-$default_answer}"
+    [[ "$answer" =~ ^[Yy]$ ]]
+}
+
+set_env_value() {
+    local file="$1"
+    local key="$2"
+    local value="$3"
+    local temporary_file
+
+    temporary_file="$(mktemp)"
+    awk -v key="$key" '$0 !~ "^" key "=" { print }' "$file" > "$temporary_file"
+    printf '%s=%s\n' "$key" "$value" >> "$temporary_file"
+    mv "$temporary_file" "$file"
+}
+
+escape_env_value() {
+    local value="$1"
+
+    value="${value//\\/\\\\}"
+    value="${value//\"/\\\"}"
+    value="${value//\$/\\\$}"
+    value="${value//$'\n'/\\n}"
+    printf '"%s"' "$value"
+}
+
+echo "Warmane Armory installer"
+echo
+
+db_host="$(prompt_value "Database host" "127.0.0.1")"
+db_port="$(prompt_value "Database port" "3306")"
+db_user="$(prompt_value "Database user" "raidbot")"
+read -r -s -p "Database password [raidbot]: " db_password
+echo
+db_password="${db_password:-raidbot}"
+db_name="$(prompt_value "Database name" "raidbot")"
+app_url="$(prompt_value "Application URL" "http://localhost")"
+
+if [[ ! "$db_port" =~ ^[0-9]+$ ]] || ((db_port < 1 || db_port > 65535)); then
+    echo "Database port must be a number from 1 to 65535." >&2
+    exit 1
+fi
+
+touch .env.local
+chmod 600 .env.local
+
+set_env_value .env.local DB_HOST "$(escape_env_value "$db_host")"
+set_env_value .env.local DB_PORT "$db_port"
+set_env_value .env.local DB_USER "$(escape_env_value "$db_user")"
+set_env_value .env.local DB_PASSWORD "$(escape_env_value "$db_password")"
+set_env_value .env.local DB_NAME "$(escape_env_value "$db_name")"
+set_env_value .env.local DEFAULT_URI "$(escape_env_value "$app_url")"
+
+if ! grep -q '^APP_SECRET=.' .env.local; then
+    set_env_value .env.local APP_SECRET "\"$(php -r 'echo bin2hex(random_bytes(32));')\""
+fi
+
+discord_configured=false
+if prompt_yes_no "Configure Discord OAuth credentials now" "n"; then
+    read -r -p "Discord client ID: " discord_client_id
+    read -r -s -p "Discord client secret: " discord_client_secret
+    echo
+
+    if [[ -z "$discord_client_id" || -z "$discord_client_secret" ]]; then
+        echo "Discord client ID and secret cannot be empty." >&2
+        exit 1
+    fi
+
+    set_env_value .env.local OAUTH_DISCORD_ID "$(escape_env_value "$discord_client_id")"
+    set_env_value .env.local OAUTH_DISCORD_SECRET "$(escape_env_value "$discord_client_secret")"
+    discord_configured=true
+fi
+
+echo
+if prompt_yes_no "Start the bundled MariaDB container with Docker" "y"; then
+    if ! docker compose version >/dev/null 2>&1; then
+        echo "Docker Compose is unavailable. Install/start MariaDB yourself, then rerun and answer no." >&2
+        exit 1
+    fi
+
+    DB_PORT="$db_port" DB_USER="$db_user" DB_PASSWORD="$db_password" DB_NAME="$db_name" docker compose up -d --wait database
+fi
+
+echo
+echo "Installing PHP dependencies..."
+composer install
+
+echo
+echo "Creating and migrating the database..."
+php bin/console doctrine:database:create --if-not-exists
+php bin/console doctrine:migrations:migrate --no-interaction
+
+if prompt_yes_no "Import the bundled item database now" "y"; then
+    php bin/console app:import-items
+fi
+
+echo
+echo "Installation complete. Start the app with:"
+echo "  symfony server:start"
+if [[ "$discord_configured" == false ]]; then
+    echo "Add OAUTH_DISCORD_ID and OAUTH_DISCORD_SECRET to .env.local before using Discord login."
+fi
