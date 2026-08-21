@@ -823,9 +823,11 @@
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
+            document.getElementById('uwu-overall-points').style.color = getUwuScoreColor(data.overallPoints);
             document.getElementById('uwu-selected-spec').textContent = specName;
 
             const rankingsBody = document.getElementById('uwu-rankings-body');
+            document.querySelectorAll('.uwu-points-tooltip').forEach(tooltip => tooltip.remove());
             rankingsBody.replaceChildren();
 
             data.bosses.forEach(boss => {
@@ -834,7 +836,7 @@
                 appendUwuCell(row, formatUwuNumber(boss.dps, 2), 'DPS');
                 appendUwuCell(row, formatUwuRank(boss.playerRank, boss.totalPlayers), 'Player rank');
                 appendUwuCell(row, formatUwuRank(boss.raidRank, boss.totalRaids), 'Raid rank');
-                appendUwuCell(row, formatUwuNumber(boss.points, 2), 'Points');
+                appendUwuPointsCell(row, boss);
                 appendUwuCell(row, formatUwuDuration(boss.fastestKillSeconds), 'Fastest kill');
                 rankingsBody.appendChild(row);
             });
@@ -846,6 +848,107 @@
             cell.textContent = value ?? '—';
             if (emphasize) cell.classList.add('uwu-encounter-name');
             row.appendChild(cell);
+        }
+
+        function appendUwuPointsCell(row, boss) {
+            const cell = document.createElement('td');
+            cell.dataset.label = 'Points';
+
+            const trigger = document.createElement('button');
+            trigger.type = 'button';
+            trigger.className = 'uwu-points-trigger';
+            trigger.textContent = formatUwuNumber(boss.score, 2);
+            trigger.style.color = getUwuScoreColor(boss.score);
+            trigger.setAttribute('aria-label', `Points ${trigger.textContent}. Hover or focus for ranking details.`);
+
+            const tooltip = buildUwuPointsTooltip(boss);
+            const showTooltip = () => positionUwuPointsTooltip(trigger, tooltip);
+            const hideTooltip = () => tooltip.remove();
+
+            trigger.addEventListener('mouseenter', showTooltip);
+            trigger.addEventListener('mouseleave', hideTooltip);
+            trigger.addEventListener('focus', showTooltip);
+            trigger.addEventListener('blur', hideTooltip);
+            trigger.addEventListener('keydown', event => {
+                if (event.key === 'Escape') {
+                    hideTooltip();
+                    trigger.blur();
+                }
+            });
+
+            cell.appendChild(trigger);
+            row.appendChild(cell);
+        }
+
+        function buildUwuPointsTooltip(boss) {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'uwu-points-tooltip';
+            tooltip.setAttribute('role', 'tooltip');
+
+            appendUwuTooltipRow(tooltip, 'Player rank', boss.playerRank, boss.totalPlayers, boss.playerRankScore);
+            appendUwuTooltipRow(tooltip, 'Raid rank', boss.raidRank, boss.totalRaids, boss.raidRankScore);
+            appendUwuTooltipRow(tooltip, 'Dps diff', boss.dps, boss.rankOneDps, boss.dpsScore);
+
+            return tooltip;
+        }
+
+        function appendUwuTooltipRow(tooltip, label, value, total, score) {
+            const row = document.createElement('div');
+            row.className = 'uwu-tooltip-row';
+
+            const parts = [
+                ['uwu-tooltip-label', label],
+                ['uwu-tooltip-number', formatUwuNumber(value, 0)],
+                ['uwu-tooltip-separator', '/'],
+                ['uwu-tooltip-number', formatUwuNumber(total, 0)],
+                ['uwu-tooltip-separator', '='],
+                ['uwu-tooltip-score', formatUwuNumber(score, 2)]
+            ];
+
+            parts.forEach(([className, text]) => {
+                const part = document.createElement(className === 'uwu-tooltip-score' ? 'strong' : 'span');
+                part.className = className;
+                part.textContent = text;
+                if (className === 'uwu-tooltip-score') {
+                    part.style.color = getUwuScoreColor(score);
+                }
+                row.appendChild(part);
+            });
+
+            tooltip.appendChild(row);
+        }
+
+        function positionUwuPointsTooltip(trigger, tooltip) {
+            document.body.appendChild(tooltip);
+
+            const triggerRect = trigger.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+            const viewportMargin = 8;
+            let left = triggerRect.left + (triggerRect.width / 2) - (tooltipRect.width / 2);
+            let top = triggerRect.top - tooltipRect.height - viewportMargin;
+
+            left = Math.max(viewportMargin, Math.min(left, window.innerWidth - tooltipRect.width - viewportMargin));
+            if (top < viewportMargin) {
+                top = triggerRect.bottom + viewportMargin;
+                tooltip.classList.add('is-below');
+            } else {
+                tooltip.classList.remove('is-below');
+            }
+
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
+        }
+
+        function getUwuScoreColor(score) {
+            const value = Number(score);
+            if (!Number.isFinite(value)) return '#666666';
+            if (value < 25) return '#666666';
+            if (value < 50) return '#1eff00';
+            if (value < 75) return '#0070ff';
+            if (value < 90) return '#a335ee';
+            if (value < 99) return '#ff3c00';
+            if (value < 100) return '#e268a8';
+            return '#e5cc80';
         }
 
         function formatUwuNumber(value, fractionDigits = 0) {

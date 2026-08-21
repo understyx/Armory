@@ -35,6 +35,9 @@ final class UwuLogsServiceTest extends TestCase
                             'rank_players' => 3376,
                             'dps_max' => 11944.14,
                             'points' => 6221.4,
+                            'points_dps' => 4404.94,
+                            'points_rank_players' => 2469.88,
+                            'points_rank_raids' => 6221.4,
                             'spec_total_players' => 4483,
                             'spec_total_raids' => 16162,
                             'spec_r1_dps' => 27115.33,
@@ -52,11 +55,15 @@ final class UwuLogsServiceTest extends TestCase
 
         self::assertSame(8, $rankings['classId']);
         self::assertSame(1525, $rankings['overallRank']);
-        self::assertSame(5851.0097, $rankings['overallPoints']);
+        self::assertEqualsWithDelta(58.510097, $rankings['overallPoints'], 0.000001);
         self::assertCount(1, $rankings['bosses']);
         self::assertSame('Lord Marrowgar', $rankings['bosses'][0]['name']);
         self::assertSame(3376, $rankings['bosses'][0]['playerRank']);
         self::assertSame(11944.14, $rankings['bosses'][0]['dps']);
+        self::assertEqualsWithDelta(62.214, $rankings['bosses'][0]['score'], 0.000001);
+        self::assertEqualsWithDelta(44.0494, $rankings['bosses'][0]['dpsScore'], 0.000001);
+        self::assertEqualsWithDelta(24.6988, $rankings['bosses'][0]['playerRankScore'], 0.000001);
+        self::assertEqualsWithDelta(62.214, $rankings['bosses'][0]['raidRankScore'], 0.000001);
         self::assertSame(102.938, $rankings['bosses'][0]['fastestKillSeconds']);
     }
 

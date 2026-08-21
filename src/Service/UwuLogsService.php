@@ -92,7 +92,10 @@ class UwuLogsService
                 'totalPlayers' => $this->integerOrNull($boss['spec_total_players'] ?? null),
                 'raidRank' => $this->integerOrNull($boss['rank_raids'] ?? null),
                 'totalRaids' => $this->integerOrNull($boss['spec_total_raids'] ?? null),
-                'points' => $this->numberOrNull($boss['points'] ?? null),
+                'score' => $this->scoreOrNull($boss['points'] ?? null),
+                'dpsScore' => $this->scoreOrNull($boss['points_dps'] ?? null),
+                'playerRankScore' => $this->scoreOrNull($boss['points_rank_players'] ?? null),
+                'raidRankScore' => $this->scoreOrNull($boss['points_rank_raids'] ?? null),
                 'rankOneDps' => $this->numberOrNull($boss['spec_r1_dps'] ?? null),
                 'fastestKillSeconds' => $this->numberOrNull($boss['fastest_kill_duration'] ?? null),
                 'reportId' => isset($boss['report_id']) && is_string($boss['report_id']) ? $boss['report_id'] : null,
@@ -104,7 +107,7 @@ class UwuLogsService
             'name' => (string) $data['name'],
             'server' => (string) $data['server'],
             'spec' => $spec,
-            'overallPoints' => (float) ($data['overall_points'] ?? 0),
+            'overallPoints' => $this->scoreOrNull($data['overall_points'] ?? null) ?? 0.0,
             'overallRank' => (int) ($data['overall_rank'] ?? 0),
             'bosses' => $bosses,
         ];
@@ -118,5 +121,15 @@ class UwuLogsService
     private function integerOrNull(mixed $value): ?int
     {
         return is_int($value) ? $value : (is_float($value) ? (int) $value : null);
+    }
+
+    private function scoreOrNull(mixed $value): ?float
+    {
+        $number = $this->numberOrNull($value);
+        if ($number === null) {
+            return null;
+        }
+
+        return max(0.0, min(100.0, $number / 100));
     }
 }
