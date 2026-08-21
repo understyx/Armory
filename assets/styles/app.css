@@ -1111,6 +1111,138 @@ body {
     font-size: 0.95rem;
 }
 
+/* Uwu-logs rankings */
+.section-subtitle {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    font-size: 0.86rem;
+}
+
+.uwu-logs-header {
+    gap: 20px;
+}
+
+.uwu-logs-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.uwu-spec-select,
+.btn-uwu-logs {
+    min-height: 42px;
+    border: 1px solid var(--border-accent);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.uwu-spec-select {
+    min-width: 150px;
+    padding: 8px 34px 8px 12px;
+    background: var(--bg-slot);
+    cursor: pointer;
+}
+
+.btn-uwu-logs {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%);
+    border-color: rgba(167, 139, 250, 0.75);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.btn-uwu-logs:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px rgba(124, 58, 237, 0.35);
+}
+
+.btn-uwu-logs:disabled,
+.uwu-spec-select:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.uwu-logs-status {
+    padding: 14px 16px;
+    border: 1px dashed var(--border-accent);
+    border-radius: 8px;
+    background: rgba(26, 28, 40, 0.55);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.uwu-logs-status.is-loading {
+    color: var(--accent-blue);
+    border-color: rgba(74, 158, 255, 0.45);
+}
+
+.uwu-logs-status.is-success {
+    color: var(--accent-green);
+    border-color: rgba(46, 204, 113, 0.4);
+}
+
+.uwu-logs-status.is-error {
+    color: var(--accent-red);
+    border-color: rgba(231, 76, 60, 0.45);
+}
+
+#uwu-logs-results {
+    margin-top: 18px;
+    animation: fadeIn 0.25s ease-in-out;
+}
+
+.uwu-overall-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.uwu-overall-card {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    padding: 14px 16px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-slot);
+}
+
+.uwu-overall-label {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.uwu-overall-value {
+    color: #c4b5fd;
+    font-size: 1.45rem;
+    line-height: 1.25;
+}
+
+.uwu-spec-value {
+    overflow: hidden;
+    font-size: 1.05rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.uwu-rankings-table {
+    min-width: 780px;
+}
+
+.uwu-encounter-name {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
@@ -1808,6 +1940,8 @@ body {
 .btn-expand-matches:focus-visible,
 .btn-details:focus-visible,
 .btn-refresh:focus-visible,
+.btn-uwu-logs:focus-visible,
+.uwu-spec-select:focus-visible,
 .spec-toggle-btn:focus-visible,
 .modal-close:focus-visible {
     outline: 3px solid rgba(74, 158, 255, 0.45);
@@ -1964,6 +2098,21 @@ body {
     .spec-toggle-btn {
         min-height: 42px;
         padding: 7px 8px;
+    }
+
+    .uwu-logs-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        width: 100%;
+    }
+
+    .uwu-spec-select,
+    .btn-uwu-logs {
+        width: 100%;
+    }
+
+    .uwu-overall-grid {
+        grid-template-columns: 1fr;
     }
 
     .status-summary-bar {

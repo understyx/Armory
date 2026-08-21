@@ -86,6 +86,9 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
         $this->assertStringContainsString('Understyx', $response->getContent());
         $this->assertStringContainsString('6000', $response->getContent());
+        $this->assertStringContainsString('Fetch rankings from Uwu-logs', $response->getContent());
+        $this->assertStringContainsString('/characters/Understyx/Icecrown/uwu-logs', $response->getContent());
+        $this->assertStringContainsString('Rankings are fetched only when you request them.', $response->getContent());
         $this->assertStringContainsString('Show all 11 matches', $response->getContent());
         $this->assertSame(1, substr_count($response->getContent(), 'class="match-history-extra" hidden'));
         $this->assertLessThan(

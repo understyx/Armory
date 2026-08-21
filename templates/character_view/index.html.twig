@@ -446,7 +446,85 @@
             {% endfor %}
         </div>
 
-        {# SECTION 3: PROFESSIONS & KILL STATS #}
+        {# SECTION 3: UWU-LOGS RAID RANKINGS (FETCHED ONLY ON REQUEST) #}
+        {% set uwuSpecOptionsByClass = {
+            'Warrior': {'1': 'Arms', '2': 'Fury', '3': 'Protection'},
+            'Paladin': {'1': 'Holy', '2': 'Protection', '3': 'Retribution'},
+            'Hunter': {'1': 'Beast Mastery', '2': 'Marksmanship', '3': 'Survival'},
+            'Rogue': {'1': 'Assassination', '2': 'Combat', '3': 'Subtlety'},
+            'Priest': {'1': 'Discipline', '2': 'Holy', '3': 'Shadow'},
+            'Death Knight': {'1': 'Blood', '2': 'Frost', '3': 'Unholy'},
+            'Shaman': {'1': 'Elemental', '2': 'Enhancement', '3': 'Restoration'},
+            'Mage': {'1': 'Arcane', '2': 'Fire', '3': 'Frost'},
+            'Warlock': {'1': 'Affliction', '2': 'Demonology', '3': 'Destruction'},
+            'Druid': {'1': 'Balance', '2': 'Feral Combat', '3': 'Restoration'}
+        } %}
+        {% set uwuSpecOptions = uwuSpecOptionsByClass[characterDetails.class]|default({'1': 'Specialization 1', '2': 'Specialization 2', '3': 'Specialization 3'}) %}
+        {% set activeSpecName = parsedSpecs is not empty ? (parsedSpecs|first).specName|lower : '' %}
+
+        <div class="content-card section-card uwu-logs-section">
+            <div class="section-header uwu-logs-header">
+                <div>
+                    <h2>📊 Uwu-logs Raid Rankings</h2>
+                    <p class="section-subtitle">Rankings are fetched only when you request them.</p>
+                </div>
+                <div class="uwu-logs-actions">
+                    <label for="uwu-logs-spec" class="visually-hidden">Uwu-logs specialization</label>
+                    <select id="uwu-logs-spec" class="uwu-spec-select">
+                        {% for specId, specName in uwuSpecOptions %}
+                            <option value="{{ specId }}"{% if specName|lower == activeSpecName %} selected{% endif %}>{{ specName }}</option>
+                        {% endfor %}
+                    </select>
+                    <button
+                        type="button"
+                        class="btn-uwu-logs"
+                        data-url="{{ path('app_character_uwu_logs', {'characterName': characterName, 'realmName': realmName}) }}"
+                        onclick="fetchUwuLogs(this)"
+                    >
+                        Fetch rankings from Uwu-logs
+                    </button>
+                </div>
+            </div>
+
+            <div id="uwu-logs-status" class="uwu-logs-status" role="status" aria-live="polite">
+                Choose a specialization, then fetch rankings to see Uwu-logs data.
+            </div>
+
+            <div id="uwu-logs-results" hidden>
+                <div class="uwu-overall-grid">
+                    <div class="uwu-overall-card">
+                        <span class="uwu-overall-label">Overall rank</span>
+                        <strong id="uwu-overall-rank" class="uwu-overall-value">—</strong>
+                    </div>
+                    <div class="uwu-overall-card">
+                        <span class="uwu-overall-label">Overall points</span>
+                        <strong id="uwu-overall-points" class="uwu-overall-value">—</strong>
+                    </div>
+                    <div class="uwu-overall-card">
+                        <span class="uwu-overall-label">Specialization</span>
+                        <strong id="uwu-selected-spec" class="uwu-overall-value uwu-spec-value">—</strong>
+                    </div>
+                </div>
+
+                <div class="table-scroll">
+                    <table class="data-table uwu-rankings-table">
+                        <thead>
+                            <tr>
+                                <th>Encounter</th>
+                                <th>DPS</th>
+                                <th>Player rank</th>
+                                <th>Raid rank</th>
+                                <th>Points</th>
+                                <th>Fastest kill</th>
+                            </tr>
+                        </thead>
+                        <tbody id="uwu-rankings-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {# SECTION 4: PROFESSIONS & KILL STATS #}
         <div class="two-col-grid">
             <div class="content-card section-card">
                 <div class="section-header">
@@ -504,7 +582,7 @@
             </div>
         </div>
 
-        {# SECTION 4: PVP & ARENA TEAMS #}
+        {# SECTION 5: PVP & ARENA TEAMS #}
         <div class="content-card section-card">
             <div class="section-header">
                 <h2>⚔️ Player vs Player & Arena Teams</h2>
@@ -570,7 +648,7 @@
             </div>
         </div>
 
-        {# SECTION 5: MATCH HISTORY #}
+        {# SECTION 6: MATCH HISTORY #}
         <div class="content-card section-card">
             <div class="section-header">
                 <h2>📜 Match History</h2>
@@ -691,6 +769,106 @@
             button.textContent = isExpanded
                 ? `Show all ${button.dataset.total} matches`
                 : 'Show latest 10 matches';
+        }
+
+        async function fetchUwuLogs(button) {
+            const status = document.getElementById('uwu-logs-status');
+            const results = document.getElementById('uwu-logs-results');
+            const specSelect = document.getElementById('uwu-logs-spec');
+            const originalLabel = button.textContent.trim();
+
+            button.disabled = true;
+            specSelect.disabled = true;
+            button.textContent = 'Fetching rankings…';
+            status.className = 'uwu-logs-status is-loading';
+            status.textContent = 'Fetching the latest rankings from Uwu-logs…';
+            results.hidden = true;
+
+            try {
+                const response = await fetch(button.dataset.url, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({spec: specSelect.value})
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Could not fetch Uwu-logs rankings.');
+                }
+
+                renderUwuLogsRankings(data, specSelect.options[specSelect.selectedIndex].text);
+                status.className = 'uwu-logs-status is-success';
+                status.textContent = data.bosses.length > 0
+                    ? `Loaded ${data.bosses.length} ranked encounters from Uwu-logs.`
+                    : 'Uwu-logs has no ranked encounters for this specialization.';
+                results.hidden = false;
+            } catch (error) {
+                status.className = 'uwu-logs-status is-error';
+                status.textContent = error.message || 'Could not fetch Uwu-logs rankings.';
+            } finally {
+                button.disabled = false;
+                specSelect.disabled = false;
+                button.textContent = originalLabel;
+            }
+        }
+
+        function renderUwuLogsRankings(data, specName) {
+            document.getElementById('uwu-overall-rank').textContent = data.overallRank > 0
+                ? `#${Number(data.overallRank).toLocaleString()}`
+                : '—';
+            document.getElementById('uwu-overall-points').textContent = Number(data.overallPoints || 0).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            document.getElementById('uwu-selected-spec').textContent = specName;
+
+            const rankingsBody = document.getElementById('uwu-rankings-body');
+            rankingsBody.replaceChildren();
+
+            data.bosses.forEach(boss => {
+                const row = document.createElement('tr');
+                appendUwuCell(row, boss.name, 'Encounter', true);
+                appendUwuCell(row, formatUwuNumber(boss.dps, 2), 'DPS');
+                appendUwuCell(row, formatUwuRank(boss.playerRank, boss.totalPlayers), 'Player rank');
+                appendUwuCell(row, formatUwuRank(boss.raidRank, boss.totalRaids), 'Raid rank');
+                appendUwuCell(row, formatUwuNumber(boss.points, 2), 'Points');
+                appendUwuCell(row, formatUwuDuration(boss.fastestKillSeconds), 'Fastest kill');
+                rankingsBody.appendChild(row);
+            });
+        }
+
+        function appendUwuCell(row, value, label, emphasize = false) {
+            const cell = document.createElement('td');
+            cell.dataset.label = label;
+            cell.textContent = value ?? '—';
+            if (emphasize) cell.classList.add('uwu-encounter-name');
+            row.appendChild(cell);
+        }
+
+        function formatUwuNumber(value, fractionDigits = 0) {
+            if (value === null || value === undefined) return '—';
+            return Number(value).toLocaleString(undefined, {
+                minimumFractionDigits: fractionDigits,
+                maximumFractionDigits: fractionDigits
+            });
+        }
+
+        function formatUwuRank(rank, total) {
+            if (!rank) return '—';
+            return total
+                ? `#${Number(rank).toLocaleString()} / ${Number(total).toLocaleString()}`
+                : `#${Number(rank).toLocaleString()}`;
+        }
+
+        function formatUwuDuration(seconds) {
+            if (seconds === null || seconds === undefined) return '—';
+            const totalSeconds = Number(seconds);
+            const minutes = Math.floor(totalSeconds / 60);
+            const remaining = (totalSeconds % 60).toFixed(1).padStart(4, '0');
+            return `${minutes}:${remaining}`;
         }
 
         function openMatchDetails(gameId, charName, realmName) {
