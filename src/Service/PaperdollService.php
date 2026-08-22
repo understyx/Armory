@@ -19,10 +19,18 @@ class PaperdollService
     public function buildPaperdollSlots(array $equippedItems, ?string $characterClass = null): array
     {
         $canDualWieldTwoHandedWeapons = strcasecmp($characterClass ?? '', 'Warrior') === 0;
-        $itemIds = array_values(array_filter(array_column($equippedItems, 'id')));
+        $itemIds = array_values(array_filter(
+            array_map(static fn (mixed $id): int => (int) $id, array_column($equippedItems, 'id')),
+            static fn (int $id): bool => $id > 0
+        ));
+        $transmogIds = array_values(array_filter(
+            array_map(static fn (mixed $id): int => (int) $id, array_column($equippedItems, 'transmog')),
+            static fn (int $id): bool => $id > 0
+        ));
 
-        // Fetch equipment item details from DB (gem IDs are spell/enchantment IDs, not item IDs)
-        $dbItems = !empty($itemIds) ? $this->itemDatabaseService->getItemsBulk($itemIds) : [];
+        // Fetch equipment and transmog item details together (gem IDs are spell/enchantment IDs, not item IDs).
+        $lookupIds = array_values(array_unique([...$itemIds, ...$transmogIds]));
+        $dbItems = $lookupIds !== [] ? $this->itemDatabaseService->getItemsBulk($lookupIds) : [];
 
         $enrichedItems = [];
         foreach ($equippedItems as $index => $item) {
@@ -44,6 +52,9 @@ class PaperdollService
                     : null;
             }
 
+            $transmogId = (int) ($item['transmog'] ?? 0);
+            $transmogData = $transmogId > 0 ? ($dbItems[$transmogId] ?? []) : [];
+
             $enrichedItems[] = [
                 'id' => $id,
                 'tooltip_key' => $id !== null ? $id . '-' . $index : null,
@@ -59,7 +70,12 @@ class PaperdollService
                 'enchant_name' => $enchantName,
                 'gems' => $rawGems,
                 'gem_details' => $gemDetails,
-                'transmog' => $item['transmog'] ?? null,
+                'transmog' => $transmogId > 0 ? $transmogId : null,
+                'transmog_item' => $transmogId > 0 ? [
+                    'id' => $transmogId,
+                    'name' => $transmogData['name'] ?? "Item #{$transmogId}",
+                    'quality' => (int) ($transmogData['quality'] ?? 4),
+                ] : null,
                 'tooltip' => $item['tooltip'] ?? ($dbData['tooltip'] ?? null),
                 'external_effects' => $item['external_effects'] ?? ($dbData['external_effects'] ?? []),
                 'item_set_details' => $item['item_set_details'] ?? ($dbData['item_set_details'] ?? null),
@@ -246,10 +262,19 @@ class PaperdollService
         }
         unset($slotData);
 
+        $transmogItems = [];
+        foreach ($enrichedItems as $enrichedItem) {
+            $transmogItem = $enrichedItem['transmog_item'] ?? null;
+            if (is_array($transmogItem) && (int) ($transmogItem['id'] ?? 0) > 0) {
+                $transmogItems[(int) $transmogItem['id']] = $transmogItem;
+            }
+        }
+
         return [
             'slots' => $slots,
             'enrichedItems' => $enrichedItems,
             'tooltips' => $itemTooltips,
+            'transmogItems' => array_values($transmogItems),
         ];
     }
 

@@ -13,7 +13,8 @@ class TalentTreeServiceTest extends TestCase
 
         $this->assertTrue($service->isWotlkServer('Icecrown'));
         $this->assertTrue($service->isWotlkServer('lordaeron'));
-        $this->assertTrue($service->isWotlkServer('Frostmourne'));
+        $this->assertTrue($service->isWotlkServer('Onyxia'));
+        $this->assertFalse($service->isWotlkServer('Frostmourne'));
         $this->assertTrue($service->isWotlkServer('Blackrock'));
     }
 

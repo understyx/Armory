@@ -59,6 +59,9 @@ if (dataElement) {
 
         appendLine(content, item.name, `item-tooltip-name q-${item.quality}`);
         if (item.heroic) appendLine(content, 'Heroic', 'item-tooltip-positive');
+        if (Number(item.transmog_item?.id) > 0) {
+            appendLine(content, `Transmogrified to: ${item.transmog_item.name}`, 'item-tooltip-transmog');
+        }
         appendLine(content, item.binding);
         if (item.unique) appendLine(content, 'Unique');
 

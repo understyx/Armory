@@ -21,6 +21,8 @@ class HomeControllerTest extends WebTestCase
         self::assertSelectorTextContains('h1', 'Armory');
         self::assertSelectorExists('form[action="/characters"]');
         self::assertSelectorNotExists('a[href="/login"]');
+        self::assertSelectorExists('option[value="Onyxia"]');
+        self::assertSelectorNotExists('option[value="Frostmourne"]');
     }
 
     public function testSearchRedirectsToPublicCharacterPage(): void

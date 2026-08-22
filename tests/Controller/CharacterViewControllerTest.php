@@ -29,7 +29,9 @@ class CharacterViewControllerTest extends KernelTestCase
         $snapshot->setAvgIlvl(264.5);
         $snapshot->setProfessions(['Jewelcrafting (450)']);
         $snapshot->setSpecializations(['Unholy']);
-        $snapshot->setEquippedItems([]);
+        $snapshot->setEquippedItems([
+            ['id' => 50001, 'transmog' => 60001],
+        ]);
         $snapshot->setCharacterModel([
             'race' => 1,
             'gender' => 0,
@@ -74,7 +76,18 @@ class CharacterViewControllerTest extends KernelTestCase
         $logger = $this->createMock(LoggerInterface::class);
         $talentTreeService = new \App\Service\TalentTreeService();
         $itemDbService = $this->createMock(\App\Service\ItemDatabaseService::class);
-        $itemDbService->method('getItemsBulk')->willReturn([]);
+        $itemDbService->method('getItemsBulk')->willReturn([
+            50001 => [
+                'name' => 'Equipped Helm',
+                'quality' => 4,
+                'type' => \App\Enum\ItemTypes::HEAD->value,
+            ],
+            60001 => [
+                'name' => 'Crown of Purple Testing',
+                'quality' => 4,
+                'type' => \App\Enum\ItemTypes::HEAD->value,
+            ],
+        ]);
         $paperdollService = new \App\Service\PaperdollService($itemDbService);
 
         $container = self::getContainer();
@@ -100,6 +113,11 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringContainsString('class="character-search character-page-search"', $response->getContent());
         $this->assertStringContainsString('action="/characters"', $response->getContent());
         $this->assertStringContainsString('<option value="Icecrown" selected>', $response->getContent());
+        $this->assertStringContainsString('<option value="Onyxia">', $response->getContent());
+        $this->assertStringNotContainsString('<option value="Frostmourne">', $response->getContent());
+        $this->assertStringContainsString('Get transmog', $response->getContent());
+        $this->assertStringContainsString('https://wotlk.cavernoftime.com/item=60001', $response->getContent());
+        $this->assertStringContainsString('Crown of Purple Testing', $response->getContent());
         $this->assertStringContainsString('Fetch rankings from Uwu-logs', $response->getContent());
         $this->assertStringContainsString('/characters/Understyx/Icecrown/uwu-logs', $response->getContent());
         $this->assertStringContainsString('Rankings are fetched only when you request them.', $response->getContent());
@@ -108,7 +126,7 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringContainsString('Show all 11 matches', $response->getContent());
         $this->assertSame(1, substr_count($response->getContent(), 'class="match-history-extra" hidden'));
         $this->assertLessThan(
-            strpos($response->getContent(), 'Player vs Player & Arena Teams'),
+            strpos($response->getContent(), 'Specialization & Talent Trees'),
             strpos($response->getContent(), 'Professions')
         );
     }

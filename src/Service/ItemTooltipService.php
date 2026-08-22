@@ -193,6 +193,7 @@ class ItemTooltipService
             'description' => (string) ($raw['description'] ?? ''),
             'sell_price' => $this->moneyParts((int) ($raw['sell_price'] ?? 0)),
             'item_set' => $itemSet,
+            'transmog_item' => $item['transmog_item'] ?? null,
         ];
     }
 

@@ -34,7 +34,7 @@
 
             <label class="visually-hidden" for="character-page-realm">Realm</label>
             <select id="character-page-realm" class="character-search-realm" name="realm" aria-label="Realm">
-                {% for realm in ['Icecrown', 'Lordaeron', 'Frostmourne', 'Blackrock'] %}
+                {% for realm in ['Icecrown', 'Lordaeron', 'Onyxia', 'Blackrock'] %}
                     <option value="{{ realm }}"{% if realm == realmName %} selected{% endif %}>{{ realm }}</option>
                 {% endfor %}
             </select>
@@ -116,6 +116,21 @@
         <div class="content-card section-card">
             <div class="section-header gear-section-header">
                 <h2>🛡️ Character Items & Gear</h2>
+                {% if transmogItems is not empty %}
+                    <details class="transmog-menu">
+                        <summary class="btn-transmog">Get transmog</summary>
+                        <div class="transmog-list">
+                            {% for transmog in transmogItems %}
+                                <a
+                                    href="https://wotlk.cavernoftime.com/item={{ transmog.id }}"
+                                    class="transmog-list-item q-{{ transmog.quality|default(4) }}"
+                                    target="_blank"
+                                    rel="noopener"
+                                >{{ transmog.name }}</a>
+                            {% endfor %}
+                        </div>
+                    </details>
+                {% endif %}
             </div>
 
             <div class="paperdoll-container">
@@ -351,7 +366,26 @@
             </div>
         </div>
 
-        {# SECTION 2: SPECIALIZATION & TALENT TREES #}
+        {# SECTION 2: PROFESSIONS #}
+        <div class="content-card section-card professions-section">
+            <div class="section-header">
+                <h2>📜 Professions</h2>
+            </div>
+            {% if professions is not empty %}
+                <div class="professions-grid">
+                    {% for profession in professions %}
+                        <div class="profession-card">
+                            <span class="prof-icon">🛠️</span>
+                            <span class="prof-name">{{ profession }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p style="color: var(--text-muted);">No professions learned.</p>
+            {% endif %}
+        </div>
+
+        {# SECTION 3: SPECIALIZATION & TALENT TREES #}
         <div class="content-card section-card">
             <div class="section-header spec-section-header">
                 <h2>⚔️ Specialization & Talent Trees</h2>
@@ -486,7 +520,7 @@
             {% endfor %}
         </div>
 
-        {# SECTION 3: UWU-LOGS RAID RANKINGS (FETCHED ONLY ON REQUEST) #}
+        {# SECTION 4: UWU-LOGS RAID RANKINGS (FETCHED ONLY ON REQUEST) #}
         {% set uwuSpecOptionsByClass = {
             'Warrior': {'1': 'Arms', '2': 'Fury', '3': 'Protection'},
             'Paladin': {'1': 'Holy', '2': 'Protection', '3': 'Retribution'},
@@ -564,65 +598,45 @@
             </div>
         </div>
 
-        {# SECTION 4: PROFESSIONS & KILL STATS #}
-        <div class="two-col-grid">
-            <div class="content-card section-card">
-                <div class="section-header">
-                    <h2>📜 Professions</h2>
-                </div>
-                {% if professions is not empty %}
-                    <div class="professions-grid">
-                        {% for profession in professions %}
-                            <div class="profession-card">
-                                <span class="prof-icon">🛠️</span>
-                                <span class="prof-name">{{ profession }}</span>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p style="color: var(--text-muted);">No professions learned.</p>
-                {% endif %}
+        {# SECTION 5: KILL STATS #}
+        <div class="content-card section-card">
+            <div class="section-header">
+                <h2>⚔️ Kill Statistics</h2>
             </div>
-
-            <div class="content-card section-card">
-                <div class="section-header">
-                    <h2>⚔️ Kill Statistics</h2>
+            {% if killStats is not empty %}
+                <div class="table-scroll">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Category / Encounter</th>
+                                <th>Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if killStats.stats is defined %}
+                                {% for description, value in killStats.stats %}
+                                    <tr>
+                                        <td>{{ description }}</td>
+                                        <td><strong style="color: var(--accent-gold);">{{ value }}</strong></td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                {% for description, value in killStats %}
+                                    <tr>
+                                        <td>{{ description }}</td>
+                                        <td><strong style="color: var(--accent-gold);">{{ value }}</strong></td>
+                                    </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
                 </div>
-                {% if killStats is not empty %}
-                    <div class="table-scroll">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Category / Encounter</th>
-                                    <th>Count</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if killStats.stats is defined %}
-                                    {% for description, value in killStats.stats %}
-                                        <tr>
-                                            <td>{{ description }}</td>
-                                            <td><strong style="color: var(--accent-gold);">{{ value }}</strong></td>
-                                        </tr>
-                                    {% endfor %}
-                                {% else %}
-                                    {% for description, value in killStats %}
-                                        <tr>
-                                            <td>{{ description }}</td>
-                                            <td><strong style="color: var(--accent-gold);">{{ value }}</strong></td>
-                                        </tr>
-                                    {% endfor %}
-                                {% endif %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <p style="color: var(--text-muted);">No kill statistics available.</p>
-                {% endif %}
-            </div>
+            {% else %}
+                <p style="color: var(--text-muted);">No kill statistics available.</p>
+            {% endif %}
         </div>
 
-        {# SECTION 5: PVP & ARENA TEAMS #}
+        {# SECTION 6: PVP & ARENA TEAMS #}
         <div class="content-card section-card">
             <div class="section-header">
                 <h2>⚔️ Player vs Player & Arena Teams</h2>
@@ -688,7 +702,7 @@
             </div>
         </div>
 
-        {# SECTION 6: MATCH HISTORY #}
+        {# SECTION 7: MATCH HISTORY #}
         <div class="content-card section-card">
             <div class="section-header">
                 <h2>📜 Match History</h2>

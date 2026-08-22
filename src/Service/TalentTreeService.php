@@ -20,7 +20,7 @@ class TalentTreeService
     private const WOTLK_REALMS = [
         'icecrown',
         'lordaeron',
-        'frostmourne',
+        'onyxia',
         'blackrock',
     ];
 

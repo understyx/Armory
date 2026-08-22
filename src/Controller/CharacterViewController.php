@@ -242,6 +242,7 @@ class CharacterViewController extends AbstractController
             'equippedItems' => $paperdollData['enrichedItems'],
             'paperdollSlots' => $paperdollData['slots'],
             'itemTooltips' => $paperdollData['tooltips'],
+            'transmogItems' => $paperdollData['transmogItems'],
             'characterModel' => $snapshot->getCharacterModel(),
             'gearScore' => $snapshot->getGearScore(),
             'avgIlvl' => $snapshot->getAvgIlvl(),

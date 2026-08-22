@@ -11,7 +11,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 class HomeController extends AbstractController
 {
-    private const REALMS = ['Icecrown', 'Lordaeron', 'Frostmourne', 'Blackrock'];
+    private const REALMS = ['Icecrown', 'Lordaeron', 'Onyxia', 'Blackrock'];
 
     #[Route('/', name: 'app_homepage', methods: ['GET'])]
     #[Route('/characters', name: 'app_characters', methods: ['GET'])]

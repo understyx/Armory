@@ -96,6 +96,51 @@ class PaperdollServiceTest extends TestCase
         $this->assertSame('Frostbr& 1', $result['tooltips']['50002-1']['enchant']);
     }
 
+    public function testResolvesTransmogItemsForTooltipAndPaperdollList(): void
+    {
+        $mockItemDb = $this->createMock(ItemDatabaseService::class);
+        $mockItemDb->expects($this->once())
+            ->method('getItemsBulk')
+            ->with([50001, 60001])
+            ->willReturn([
+                50001 => [
+                    'name' => 'Equipped Helm',
+                    'quality' => 4,
+                    'type' => ItemTypes::HEAD->value,
+                    'tooltip' => [
+                        'flags' => 0,
+                        'bonding' => 1,
+                        'max_count' => 0,
+                        'stats' => [],
+                        'damage' => [],
+                        'sockets' => [],
+                        'socket_bonus_id' => 0,
+                        'sell_price' => 0,
+                        'description' => '',
+                        'item_set_id' => 0,
+                    ],
+                ],
+                60001 => [
+                    'name' => 'Crown of Purple Testing',
+                    'quality' => 4,
+                    'type' => ItemTypes::HEAD->value,
+                ],
+            ]);
+
+        $service = new PaperdollService($mockItemDb, new ItemTooltipService());
+        $result = $service->buildPaperdollSlots([
+            ['id' => 50001, 'transmog' => 60001],
+        ]);
+
+        $expectedTransmog = [
+            'id' => 60001,
+            'name' => 'Crown of Purple Testing',
+            'quality' => 4,
+        ];
+        $this->assertSame($expectedTransmog, $result['tooltips']['50001-0']['transmog_item']);
+        $this->assertSame([$expectedTransmog], $result['transmogItems']);
+    }
+
     public function testBuildPaperdollSlotsAssignsItemsByTypesAndFallbacks(): void
     {
         $mockItemDb = $this->createMock(ItemDatabaseService::class);
