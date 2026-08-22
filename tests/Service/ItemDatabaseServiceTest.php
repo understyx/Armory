@@ -3,9 +3,13 @@
 namespace App\Tests\Service;
 
 use App\Entity\WowItem;
+use App\Message\EnrichItemTooltipMessage;
+use App\Repository\TooltipEnrichmentRepository;
 use App\Repository\WowItemRepository;
 use App\Service\ItemDatabaseService;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 class ItemDatabaseServiceTest extends TestCase
 {
@@ -63,5 +67,39 @@ class ItemDatabaseServiceTest extends TestCase
 
         $service = new ItemDatabaseService($repo);
         $this->assertNull($service->getItem(999999));
+    }
+
+    public function testMissingSpecialEffectIsQueuedWithoutBlockingItemLoad(): void
+    {
+        $item = new WowItem();
+        $item->setItemId(50363);
+        $item->setName("Deathbringer's Will");
+        $item->setIcon('inv_jewelry_trinket_04');
+        $item->setTooltipData([
+            'spells' => [['id' => 71562, 'trigger' => 1]],
+            'item_set_id' => 0,
+        ]);
+
+        $items = $this->createMock(WowItemRepository::class);
+        $items->method('findByItemId')->willReturn($item);
+
+        $enrichment = $this->createMock(TooltipEnrichmentRepository::class);
+        $enrichment->method('findForItems')->willReturn([
+            50363 => ['effects' => [], 'set' => null, 'checked' => false],
+        ]);
+        $enrichment->method('shouldQueue')->with(50363)->willReturn(true);
+        $enrichment->expects(self::once())->method('markQueued')->with(50363);
+
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->expects(self::once())
+            ->method('dispatch')
+            ->with(self::callback(static fn (object $message): bool => $message instanceof EnrichItemTooltipMessage
+                && $message->itemId === 50363))
+            ->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
+
+        $result = (new ItemDatabaseService($items, null, $enrichment, $bus))->getItem(50363);
+
+        self::assertNotNull($result);
+        self::assertSame([], $result['external_effects']);
     }
 }

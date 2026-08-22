@@ -48,6 +48,10 @@ class ImportTrinityItemsCommandTest extends TestCase
         $row[50] = '954';
         $row[51] = '1592';
         $row[63] = '3700';
+        $row[66] = '71903';
+        $row[67] = '1';
+        $row[73] = '-1';
+        $row[74] = '1';
         $row[101] = '1';
         $row[102] = "''";
         $row[114] = '145';
@@ -97,5 +101,12 @@ class ImportTrinityItemsCommandTest extends TestCase
         $this->assertSame(3, count($tooltip['sockets']));
         $this->assertSame(3312, $tooltip['socket_bonus_id']);
         $this->assertSame(145, $tooltip['max_durability']);
+        $this->assertSame([[
+            'id' => 71903,
+            'trigger' => 1,
+            'charges' => 0,
+            'ppm' => 0,
+            'cooldown' => 0,
+        ]], $tooltip['spells']);
     }
 }

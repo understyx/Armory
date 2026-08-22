@@ -104,7 +104,36 @@ if (dataElement) {
 
         if (item.required_level > 0) appendLine(content, `Requires Level ${item.required_level}`);
         if (item.item_level > 0) appendLine(content, `Item Level ${item.item_level}`);
-        (item.equip_effects || []).forEach((effect) => appendLine(content, `Equip: ${effect}`, 'item-tooltip-positive'));
+
+        if (Array.isArray(item.effects)) {
+            const effectPrefixes = {equip: 'Equip', use: 'Use', chance_on_hit: 'Chance on hit'};
+            item.effects.forEach((effect) => appendLine(
+                content,
+                `${effectPrefixes[effect.type] || 'Equip'}: ${effect.text}`,
+                'item-tooltip-positive'
+            ));
+        } else {
+            (item.equip_effects || []).forEach((effect) => appendLine(content, `Equip: ${effect}`, 'item-tooltip-positive'));
+        }
+
+        if (item.item_set?.name) {
+            const memberCount = item.item_set.members?.length || 0;
+            appendLine(
+                content,
+                `${item.item_set.name} (${item.item_set.equipped_count}/${memberCount})`,
+                'item-tooltip-set-name'
+            );
+            (item.item_set.members || []).forEach((member) => appendLine(
+                content,
+                member.name,
+                `item-tooltip-set-member ${member.equipped ? 'is-equipped' : ''}`
+            ));
+            (item.item_set.bonuses || []).forEach((bonus) => appendLine(
+                content,
+                `(${bonus.required_count}) Set: ${bonus.description}`,
+                bonus.active ? 'item-tooltip-positive item-tooltip-set-bonus' : 'item-tooltip-inactive item-tooltip-set-bonus'
+            ));
+        }
         appendLine(content, item.description, 'item-tooltip-flavor');
 
         if (item.sell_price) {
@@ -130,19 +159,42 @@ if (dataElement) {
 
     const positionTooltip = (trigger, tooltip) => {
         const margin = 10;
-        const triggerRect = trigger.getBoundingClientRect();
+        const itemContainer = trigger.closest('.paperdoll-row, .paperdoll-bottom-card') || trigger;
+        const anchorRect = itemContainer.getBoundingClientRect();
         const tooltipRect = tooltip.getBoundingClientRect();
         const icon = tooltip.querySelector('.item-tooltip-icon');
         const iconOffset = icon && getComputedStyle(icon).display !== 'none' ? 55 : 0;
         const minimumLeft = margin + iconOffset;
-        let left = triggerRect.right + margin;
-        let top = triggerRect.top;
+        const rightPlacement = anchorRect.right + margin + iconOffset;
+        const leftPlacement = anchorRect.left - tooltipRect.width - margin;
+        const fitsRight = rightPlacement + tooltipRect.width <= window.innerWidth - margin;
+        const fitsLeft = leftPlacement - iconOffset >= margin;
+        const prefersLeft = itemContainer.classList.contains('right-row');
+        let left;
+        let top = anchorRect.top;
+        let placedVertically = false;
 
-        if (left + tooltipRect.width > window.innerWidth - margin) {
-            left = triggerRect.left - tooltipRect.width - margin;
+        if (prefersLeft && fitsLeft) {
+            left = leftPlacement;
+        } else if (!prefersLeft && fitsRight) {
+            left = rightPlacement;
+        } else if (fitsRight) {
+            left = rightPlacement;
+        } else if (fitsLeft) {
+            left = leftPlacement;
+        } else {
+            placedVertically = true;
+            left = Math.max(minimumLeft, Math.min(
+                anchorRect.left + (anchorRect.width - tooltipRect.width) / 2,
+                window.innerWidth - tooltipRect.width - margin
+            ));
         }
-        if (left < minimumLeft) {
-            left = Math.max(minimumLeft, Math.min(triggerRect.left, window.innerWidth - tooltipRect.width - margin));
+
+        if (placedVertically) {
+            const below = anchorRect.bottom + margin;
+            top = below + tooltipRect.height <= window.innerHeight - margin
+                ? below
+                : anchorRect.top - tooltipRect.height - margin;
         }
         top = Math.max(margin, Math.min(top, window.innerHeight - tooltipRect.height - margin));
 

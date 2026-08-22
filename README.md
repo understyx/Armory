@@ -40,7 +40,30 @@ php bin/console app:import-trinity-items /path/to/TDB_full_world_335.sql \
 
 The importer streams `item_template` from the full dump, uses TrinityCore for authoritative item fields, and uses `data/items.sql` only as the precomputed GearScore overlay. Existing icons and GearScores without a matching overlay row are preserved. The older `app:import-items` command remains available as a lightweight fallback.
 
-The raw TrinityCore dump is intentionally ignored by Git. Client DBC lookups are still required for exact meta-gem conditions and item-set bonus text; base item tooltips and ordinary socket matching work without them.
+The raw TrinityCore dump is intentionally ignored by Git. Client DBC lookups are still required for exact meta-gem conditions; base item tooltips and ordinary socket matching work without them.
+
+Special item effects and item-set text are enriched into local cache tables. Cavern of Time is queried first because it reflects original 3.3.5 data; Wowhead is a fallback only, since WotLK Classic changed some item and trinket effects. The character page never waits for either provider. Missing data is queued for the Messenger worker and appears on a later view.
+
+To prefill the cache after importing items, run:
+
+```bash
+php bin/console app:enrich-item-tooltips
+```
+
+To enrich one item or refresh cached text:
+
+```bash
+php bin/console app:enrich-item-tooltips 50363
+php bin/console app:enrich-item-tooltips 50363 --force
+```
+
+Development environments must have an async worker running for lazy enrichment:
+
+```bash
+php bin/console messenger:consume async --time-limit=3600
+```
+
+Production installs made with `bin/install-server` configure this worker as the `armorystuff-messenger` systemd service. Raw provider responses and parser versions are retained so cached pages can be reparsed if an external site changes its markup. External providers only supply display text; TrinityCore remains authoritative for item, spell-trigger, and set IDs. Custom items can be populated directly in the same cache tables when external databases do not know them.
 
 ## Production deployment
 

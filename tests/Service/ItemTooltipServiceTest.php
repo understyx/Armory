@@ -21,7 +21,7 @@ class ItemTooltipServiceTest extends TestCase
             'enchant_name' => 'Swordguard Embroidery',
             'gem_details' => [[
                 'name' => 'Inscribed Ametrine',
-                'effect' => '+20 Armor Penetration Rating',
+                'effect' => '+20 Armor Pen Rating',
                 'color_mask' => 2 | 4,
                 'icon_url' => '/gem.jpg',
             ]],
@@ -54,6 +54,7 @@ class ItemTooltipServiceTest extends TestCase
         $this->assertSame(['+102 Agility', '+102 Stamina'], $tooltip['primary_stats']);
         $this->assertContains('Increases attack power by 120.', $tooltip['equip_effects']);
         $this->assertTrue($tooltip['sockets'][0]['matches']);
+        $this->assertSame('+20 Armor Penetration Rating', $tooltip['sockets'][0]['gem']['effect']);
         $this->assertSame('+4 Agility', $tooltip['socket_bonus']['text']);
         $this->assertTrue($tooltip['socket_bonus']['active']);
         $this->assertSame(['gold' => 7, 'silver' => 67, 'copper' => 79], $tooltip['sell_price']);
@@ -86,5 +87,92 @@ class ItemTooltipServiceTest extends TestCase
         $this->assertNotNull($tooltip);
         $this->assertFalse($tooltip['sockets'][0]['matches']);
         $this->assertFalse($tooltip['socket_bonus']['active']);
+    }
+
+    public function testExcessArmoryGemsBecomePrismaticProfessionSockets(): void
+    {
+        $tooltip = (new ItemTooltipService())->build([
+            'id' => 2,
+            'name' => 'Socketed Belt',
+            'quality' => 4,
+            'type' => 6,
+            'class' => 4,
+            'subclass' => 4,
+            'gem_details' => [
+                ['effect' => '+20 Strength', 'color_mask' => 2],
+                ['effect' => '+20 Hit Rating', 'color_mask' => 4],
+                ['effect' => '+20 Armor Pen', 'color_mask' => 2],
+            ],
+            'tooltip' => [
+                'flags' => 0,
+                'bonding' => 0,
+                'max_count' => 0,
+                'stats' => [],
+                'damage' => [],
+                'sockets' => [
+                    ['color' => 2, 'content' => 0],
+                    ['color' => 4, 'content' => 0],
+                ],
+                'socket_bonus_id' => 3312,
+                'sell_price' => 0,
+                'description' => '',
+                'item_set_id' => 0,
+            ],
+        ]);
+
+        $this->assertNotNull($tooltip);
+        $this->assertCount(3, $tooltip['sockets']);
+        $this->assertSame('Prismatic', $tooltip['sockets'][2]['color']);
+        $this->assertTrue($tooltip['sockets'][2]['matches']);
+        $this->assertTrue($tooltip['sockets'][2]['inferred']);
+        $this->assertFalse($tooltip['sockets'][2]['counts_for_bonus']);
+        $this->assertSame('+20 Armor Penetration', $tooltip['sockets'][2]['gem']['effect']);
+        $this->assertTrue($tooltip['socket_bonus']['active']);
+    }
+
+    public function testAddsCachedSpecialEffectsAndSetBonuses(): void
+    {
+        $tooltip = (new ItemTooltipService())->build([
+            'id' => 51159,
+            'name' => 'Sanctified Bloodmage Gloves',
+            'quality' => 4,
+            'external_effects' => [[
+                'spell_id' => 71562,
+                'type' => 'use',
+                'text' => 'Awaken the powers of Northrend.',
+                'source' => 'cavern_of_time',
+            ]],
+            'item_set_details' => [
+                'name' => "Sanctified Bloodmage's Regalia",
+                'members' => [
+                    ['item_id' => 51159, 'name' => 'Sanctified Bloodmage Gloves'],
+                    ['item_id' => 51158, 'name' => 'Sanctified Bloodmage Hood'],
+                ],
+                'bonuses' => [
+                    ['required_count' => 2, 'description' => 'Gain 12% haste.'],
+                    ['required_count' => 4, 'description' => 'Deal 18% additional damage.'],
+                ],
+            ],
+            'tooltip' => [
+                'flags' => 0,
+                'bonding' => 1,
+                'max_count' => 0,
+                'stats' => [],
+                'damage' => [],
+                'sockets' => [],
+                'socket_bonus_id' => 0,
+                'sell_price' => 0,
+                'description' => '',
+                'item_set_id' => 883,
+            ],
+        ], [883 => 2], [51159, 51158]);
+
+        self::assertNotNull($tooltip);
+        self::assertSame('use', $tooltip['effects'][0]['type']);
+        self::assertSame('Awaken the powers of Northrend.', $tooltip['effects'][0]['text']);
+        self::assertSame("Sanctified Bloodmage's Regalia", $tooltip['item_set']['name']);
+        self::assertTrue($tooltip['item_set']['members'][0]['equipped']);
+        self::assertTrue($tooltip['item_set']['bonuses'][0]['active']);
+        self::assertFalse($tooltip['item_set']['bonuses'][1]['active']);
     }
 }

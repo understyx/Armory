@@ -1415,6 +1415,24 @@ body {
     font-style: italic;
 }
 
+.item-tooltip-set-name {
+    color: #ffd100;
+    margin-top: 7px;
+}
+
+.item-tooltip-set-member,
+.item-tooltip-set-bonus {
+    padding-left: 10px;
+}
+
+.item-tooltip-set-member {
+    color: #888;
+}
+
+.item-tooltip-set-member.is-equipped {
+    color: #ffff98;
+}
+
 .item-tooltip-price {
     display: flex;
     align-items: center;

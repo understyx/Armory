@@ -153,7 +153,8 @@ class ImportTrinityItemsCommand extends Command
         for ($index = 0; $index < 5; $index++) {
             $offset = 66 + ($index * 7);
             $spellId = (int) $row[$offset];
-            if ($spellId !== 0) {
+            // Trinity uses -1 in unused spell slots on some items.
+            if ($spellId > 0) {
                 $spells[] = [
                     'id' => $spellId,
                     'trigger' => (int) $row[$offset + 1],

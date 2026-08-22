@@ -61,6 +61,8 @@ class PaperdollService
                 'gem_details' => $gemDetails,
                 'transmog' => $item['transmog'] ?? null,
                 'tooltip' => $item['tooltip'] ?? ($dbData['tooltip'] ?? null),
+                'external_effects' => $item['external_effects'] ?? ($dbData['external_effects'] ?? []),
+                'item_set_details' => $item['item_set_details'] ?? ($dbData['item_set_details'] ?? null),
                 'orig_index' => $index,
             ];
         }
@@ -77,7 +79,11 @@ class PaperdollService
         unset($enrichedItem);
 
         $setCounts = [];
+        $equippedItemIds = [];
         foreach ($enrichedItems as $enrichedItem) {
+            if ((int) ($enrichedItem['id'] ?? 0) > 0) {
+                $equippedItemIds[] = (int) $enrichedItem['id'];
+            }
             $setId = (int) ($enrichedItem['tooltip']['item_set_id'] ?? 0);
             if ($setId > 0) {
                 $setCounts[$setId] = ($setCounts[$setId] ?? 0) + 1;
@@ -87,7 +93,7 @@ class PaperdollService
         $itemTooltips = [];
         if ($this->itemTooltipService !== null) {
             foreach ($enrichedItems as &$enrichedItem) {
-                $tooltip = $this->itemTooltipService->build($enrichedItem, $setCounts);
+                $tooltip = $this->itemTooltipService->build($enrichedItem, $setCounts, $equippedItemIds);
                 if ($tooltip !== null && $enrichedItem['tooltip_key'] !== null) {
                     $enrichedItem['display_tooltip'] = $tooltip;
                     $itemTooltips[$enrichedItem['tooltip_key']] = $tooltip;

@@ -7,6 +7,7 @@ use App\Enum\ItemTypes;
 class ItemTooltipService
 {
     private const HEROIC_TOOLTIP_FLAG = 0x08;
+    private const PRISMATIC_SOCKET_MASK = 2 | 4 | 8;
 
     /** @var array<int, string> */
     private const PRIMARY_STATS = [
@@ -22,9 +23,10 @@ class ItemTooltipService
     /**
      * @param array<string, mixed> $item
      * @param array<int, int> $setCounts
+     * @param int[] $equippedItemIds
      * @return array<string, mixed>|null
      */
-    public function build(array $item, array $setCounts = []): ?array
+    public function build(array $item, array $setCounts = [], array $equippedItemIds = []): ?array
     {
         $raw = $item['tooltip'] ?? null;
         if (!is_array($raw)) {
@@ -59,15 +61,37 @@ class ItemTooltipService
             }
         }
 
+        $effects = array_map(
+            static fn (string $effect): array => ['type' => 'equip', 'text' => $effect, 'source' => 'trinity'],
+            $equipEffects
+        );
+        foreach ($item['external_effects'] ?? [] as $effect) {
+            $text = trim((string) ($effect['text'] ?? ''));
+            if ($text === '') {
+                continue;
+            }
+            $effects[] = [
+                'type' => in_array($effect['type'] ?? null, ['equip', 'use', 'chance_on_hit'], true)
+                    ? $effect['type']
+                    : 'equip',
+                'text' => $text,
+                'spell_id' => isset($effect['spell_id']) ? (int) $effect['spell_id'] : null,
+                'source' => $effect['source'] ?? null,
+            ];
+        }
+
         $sockets = $this->buildSockets($raw['sockets'] ?? [], $item['gem_details'] ?? []);
         $socketBonusId = (int) ($raw['socket_bonus_id'] ?? 0);
         $socketBonus = null;
         if ($socketBonusId > 0) {
             $socketBonus = [
-                'text' => EnchantDatabase::ENCHANTS[$socketBonusId] ?? sprintf('Enchantment #%d', $socketBonusId),
+                'text' => $this->expandLegacyStatNames(
+                    EnchantDatabase::ENCHANTS[$socketBonusId] ?? sprintf('Enchantment #%d', $socketBonusId)
+                ),
                 'active' => $sockets !== [] && array_reduce(
                     $sockets,
-                    static fn (bool $active, array $socket): bool => $active && ($socket['matches'] ?? false),
+                    static fn (bool $active, array $socket): bool => $active
+                        && (!(bool) ($socket['counts_for_bonus'] ?? true) || ($socket['matches'] ?? false)),
                     true
                 ),
             ];
@@ -92,6 +116,31 @@ class ItemTooltipService
         }
 
         $setId = (int) ($raw['item_set_id'] ?? 0);
+        $itemSet = $setId > 0 ? [
+            'id' => $setId,
+            'equipped_count' => $setCounts[$setId] ?? 0,
+        ] : null;
+        $setDetails = $item['item_set_details'] ?? null;
+        if ($itemSet !== null && is_array($setDetails)) {
+            $itemSet['name'] = (string) ($setDetails['name'] ?? sprintf('Item Set #%d', $setId));
+            $itemSet['members'] = array_map(
+                static fn (array $member): array => [
+                    'item_id' => (int) ($member['item_id'] ?? 0),
+                    'name' => (string) ($member['name'] ?? 'Unknown Item'),
+                    'equipped' => in_array((int) ($member['item_id'] ?? 0), $equippedItemIds, true),
+                ],
+                $setDetails['members'] ?? []
+            );
+            $equippedCount = (int) $itemSet['equipped_count'];
+            $itemSet['bonuses'] = array_map(
+                static fn (array $bonus): array => [
+                    'required_count' => (int) ($bonus['required_count'] ?? 0),
+                    'description' => (string) ($bonus['description'] ?? ''),
+                    'active' => $equippedCount >= (int) ($bonus['required_count'] ?? 0),
+                ],
+                $setDetails['bonuses'] ?? []
+            );
+        }
 
         return [
             'id' => (int) ($item['id'] ?? 0),
@@ -107,7 +156,8 @@ class ItemTooltipService
             'block' => (int) ($raw['block'] ?? 0),
             'primary_stats' => $primaryStats,
             'equip_effects' => $equipEffects,
-            'enchant' => $item['enchant_name'] ?? null,
+            'effects' => $effects,
+            'enchant' => $this->expandLegacyStatNames($item['enchant_name'] ?? null),
             'sockets' => $sockets,
             'socket_bonus' => $socketBonus,
             'required_level' => (int) ($item['requires'] ?? 0),
@@ -115,7 +165,7 @@ class ItemTooltipService
             'damage' => $damage,
             'description' => (string) ($raw['description'] ?? ''),
             'sell_price' => $this->moneyParts((int) ($raw['sell_price'] ?? 0)),
-            'item_set' => $setId > 0 ? ['id' => $setId, 'equipped_count' => $setCounts[$setId] ?? 0] : null,
+            'item_set' => $itemSet,
         ];
     }
 
@@ -130,16 +180,49 @@ class ItemTooltipService
         foreach ($rawSockets as $index => $rawSocket) {
             $socketColor = (int) ($rawSocket['color'] ?? 0);
             $gem = $gems[$index] ?? null;
+            if (is_array($gem)) {
+                $gem['effect'] = $this->expandLegacyStatNames($gem['effect'] ?? null);
+            }
             $gemMask = is_array($gem) ? (int) ($gem['color_mask'] ?? 0) : 0;
             $sockets[] = [
                 'color' => $this->socketColorName($socketColor),
                 'color_mask' => $socketColor,
                 'gem' => $gem,
                 'matches' => is_array($gem) && ($gemMask & $socketColor) !== 0,
+                'counts_for_bonus' => true,
+            ];
+        }
+
+        // The armory includes gems added by an Eternal Belt Buckle and
+        // Blacksmithing sockets, while item_template only contains native slots.
+        // Preserve every equipped gem and treat any excess as a prismatic slot.
+        foreach (array_slice($gems, count($rawSockets)) as $gem) {
+            if (!is_array($gem)) {
+                continue;
+            }
+
+            $gem['effect'] = $this->expandLegacyStatNames($gem['effect'] ?? null);
+            $gemMask = (int) ($gem['color_mask'] ?? 0);
+            $sockets[] = [
+                'color' => 'Prismatic',
+                'color_mask' => self::PRISMATIC_SOCKET_MASK,
+                'gem' => $gem,
+                'matches' => $gemMask !== 1,
+                'counts_for_bonus' => false,
+                'inferred' => true,
             ];
         }
 
         return $sockets;
+    }
+
+    private function expandLegacyStatNames(?string $text): ?string
+    {
+        if ($text === null) {
+            return null;
+        }
+
+        return preg_replace('/\bArmor Pen\b(?!etration)/i', 'Armor Penetration', $text) ?? $text;
     }
 
     private function bindingName(int $bonding): ?string
