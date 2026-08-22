@@ -44,10 +44,10 @@ The raw TrinityCore dump is intentionally ignored by Git. Client DBC lookups are
 
 Special item effects and item-set text are enriched into local cache tables. Cavern of Time is queried first because it reflects original 3.3.5 data; Wowhead is a fallback only, since WotLK Classic changed some item and trinket effects. The character page never waits for either provider. Missing data is queued for the Messenger worker and appears on a later view.
 
-To prefill the cache after importing items, run:
+Bulk prefilling is optional and must be requested explicitly:
 
 ```bash
-php bin/console app:enrich-item-tooltips
+php bin/console app:enrich-item-tooltips --all
 ```
 
 To enrich one item or refresh cached text:
