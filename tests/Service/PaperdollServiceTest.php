@@ -91,4 +91,36 @@ class PaperdollServiceTest extends TestCase
         $this->assertNull($slots['tabard']['item']);
         $this->assertNull($slots['shirt']['item']);
     }
+
+    public function testWarriorCanEquipTwoTwoHandedWeaponsWithTitansGrip(): void
+    {
+        $mockItemDb = $this->createMock(ItemDatabaseService::class);
+        $mockItemDb->method('getItemsBulk')
+            ->willReturn([
+                50004 => [
+                    'name' => 'Shadowmourne',
+                    'quality' => 5,
+                    'type' => ItemTypes::WEAPON_2H->value,
+                    'icon' => 'inv_axe_113',
+                ],
+                50730 => [
+                    'name' => 'Glorenzelg, High-Blade of the Silver Hand',
+                    'quality' => 4,
+                    'type' => ItemTypes::WEAPON_2H->value,
+                    'icon' => 'inv_sword_148',
+                ],
+            ]);
+
+        $service = new PaperdollService($mockItemDb);
+        $result = $service->buildPaperdollSlots([
+            ['id' => 50004],
+            ['id' => 50730],
+        ], 'Warrior');
+
+        $this->assertSame('Shadowmourne', $result['slots']['mainhand']['item']['name']);
+        $this->assertSame(
+            'Glorenzelg, High-Blade of the Silver Hand',
+            $result['slots']['offhand']['item']['name']
+        );
+    }
 }

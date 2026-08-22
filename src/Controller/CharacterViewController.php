@@ -196,7 +196,10 @@ class CharacterViewController extends AbstractController
             $snapshot->getTalentTreesData() ?? []
         );
 
-        $paperdollData = $this->paperdollService->buildPaperdollSlots($snapshot->getEquippedItems() ?? []);
+        $paperdollData = $this->paperdollService->buildPaperdollSlots(
+            $snapshot->getEquippedItems() ?? [],
+            $snapshot->getClass()
+        );
 
         return $this->render('character_view/index.html.twig', [
             'characterName' => $snapshot->getName(),

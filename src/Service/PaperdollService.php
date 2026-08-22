@@ -15,8 +15,9 @@ class PaperdollService
      * Maps a raw list of equipped items into standard Paperdoll slots.
      * Returns an array with 'slots' (keyed by slot name) and 'enrichedItems'.
      */
-    public function buildPaperdollSlots(array $equippedItems): array
+    public function buildPaperdollSlots(array $equippedItems, ?string $characterClass = null): array
     {
+        $canDualWieldTwoHandedWeapons = strcasecmp($characterClass ?? '', 'Warrior') === 0;
         $itemIds = array_values(array_filter(array_column($equippedItems, 'id')));
 
         // Fetch equipment item details from DB (gem IDs are spell/enchantment IDs, not item IDs)
@@ -128,7 +129,14 @@ class PaperdollService
                 } elseif ($slots['trinket2']['item'] === null) {
                     $slots['trinket2']['item'] = $item; $assignedIndices[$idx] = true;
                 }
-            } elseif ($type === ItemTypes::WEAPON_2H->value || $type === ItemTypes::WEAPON_MAINHAND->value) {
+            } elseif ($type === ItemTypes::WEAPON_2H->value) {
+                if ($slots['mainhand']['item'] === null) {
+                    $slots['mainhand']['item'] = $item; $assignedIndices[$idx] = true;
+                } elseif ($canDualWieldTwoHandedWeapons && $slots['offhand']['item'] === null) {
+                    // Warriors with Titan's Grip can equip a second 2H weapon.
+                    $slots['offhand']['item'] = $item; $assignedIndices[$idx] = true;
+                }
+            } elseif ($type === ItemTypes::WEAPON_MAINHAND->value) {
                 if ($slots['mainhand']['item'] === null) {
                     $slots['mainhand']['item'] = $item; $assignedIndices[$idx] = true;
                 }
