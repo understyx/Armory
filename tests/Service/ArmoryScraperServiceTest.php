@@ -2,6 +2,7 @@
 
 namespace App\Tests\Service;
 
+use App\Enum\ItemTypes;
 use App\Service\ArmoryScraperService;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -72,6 +73,40 @@ class ArmoryScraperServiceTest extends TestCase
 
         $avgIlvl = $service->calculateAvgIlvl($equippedItems);
         $this->assertIsFloat($avgIlvl);
+    }
+
+    public function testCalculateGearScoreAveragesTwoEquippedWeapons(): void
+    {
+        $service = new ArmoryScraperService();
+        $equippedItems = [
+            ['id' => 1],
+            ['id' => 2],
+            ['id' => 3],
+        ];
+        $itemData = [
+            1 => ['type' => ItemTypes::HEAD->value, 'gs' => 100],
+            2 => ['type' => ItemTypes::WEAPON_2H->value, 'gs' => 300],
+            3 => ['type' => ItemTypes::WEAPON_2H->value, 'gs' => 340],
+        ];
+
+        $this->assertSame(420, $service->calculateGearScore($equippedItems, $itemData));
+    }
+
+    public function testCalculateAvgIlvlAveragesTwoEquippedWeaponsAsOneSlot(): void
+    {
+        $service = new ArmoryScraperService();
+        $equippedItems = [
+            ['id' => 1],
+            ['id' => 2],
+            ['id' => 3],
+        ];
+        $itemData = [
+            1 => ['type' => ItemTypes::HEAD->value, 'ilvl' => 200],
+            2 => ['type' => ItemTypes::WEAPON_MAINHAND->value, 'ilvl' => 264],
+            3 => ['type' => ItemTypes::WEAPON_OFFHAND->value, 'ilvl' => 284],
+        ];
+
+        $this->assertSame(237.0, $service->calculateAvgIlvl($equippedItems, $itemData));
     }
 
     public function testExtractProfessions(): void

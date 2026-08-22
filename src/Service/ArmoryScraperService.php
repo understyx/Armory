@@ -594,8 +594,7 @@ class ArmoryScraperService
     public function calculateGearScore(array $equippedItemsData, array $dbItemData = []): int
     {
         $gearscore = 0.0;
-        $twoHandWeapons = [];
-        $processedSlots = [];
+        $weaponGearScores = [];
 
         foreach ($equippedItemsData as $itemInstance) {
             $itemId = $itemInstance['id'];
@@ -612,15 +611,16 @@ class ArmoryScraperService
                 continue;
             }
 
-            if ($itemType == ItemTypes::WEAPON_2H->value) {
-                $twoHandWeapons[] = $itemGs;
+            if ($this->isEquippedWeaponType($itemType)) {
+                $weaponGearScores[] = $itemGs;
             } else {
                 $gearscore += $itemGs;
             }
         }
 
-        if (!empty($twoHandWeapons)) {
-            $gearscore += array_sum($twoHandWeapons);
+        if (!empty($weaponGearScores)) {
+            // Main-hand and off-hand together represent one weapon slot in the total.
+            $gearscore += array_sum($weaponGearScores) / count($weaponGearScores);
         }
 
         return (int)round($gearscore);
@@ -639,6 +639,7 @@ class ArmoryScraperService
     {
         $ilvlTotal = 0.0;
         $count = 0;
+        $weaponItemLevels = [];
 
         foreach ($equippedItemsData as $itemInstance) {
             $itemId = $itemInstance['id'];
@@ -654,11 +655,30 @@ class ArmoryScraperService
                 continue;
             }
 
-            $ilvlTotal += $itemIlvl;
+            if ($this->isEquippedWeaponType($itemType)) {
+                $weaponItemLevels[] = $itemIlvl;
+            } else {
+                $ilvlTotal += $itemIlvl;
+                $count++;
+            }
+        }
+
+        if (!empty($weaponItemLevels)) {
+            $ilvlTotal += array_sum($weaponItemLevels) / count($weaponItemLevels);
             $count++;
         }
 
         return $count > 0 ? round($ilvlTotal / $count, 2) : 0.0;
+    }
+
+    private function isEquippedWeaponType(?int $itemType): bool
+    {
+        return in_array($itemType, [
+            ItemTypes::WEAPON_1H->value,
+            ItemTypes::WEAPON_2H->value,
+            ItemTypes::WEAPON_MAINHAND->value,
+            ItemTypes::WEAPON_OFFHAND->value,
+        ], true);
     }
 
 
