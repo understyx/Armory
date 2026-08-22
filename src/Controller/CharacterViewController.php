@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\CharacterSnapshot;
 use App\Repository\CharacterSnapshotRepository;
+use App\Repository\UwuLogRankRepository;
 use App\Service\ArmoryScraperService;
 use App\Service\CharacterUpdateThrottle;
 use App\Service\PaperdollService;
@@ -24,6 +25,7 @@ class CharacterViewController extends AbstractController
         private readonly PaperdollService $paperdollService,
         private readonly LoggerInterface $logger,
         private readonly CharacterUpdateThrottle $updateThrottle,
+        private readonly ?UwuLogRankRepository $uwuRankRepository = null,
     ) {
     }
 
@@ -254,6 +256,7 @@ class CharacterViewController extends AbstractController
             'scrapedAt' => $snapshot->getScrapedAt(),
             'staleAgeDays' => $staleAgeDays,
             'warningMessage' => $warningMessage,
+            'uwuRank' => $this->uwuRankRepository?->findBest((string) $snapshot->getName(), (string) $snapshot->getRealm()),
         ]);
     }
 }

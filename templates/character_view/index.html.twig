@@ -78,7 +78,7 @@
                 <div class="char-details-sub">
                     <span>Level {{ characterDetails.level }}{% if characterDetails.gender %} {{ characterDetails.gender }}{% endif %} {{ characterDetails.race }} <strong class="{{ classCss }}">{{ characterDetails.class }}</strong></span>
                     {% if guild %}
-                        <span>&bull; &lt;<span class="guild-name">{{ guild }}</span>&gt;</span>
+                        <span>&bull; &lt;<a class="guild-name" href="{{ path('app_guild_view', {'guildName': guild, 'realmName': realmName}) }}">{{ guild }}</a>&gt;</span>
                     {% endif %}
                 </div>
             </div>
@@ -91,6 +91,11 @@
                 <div class="stat-pill">
                     <div class="stat-label">Avg iLvl</div>
                     <div class="stat-value">{{ avgIlvl }}</div>
+                </div>
+                <div class="stat-pill uwu-rank-pill">
+                    <div class="stat-label">Uwu-logs Rank</div>
+                    <div id="header-uwu-rank" class="stat-value" data-rank="{{ uwuRank ? uwuRank.overallRank : 0 }}">{% if uwuRank and uwuRank.overallRank > 0 %}#{{ uwuRank.overallRank|number_format }}{% else %}—{% endif %}</div>
+                    <div id="header-uwu-spec" class="stat-meta">{% if uwuRank %}Spec {{ uwuRank.spec }}{% endif %}</div>
                 </div>
             </div>
 
@@ -540,7 +545,7 @@
             <div class="section-header uwu-logs-header">
                 <div>
                     <h2>📊 Uwu-logs Raid Rankings</h2>
-                    <p class="section-subtitle">Rankings are fetched only when you request them.</p>
+                    <p class="section-subtitle">Rankings are fetched only when you request them. Results are cached for 30 minutes, with one new request allowed per character during that time.</p>
                 </div>
                 <div class="uwu-logs-actions">
                     <label for="uwu-logs-spec" class="visually-hidden">Uwu-logs specialization</label>
@@ -854,9 +859,16 @@
                 }
 
                 renderUwuLogsRankings(data, specSelect.options[specSelect.selectedIndex].text);
+                const headerRank = document.getElementById('header-uwu-rank');
+                const currentBestRank = Number(headerRank?.dataset.rank || 0);
+                if (headerRank && data.overallRank > 0 && (currentBestRank <= 0 || data.overallRank < currentBestRank)) {
+                    headerRank.textContent = `#${Number(data.overallRank).toLocaleString()}`;
+                    headerRank.dataset.rank = String(data.overallRank);
+                    document.getElementById('header-uwu-spec').textContent = `Spec ${data.spec}`;
+                }
                 status.className = 'uwu-logs-status is-success';
                 status.textContent = data.bosses.length > 0
-                    ? `Loaded ${data.bosses.length} ranked encounters from Uwu-logs.`
+                    ? `${data.cached ? 'Loaded cached' : 'Loaded'} ${data.bosses.length} ranked encounters from Uwu-logs.`
                     : 'Uwu-logs has no ranked encounters for this specialization.';
                 results.hidden = false;
             } catch (error) {

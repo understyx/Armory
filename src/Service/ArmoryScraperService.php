@@ -156,6 +156,112 @@ class ArmoryScraperService
         return $this->fetchWithRetry($url);
     }
 
+    /** Fetches a Warmane guild page. */
+    public function fetchGuildHtml(string $guild, string $realm, string $dataType = 'summary'): ?string
+    {
+        $url = sprintf(
+            'https://armory.warmane.com/guild/%s/%s/%s',
+            rawurlencode(trim($guild)),
+            rawurlencode(ucfirst(trim($realm))),
+            $dataType,
+        );
+
+        return $this->fetchWithRetry($url);
+    }
+
+    public function checkGuildExists(string $html): bool
+    {
+        if ($html === '' || str_contains($html, 'The guild you are looking for does not exist')) {
+            return false;
+        }
+
+        $dom = new DOMDocument();
+        @$dom->loadHTML($html);
+
+        return (new DOMXPath($dom))->query("//div[@id='guild-sheet']")->length > 0;
+    }
+
+    /**
+     * @return array{
+     *   name: string,
+     *   faction: string|null,
+     *   memberCount: int,
+     *   pvePoints: int,
+     *   members: list<array{name: string, race: string|null, class: string|null, faction: string|null, level: int, rank: string|null, achievementPoints: int, professions: list<string>}>
+     * }
+     */
+    public function extractGuildSummary(string $html): array
+    {
+        if ($html === '') {
+            throw new WarmaneParserException('Cannot parse an empty guild page.');
+        }
+
+        $dom = new DOMDocument();
+        @$dom->loadHTML($html);
+        $xpath = new DOMXPath($dom);
+        $nameNode = $xpath->query("//div[@id='guild-sheet']//div[contains(concat(' ', normalize-space(@class), ' '), ' name ')]")->item(0);
+        $informationNode = $xpath->query("//div[@id='guild-sheet']//div[contains(concat(' ', normalize-space(@class), ' '), ' level-faction-realm ')]")->item(0);
+        if ($nameNode === null || $informationNode === null) {
+            throw new WarmaneParserException('Warmane returned an unexpected guild page.');
+        }
+
+        $information = preg_replace('/\s+/', ' ', trim($informationNode->textContent)) ?? '';
+        preg_match('/\b(Horde|Alliance)\s+Guild\b/i', $information, $factionMatch);
+        // DOM textContent does not insert whitespace for <br>, so this may be "members480".
+        preg_match('/([\d,]+)\s+members/i', $information, $memberCountMatch);
+        preg_match('/([\d,]+)\s+PVE\s+Points\b/i', $information, $pvePointsMatch);
+
+        $headerIndexes = [];
+        foreach ($xpath->query("//table[@id='data-table']/thead/tr/th") as $index => $header) {
+            $headerIndexes[strtolower(trim($header->textContent))] = $index;
+        }
+
+        $members = [];
+        foreach ($xpath->query("//tbody[@id='data-table-list']/tr") as $row) {
+            $cells = $xpath->query('./td', $row);
+            $cell = static fn(string $heading) => isset($headerIndexes[$heading]) ? $cells->item($headerIndexes[$heading]) : null;
+            $nameCell = $cell('name');
+            $characterLink = $nameCell ? $xpath->query(".//a[contains(@href, '/character/')]", $nameCell)->item(0) : null;
+            if ($characterLink === null) {
+                continue;
+            }
+
+            $imageAlt = static function (?\DOMNode $node) use ($xpath): ?string {
+                $image = $node ? $xpath->query('.//img[@alt]', $node)->item(0) : null;
+                return $image instanceof \DOMElement ? trim($image->getAttribute('alt')) ?: null : null;
+            };
+            $text = static fn(?\DOMNode $node): ?string => $node ? (trim($node->textContent) ?: null) : null;
+            $professionNames = [];
+            $professionCell = $cell('professions');
+            if ($professionCell !== null) {
+                foreach ($xpath->query('.//img[@alt]', $professionCell) as $image) {
+                    if ($image instanceof \DOMElement && trim($image->getAttribute('alt')) !== '') {
+                        $professionNames[] = trim($image->getAttribute('alt'));
+                    }
+                }
+            }
+
+            $members[] = [
+                'name' => trim($characterLink->textContent),
+                'race' => $imageAlt($cell('race')),
+                'class' => $imageAlt($cell('class')),
+                'faction' => $imageAlt($cell('faction')),
+                'level' => (int) ($text($cell('level')) ?? 0),
+                'rank' => $text($cell('rank')),
+                'achievementPoints' => (int) str_replace(',', '', $text($cell('achievements points')) ?? '0'),
+                'professions' => $professionNames,
+            ];
+        }
+
+        return [
+            'name' => trim($nameNode->textContent),
+            'faction' => isset($factionMatch[1]) ? ucfirst(strtolower($factionMatch[1])) : null,
+            'memberCount' => (int) str_replace(',', '', $memberCountMatch[1] ?? (string) count($members)),
+            'pvePoints' => (int) str_replace(',', '', $pvePointsMatch[1] ?? '0'),
+            'members' => $members,
+        ];
+    }
+
     /**
      * Checks if the HTML indicates a 'character not found' error.
      * Corresponds to `WarmaneParser::check_character_exists`.

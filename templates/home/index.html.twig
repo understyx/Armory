@@ -43,6 +43,32 @@
                 </button>
             </form>
 
+            <div class="landing-search-divider"><span>or search a guild</span></div>
+
+            <form class="character-search guild-search" action="{{ path('app_guilds') }}" method="get">
+                <label class="visually-hidden" for="guild">Guild name</label>
+                <input
+                    id="guild"
+                    class="character-search-input"
+                    type="search"
+                    name="guild"
+                    placeholder="Guild name"
+                    autocomplete="off"
+                    required
+                >
+
+                <label class="visually-hidden" for="guild-realm">Realm</label>
+                <select id="guild-realm" class="character-search-realm" name="realm" aria-label="Guild realm">
+                    {% for realm in realms %}
+                        <option value="{{ realm }}">{{ realm }}</option>
+                    {% endfor %}
+                </select>
+
+                <button class="character-search-button" type="submit" aria-label="Search for guild">
+                    <span>Guild Search</span>
+                </button>
+            </form>
+
             {% if recentCharacters is not empty %}
                 <section class="recent-searches" aria-labelledby="recent-searches-title">
                     <h2 id="recent-searches-title" class="recent-searches-title">Recently searched</h2>

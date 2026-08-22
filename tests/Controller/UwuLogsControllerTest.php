@@ -3,7 +3,7 @@
 namespace App\Tests\Controller;
 
 use App\Exception\UwuLogsException;
-use App\Service\UwuLogsService;
+use App\Service\UwuRankUpdater;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class UwuLogsControllerTest extends WebTestCase
@@ -11,9 +11,9 @@ final class UwuLogsControllerTest extends WebTestCase
     public function testRankingsAreFetchedOnlyByPostEndpoint(): void
     {
         $client = static::createClient();
-        $service = $this->createMock(UwuLogsService::class);
+        $service = $this->createMock(UwuRankUpdater::class);
         $service->expects(self::once())
-            ->method('fetchRankings')
+            ->method('getOrRefresh')
             ->with('Nomoredots', 'Icecrown', '2')
             ->willReturn([
                 'classId' => 8,
@@ -24,7 +24,7 @@ final class UwuLogsControllerTest extends WebTestCase
                 'overallRank' => 1525,
                 'bosses' => [],
             ]);
-        static::getContainer()->set(UwuLogsService::class, $service);
+        static::getContainer()->set(UwuRankUpdater::class, $service);
 
         $client->jsonRequest('POST', '/characters/Nomoredots/Icecrown/uwu-logs', ['spec' => '2']);
 
@@ -37,10 +37,10 @@ final class UwuLogsControllerTest extends WebTestCase
     public function testRankingsEndpointReturnsReadableUpstreamError(): void
     {
         $client = static::createClient();
-        $service = $this->createMock(UwuLogsService::class);
-        $service->method('fetchRankings')
+        $service = $this->createMock(UwuRankUpdater::class);
+        $service->method('getOrRefresh')
             ->willThrowException(new UwuLogsException('Uwu-logs is currently unavailable. Please try again later.'));
-        static::getContainer()->set(UwuLogsService::class, $service);
+        static::getContainer()->set(UwuRankUpdater::class, $service);
 
         $client->jsonRequest('POST', '/characters/Nomoredots/Icecrown/uwu-logs', ['spec' => '1']);
 

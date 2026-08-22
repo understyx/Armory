@@ -3,7 +3,7 @@
 namespace App\Controller;
 
 use App\Exception\UwuLogsException;
-use App\Service\UwuLogsService;
+use App\Service\UwuRankUpdater;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,12 +16,12 @@ final class UwuLogsController extends AbstractController
         string $characterName,
         string $realmName,
         Request $request,
-        UwuLogsService $uwuLogsService
+        UwuRankUpdater $uwuRankUpdater
     ): JsonResponse {
         $spec = $request->getPayload()->getString('spec', '1');
 
         try {
-            return $this->json($uwuLogsService->fetchRankings($characterName, $realmName, $spec));
+            return $this->json($uwuRankUpdater->getOrRefresh($characterName, $realmName, $spec));
         } catch (UwuLogsException $exception) {
             return $this->json(
                 ['error' => $exception->getMessage()],

@@ -52,6 +52,38 @@ class ArmoryScraperServiceTest extends TestCase
         $this->assertCount(1, $sleptDelays);
     }
 
+    public function testExtractGuildSummaryParsesRosterAndMetadata(): void
+    {
+        $html = <<<'HTML'
+            <div id="guild-sheet">
+                <div class="information">
+                    <div class="name">Cadence</div>
+                    <div class="level-faction-realm">Horde Guild, Icecrown, 197 members<br>480 PVE Points</div>
+                </div>
+                <table id="data-table">
+                    <thead><tr><th>Name</th><th>Race</th><th>Class</th><th>Faction</th><th>Level</th><th>Rank</th><th>Achievements Points</th><th>Professions</th></tr></thead>
+                    <tbody id="data-table-list"><tr>
+                        <td><a href="/character/Imtilted/Icecrown/profile">Imtilted</a></td>
+                        <td><img alt="Blood Elf"></td><td><img alt="Paladin"></td><td><img alt="Horde"></td>
+                        <td>80</td><td>Officer</td><td>1,695</td><td><img alt="Engineering"><img alt="Jewelcrafting"></td>
+                    </tr></tbody>
+                </table>
+            </div>
+            HTML;
+
+        $service = new ArmoryScraperService();
+        $summary = $service->extractGuildSummary($html);
+
+        self::assertSame('Cadence', $summary['name']);
+        self::assertSame('Horde', $summary['faction']);
+        self::assertSame(197, $summary['memberCount']);
+        self::assertSame(480, $summary['pvePoints']);
+        self::assertSame('Imtilted', $summary['members'][0]['name']);
+        self::assertSame('Paladin', $summary['members'][0]['class']);
+        self::assertSame(1695, $summary['members'][0]['achievementPoints']);
+        self::assertSame(['Engineering', 'Jewelcrafting'], $summary['members'][0]['professions']);
+    }
+
     public function testCalculateGearScoreDefaultArguments(): void
     {
         $service = new ArmoryScraperService();

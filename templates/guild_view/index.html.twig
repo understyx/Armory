@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ guild.name }} @ {{ guild.realm }} — Warmane Guild</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+</head>
+<body>
+<main class="armory-wrapper guild-page">
+    <form class="character-search character-page-search" action="{{ path('app_guilds') }}" method="get" aria-label="Search for another guild">
+        <label class="visually-hidden" for="guild-page-search">Guild name</label>
+        <input id="guild-page-search" class="character-search-input" type="search" name="guild" placeholder="Search another guild" required>
+        <label class="visually-hidden" for="guild-page-realm">Realm</label>
+        <select id="guild-page-realm" class="character-search-realm" name="realm" aria-label="Realm">
+            {% for realm in ['Icecrown', 'Lordaeron', 'Onyxia', 'Blackrock'] %}
+                <option value="{{ realm }}"{% if realm == guild.realm %} selected{% endif %}>{{ realm }}</option>
+            {% endfor %}
+        </select>
+        <button class="character-search-button" type="submit"><span>Guild Search</span></button>
+    </form>
+
+    {% for label, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert-banner {{ label == 'success' ? 'alert-success' : 'alert-warning' }}">{{ message }}</div>
+        {% endfor %}
+    {% endfor %}
+
+    <section class="header-card guild-header-card">
+        <div class="char-main-info">
+            <div class="char-name-row">
+                <h1 class="char-name">&lt;{{ guild.name }}&gt;</h1>
+                <span class="realm-badge">{{ guild.realm }}</span>
+                {% if guild.faction %}<span class="faction-badge faction-{{ guild.faction|lower }}">{{ guild.faction }}</span>{% endif %}
+            </div>
+            <div class="char-details-sub">Warmane guild roster</div>
+        </div>
+        <div class="stats-row">
+            <div class="stat-pill"><div class="stat-label">Members</div><div class="stat-value">{{ guild.memberCount }}</div></div>
+            <div class="stat-pill"><div class="stat-label">PVE Points</div><div class="stat-value">{{ guild.pvePoints|number_format }}</div></div>
+        </div>
+        <div class="header-actions">
+            <form action="{{ path('app_guild_refresh', {'guildName': guild.name, 'realmName': guild.realm}) }}" method="post">
+                <button type="submit" class="btn-refresh">Refresh Guild</button>
+            </form>
+            <div class="scraped-time">Updated {{ guild.scrapedAt|date('Y-m-d H:i') }} UTC<br>Guild updates are limited to once per day.</div>
+        </div>
+    </section>
+
+    <section class="content-card section-card">
+        <div class="section-header guild-roster-header">
+            <div>
+                <h2>Guild Roster</h2>
+                <p class="section-subtitle">Uwu-logs ranks are collected gradually in the background and cached for 30 minutes.</p>
+            </div>
+        </div>
+        <div class="table-scroll">
+            <table class="data-table guild-roster-table">
+                <thead><tr><th>Character</th><th>Class</th><th>Level</th><th>Guild rank</th><th>Achievement points</th><th>Professions</th><th>Uwu-logs rank</th></tr></thead>
+                <tbody>
+                {% for member in guild.members %}
+                    {% set memberKey = member.name|lower %}
+                    {% set rank = ranks[memberKey]|default(null) %}
+                    <tr>
+                        <td data-label="Character"><a class="guild-member-link" href="{{ path('app_character_view', {'characterName': member.name, 'realmName': guild.realm}) }}">{{ member.name }}</a>{% if member.race %}<span class="member-race">{{ member.race }}</span>{% endif %}</td>
+                        <td data-label="Class"><span class="class-{{ member.class|default('unknown')|lower|replace({' ': '-'}) }}">{{ member.class|default('Unknown') }}</span></td>
+                        <td data-label="Level">{{ member.level }}</td>
+                        <td data-label="Guild rank">{{ member.rank|default('—') }}</td>
+                        <td data-label="Achievement points">{{ member.achievementPoints|number_format }}</td>
+                        <td data-label="Professions">{{ member.professions is not empty ? member.professions|join(', ') : '—' }}</td>
+                        <td data-label="Uwu-logs rank" class="guild-uwu-rank">{% if rank %}<strong>#{{ rank.overallRank|number_format }}</strong><span>Spec {{ rank.spec }}</span>{% else %}<span class="rank-pending">Pending</span>{% endif %}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7">No members were found in this guild roster.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+</body>
+</html>

@@ -15,9 +15,11 @@ class HomeController extends AbstractController
 
     #[Route('/', name: 'app_homepage', methods: ['GET'])]
     #[Route('/characters', name: 'app_characters', methods: ['GET'])]
+    #[Route('/guilds', name: 'app_guilds', methods: ['GET'])]
     public function index(Request $request, CharacterSnapshotRepository $snapshotRepository): Response
     {
         $characterName = trim($request->query->getString('character'));
+        $guildName = trim($request->query->getString('guild'));
         $realmName = $request->query->getString('realm', self::REALMS[0]);
 
         if ($characterName !== '') {
@@ -27,6 +29,17 @@ class HomeController extends AbstractController
 
             return $this->redirectToRoute('app_character_view', [
                 'characterName' => $characterName,
+                'realmName' => $realmName,
+            ]);
+        }
+
+        if ($guildName !== '') {
+            if (!in_array($realmName, self::REALMS, true)) {
+                $realmName = self::REALMS[0];
+            }
+
+            return $this->redirectToRoute('app_guild_view', [
+                'guildName' => $guildName,
                 'realmName' => $realmName,
             ]);
         }

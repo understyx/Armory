@@ -1,6 +1,6 @@
 # Warmane Armory
 
-A Symfony 7.3 application for viewing and caching Warmane character data, including gear, talents, gems, enchants, professions, and match details.
+A Symfony 7.3 application for viewing and caching Warmane character and guild data, including gear, talents, gems, enchants, professions, match details, guild rosters, and Uwu-logs ranks.
 
 ## Requirements
 
@@ -64,6 +64,8 @@ Development environments must have an async worker running for lazy enrichment:
 ```bash
 php bin/console messenger:consume async --time-limit=3600
 ```
+
+Guild imports queue paced Uwu-logs rank checks for every roster member and specialization. Requests for one character are spaced by at least 30 minutes, results are cached, and a guild roster can be refreshed at most once per calendar day. Keep the Messenger worker running for these background rank sweeps.
 
 Production installs made with `bin/install-server` configure this worker as the `armorystuff-messenger` systemd service. Raw provider responses and parser versions are retained so cached pages can be reparsed if an external site changes its markup. External providers only supply display text; TrinityCore remains authoritative for item, spell-trigger, and set IDs. Custom items can be populated directly in the same cache tables when external databases do not know them.
 

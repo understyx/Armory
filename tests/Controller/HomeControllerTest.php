@@ -20,9 +20,18 @@ class HomeControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'Armory');
         self::assertSelectorExists('form[action="/characters"]');
+        self::assertSelectorExists('form[action="/guilds"]');
         self::assertSelectorNotExists('a[href="/login"]');
         self::assertSelectorExists('option[value="Onyxia"]');
         self::assertSelectorNotExists('option[value="Frostmourne"]');
+    }
+
+    public function testGuildSearchRedirectsToPublicGuildPage(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/guilds?guild=Cadence&realm=Icecrown');
+
+        self::assertResponseRedirects('/guilds/Cadence/Icecrown');
     }
 
     public function testSearchRedirectsToPublicCharacterPage(): void

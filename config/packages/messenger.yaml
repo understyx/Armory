@@ -23,6 +23,7 @@ framework:
         routing:
             App\Message\EnrichItemTooltipMessage: async
             App\Message\RefreshCharacterSnapshotMessage: async
+            App\Message\RefreshUwuRankMessage: async
             Symfony\Component\Mailer\Messenger\SendEmailMessage: async
             Symfony\Component\Notifier\Message\ChatMessage: async
             Symfony\Component\Notifier\Message\SmsMessage: async

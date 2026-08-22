@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guild not found — Warmane Armory</title>
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+</head>
+<body>
+<main class="landing-page">
+    <section class="landing-content not-found-card">
+        <h1 class="landing-title">Guild not found</h1>
+        <p>Could not find &lt;{{ guildName }}&gt; on {{ realmName }}, or Warmane is temporarily unavailable.</p>
+        <a class="landing-api-link" href="{{ path('app_homepage') }}">Back to search</a>
+    </section>
+</main>
+</body>
+</html>
