@@ -11,18 +11,6 @@
 </head>
 <body>
 <main class="armory-wrapper guild-page">
-    <form class="character-search character-page-search" action="{{ path('app_guilds') }}" method="get" aria-label="Search for another guild">
-        <label class="visually-hidden" for="guild-page-search">Guild name</label>
-        <input id="guild-page-search" class="character-search-input" type="search" name="guild" placeholder="Search another guild" required>
-        <label class="visually-hidden" for="guild-page-realm">Realm</label>
-        <select id="guild-page-realm" class="character-search-realm" name="realm" aria-label="Realm">
-            {% for realm in ['Icecrown', 'Lordaeron', 'Onyxia', 'Blackrock'] %}
-                <option value="{{ realm }}"{% if realm == guild.realm %} selected{% endif %}>{{ realm }}</option>
-            {% endfor %}
-        </select>
-        <button class="character-search-button" type="submit"><span>Guild Search</span></button>
-    </form>
-
     {% for label, messages in app.flashes %}
         {% for message in messages %}
             <div class="alert-banner {{ label == 'success' ? 'alert-success' : 'alert-warning' }}">{{ message }}</div>
@@ -71,7 +59,7 @@
                         <td data-label="Guild rank">{{ member.rank|default('—') }}</td>
                         <td data-label="Achievement points">{{ member.achievementPoints|number_format }}</td>
                         <td data-label="Professions">{{ member.professions is not empty ? member.professions|join(', ') : '—' }}</td>
-                        <td data-label="Uwu-logs rank" class="guild-uwu-rank">{% if rank %}<strong>#{{ rank.overallRank|number_format }}</strong><span>Spec {{ rank.spec }}</span>{% else %}<span class="rank-pending">Pending</span>{% endif %}</td>
+                        <td data-label="Uwu-logs rank" class="guild-uwu-rank">{% if rank %}<strong style="color: {{ rank.scoreColor }}">#{{ rank.overallRank|number_format }}</strong><span>{{ rank.specName(member.class|default(null)) }}</span>{% else %}<span class="rank-pending">Pending</span>{% endif %}</td>
                     </tr>
                 {% else %}
                     <tr><td colspan="7">No members were found in this guild roster.</td></tr>

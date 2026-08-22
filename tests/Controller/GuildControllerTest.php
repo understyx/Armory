@@ -25,7 +25,7 @@ final class GuildControllerTest extends WebTestCase
             ->setScrapedAt(new \DateTimeImmutable());
         $rank = (new UwuLogRank())
             ->setName('Imtilted')->setRealm('Icecrown')->setSpec('1')->setOverallRank(42)
-            ->setPayload([])->setScrapedAt(new \DateTimeImmutable());
+            ->setPayload(['overallPoints' => 85.0])->setScrapedAt(new \DateTimeImmutable());
 
         $guildRepository = $this->createMock(GuildSnapshotRepository::class);
         $guildRepository->method('findByNameAndRealm')->willReturn($guild);
@@ -42,6 +42,8 @@ final class GuildControllerTest extends WebTestCase
         self::assertSelectorTextContains('h1', '<Cadence>');
         self::assertSelectorTextContains('.guild-roster-table', 'Imtilted');
         self::assertSelectorTextContains('.guild-uwu-rank', '#42');
+        self::assertSelectorTextContains('.guild-uwu-rank', 'Holy');
+        self::assertSelectorExists('.guild-uwu-rank strong[style="color: #a335ee"]');
         self::assertSelectorExists('a[href="/characters/Imtilted/Icecrown"]');
         self::assertSelectorTextContains('body', 'limited to once per day');
     }

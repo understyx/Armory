@@ -94,8 +94,8 @@
                 </div>
                 <div class="stat-pill uwu-rank-pill">
                     <div class="stat-label">Uwu-logs Rank</div>
-                    <div id="header-uwu-rank" class="stat-value" data-rank="{{ uwuRank ? uwuRank.overallRank : 0 }}">{% if uwuRank and uwuRank.overallRank > 0 %}#{{ uwuRank.overallRank|number_format }}{% else %}—{% endif %}</div>
-                    <div id="header-uwu-spec" class="stat-meta">{% if uwuRank %}Spec {{ uwuRank.spec }}{% endif %}</div>
+                    <div id="header-uwu-rank" class="stat-value" data-rank="{{ uwuRank ? uwuRank.overallRank : 0 }}"{% if uwuRank %} style="color: {{ uwuRank.scoreColor }}"{% endif %}>{% if uwuRank and uwuRank.overallRank > 0 %}#{{ uwuRank.overallRank|number_format }}{% else %}—{% endif %}</div>
+                    <div id="header-uwu-spec" class="stat-meta">{% if uwuRank %}{{ uwuRank.specName(characterDetails.class) }}{% endif %}</div>
                 </div>
             </div>
 
@@ -864,7 +864,8 @@
                 if (headerRank && data.overallRank > 0 && (currentBestRank <= 0 || data.overallRank < currentBestRank)) {
                     headerRank.textContent = `#${Number(data.overallRank).toLocaleString()}`;
                     headerRank.dataset.rank = String(data.overallRank);
-                    document.getElementById('header-uwu-spec').textContent = `Spec ${data.spec}`;
+                    headerRank.style.color = getUwuScoreColor(data.overallPoints);
+                    document.getElementById('header-uwu-spec').textContent = specSelect.options[specSelect.selectedIndex].text;
                 }
                 status.className = 'uwu-logs-status is-success';
                 status.textContent = data.bosses.length > 0

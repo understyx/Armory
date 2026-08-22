@@ -94,7 +94,7 @@ class CharacterViewControllerTest extends KernelTestCase
         $paperdollService = new \App\Service\PaperdollService($itemDbService);
         $uwuRank = (new UwuLogRank())
             ->setName('Understyx')->setRealm('Icecrown')->setSpec('3')->setOverallRank(1525)
-            ->setPayload([])->setScrapedAt(new \DateTimeImmutable());
+            ->setPayload(['overallPoints' => 98.0])->setScrapedAt(new \DateTimeImmutable());
         $uwuRankRepository = $this->createMock(UwuLogRankRepository::class);
         $uwuRankRepository->expects(self::once())->method('findBest')->with('Understyx', 'Icecrown')->willReturn($uwuRank);
 
@@ -117,7 +117,8 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
         $this->assertStringContainsString('Understyx', $response->getContent());
         $this->assertStringContainsString('6000', $response->getContent());
-        $this->assertStringContainsString('id="header-uwu-rank" class="stat-value" data-rank="1525">#1,525', $response->getContent());
+        $this->assertStringContainsString('data-rank="1525" style="color: #ff3c00">#1,525', $response->getContent());
+        $this->assertStringContainsString('id="header-uwu-spec" class="stat-meta">Unholy', $response->getContent());
         $this->assertStringContainsString('href="/guilds/Cadence/Icecrown"', $response->getContent());
         $this->assertStringContainsString('Level 80 Male Human', $response->getContent());
         $this->assertStringContainsString('Interactive 3D model of Understyx, male', $response->getContent());

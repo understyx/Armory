@@ -514,26 +514,6 @@ body {
     font-weight: 600;
 }
 
-.landing-search-divider {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    width: min(100%, 650px);
-    margin: 1rem auto;
-    color: var(--text-muted);
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-
-.landing-search-divider::before,
-.landing-search-divider::after {
-    content: "";
-    height: 1px;
-    flex: 1;
-    background: var(--border-color);
-}
-
 .stat-meta,
 .guild-uwu-rank span,
 .member-race {
@@ -541,11 +521,6 @@ body {
     margin-top: 0.2rem;
     color: var(--text-muted);
     font-size: 0.72rem;
-}
-
-.uwu-rank-pill .stat-value,
-.guild-uwu-rank strong {
-    color: #f3a8ff;
 }
 
 .guild-header-card {
