@@ -54,5 +54,19 @@ class HomeControllerTest extends WebTestCase
         self::assertSelectorTextContains('#recent-searches-title', 'Recently searched');
         self::assertSelectorCount(10, '.recent-searches-list li');
         self::assertSelectorExists('a[href="/characters/Character1/Icecrown"]');
+        self::assertSelectorTextContains('a[href="/api"]', 'API documentation');
+    }
+
+    public function testApiDocumentationDescribesBothPublicEndpoints(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/api');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Warmane Armory API');
+        self::assertSelectorTextContains('.api-method-get', 'GET');
+        self::assertSelectorTextContains('.api-method-post', 'POST');
+        self::assertSelectorTextContains('body', '/api/character/{name}/{realm}');
+        self::assertSelectorTextContains('body', '/api/requestupdate/{name}/{realm}');
     }
 }

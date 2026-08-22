@@ -251,7 +251,14 @@ class ArmoryScraperService
                         $enchantId = (int)explode("=", $component)[1];
                     } elseif (str_starts_with($component, "gems=")) {
                         $rawGems = explode("=", $component)[1];
-                        $gemIds = array_map('intval', array_filter(explode(":", $rawGems), fn($gem) => $gem !== "0"));
+                        $gemIds = array_map('intval', explode(":", $rawGems));
+
+                        // Trailing zeroes are unused socket fields, but a zero before a
+                        // later gem represents an actual empty socket and must retain
+                        // its position (for example, 0:3375:0 becomes [0, 3375]).
+                        while ($gemIds !== [] && end($gemIds) === 0) {
+                            array_pop($gemIds);
+                        }
                     } elseif (str_starts_with($component, "transmog=")) {
                         $transmogId = (int)explode("=", $component)[1];
                     }
@@ -812,7 +819,12 @@ class ArmoryScraperService
                 $amountOfExpectedGems = $declaredGemSlots + 1;
             }
 
-            if ($amountOfExpectedGems > 0 && count($scrapedGemIds) < $amountOfExpectedGems) {
+            $filledGemSlots = count(array_filter(
+                $scrapedGemIds,
+                static fn (mixed $gemId): bool => (int) $gemId > 0
+            ));
+
+            if ($amountOfExpectedGems > 0 && $filledGemSlots < $amountOfExpectedGems) {
                 $missingGemsItemNames[] = $itemName;
             }
         }

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API — Warmane Armory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+</head>
+<body>
+    <main class="api-page">
+        <div class="api-container">
+            <nav class="api-nav" aria-label="API navigation">
+                <a href="{{ path('app_homepage') }}">← Back to Armory</a>
+            </nav>
+
+            <header class="api-header">
+                <span class="api-eyebrow">Public API</span>
+                <h1>Warmane Armory API</h1>
+                <p>Read cached character data or request a fresh snapshot. All responses are JSON, and no authentication is required.</p>
+            </header>
+
+            <section class="api-endpoint" aria-labelledby="read-character">
+                <div class="api-endpoint-heading">
+                    <span class="api-method api-method-get">GET</span>
+                    <code>/api/character/{name}/{realm}</code>
+                </div>
+                <h2 id="read-character">Get character data</h2>
+                <p>Returns the most recently cached snapshot. This request does not contact Warmane. If no cached snapshot exists, it returns <code>404 Not Found</code>.</p>
+                <h3>Example</h3>
+                <pre><code>curl {{ absolute_url('/api/character/Understyx/Icecrown') }}</code></pre>
+            </section>
+
+            <section class="api-endpoint" aria-labelledby="request-update">
+                <div class="api-endpoint-heading">
+                    <span class="api-method api-method-post">POST</span>
+                    <code>/api/requestupdate/{name}/{realm}</code>
+                </div>
+                <h2 id="request-update">Request an update</h2>
+                <p>Queues a new character snapshot and returns <code>202 Accepted</code>. Updates are limited to once every five minutes per character. Requests during that window return <code>429 Too Many Requests</code> with a <code>Retry-After</code> header.</p>
+                <h3>Example</h3>
+                <pre><code>curl -X POST {{ absolute_url('/api/requestupdate/Understyx/Icecrown') }}</code></pre>
+            </section>
+
+            <section class="api-notes" aria-labelledby="response-notes">
+                <h2 id="response-notes">Response notes</h2>
+                <ul>
+                    <li><code>updatedAt</code> contains the snapshot time in ISO 8601 format.</li>
+                    <li><code>character</code> contains identity, guild, GearScore, and average item level.</li>
+                    <li><code>items</code>, <code>professions</code>, and <code>talents</code> contain the character build details.</li>
+                </ul>
+            </section>
+        </div>
+    </main>
+</body>
+</html>

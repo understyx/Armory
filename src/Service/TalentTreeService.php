@@ -73,11 +73,23 @@ class TalentTreeService
             $trees = [];
             if (!empty($rawTrees) && is_array($rawTrees)) {
                 foreach ($rawTrees as $idx => $treeData) {
+                    $tiers = $treeData['tiers'] ?? [];
+                    foreach ($tiers as &$tier) {
+                        foreach ($tier as &$talent) {
+                            if (is_array($talent)) {
+                                $talent['iconFallbackUrl'] = $this->localFallbackUrl($talent['iconUrl'] ?? null);
+                            }
+                        }
+                        unset($talent);
+                    }
+                    unset($tier);
+
                     $trees[] = [
                         'name' => $treeData['name'] ?? ($treeNames[$idx] ?? 'Tree ' . ($idx + 1)),
                         'iconUrl' => $treeData['iconUrl'] ?? null,
+                        'iconFallbackUrl' => $this->localFallbackUrl($treeData['iconUrl'] ?? null),
                         'points' => (int)($treeData['points'] ?? 0),
-                        'tiers' => $treeData['tiers'] ?? [],
+                        'tiers' => $tiers,
                     ];
                 }
             } else {
@@ -91,6 +103,7 @@ class TalentTreeService
                     $trees[] = [
                         'name' => $treeName,
                         'iconUrl' => null,
+                        'iconFallbackUrl' => null,
                         'points' => $allocatedPoints,
                         'tiers' => [],
                     ];
@@ -126,6 +139,25 @@ class TalentTreeService
         }
 
         return $specs;
+    }
+
+    private function localFallbackUrl(?string $sourceUrl): ?string
+    {
+        if ($sourceUrl === null || trim($sourceUrl) === '') {
+            return null;
+        }
+
+        $path = parse_url($sourceUrl, PHP_URL_PATH);
+        if (!is_string($path)) {
+            return null;
+        }
+
+        $iconName = strtolower(pathinfo($path, PATHINFO_FILENAME));
+        if (!preg_match('/\A[a-z0-9][a-z0-9_-]{0,127}\z/', $iconName)) {
+            return null;
+        }
+
+        return '/wow-icons/large/'.rawurlencode($iconName).'.jpg';
     }
 
     /**

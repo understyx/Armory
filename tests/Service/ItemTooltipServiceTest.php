@@ -13,6 +13,8 @@ class ItemTooltipServiceTest extends TestCase
             'id' => 50653,
             'name' => "Shadowvault Slayer's Cloak",
             'quality' => 4,
+            'icon_url' => 'https://wow.zamimg.com/images/wow/icons/large/inv_misc_cape_20.jpg',
+            'icon_fallback_url' => '/wow-icons/large/inv_misc_cape_20.jpg',
             'type' => 16,
             'class' => 4,
             'subclass' => 1,
@@ -47,6 +49,11 @@ class ItemTooltipServiceTest extends TestCase
         ]);
 
         $this->assertNotNull($tooltip);
+        $this->assertSame(
+            'https://wow.zamimg.com/images/wow/icons/large/inv_misc_cape_20.jpg',
+            $tooltip['icon_url']
+        );
+        $this->assertSame('/wow-icons/large/inv_misc_cape_20.jpg', $tooltip['icon_fallback_url']);
         $this->assertTrue($tooltip['heroic']);
         $this->assertSame('Binds when picked up', $tooltip['binding']);
         $this->assertSame('Back', $tooltip['slot']);
@@ -210,6 +217,50 @@ class ItemTooltipServiceTest extends TestCase
         self::assertSame(1, $tooltip['item_set']['equipped_count']);
         self::assertTrue($tooltip['item_set']['members'][0]['equipped']);
         self::assertFalse($tooltip['item_set']['members'][1]['equipped']);
+    }
+
+    public function testHighlightsSanctifiedHunterPiecesListedByTheirBaseNames(): void
+    {
+        $tooltip = (new ItemTooltipService())->build([
+            'id' => 51154,
+            'name' => "Sanctified Ahn'Kahar Blood Hunter's Handguards",
+            'quality' => 4,
+            'item_set_details' => [
+                'name' => "Ahn'Kahar Blood Hunter's Battlegear",
+                'members' => [
+                    ['item_id' => 50114, 'name' => "Ahn'Kahar Blood Hunter's Handguards"],
+                    ['item_id' => 50115, 'name' => "Ahn'Kahar Blood Hunter's Headpiece"],
+                    ['item_id' => 50116, 'name' => "Ahn'Kahar Blood Hunter's Legguards"],
+                    ['item_id' => 50117, 'name' => "Ahn'Kahar Blood Hunter's Spaulders"],
+                    ['item_id' => 50118, 'name' => "Ahn'Kahar Blood Hunter's Tunic"],
+                ],
+                'bonuses' => [],
+            ],
+            'tooltip' => [
+                'flags' => 0,
+                'bonding' => 1,
+                'max_count' => 0,
+                'stats' => [],
+                'damage' => [],
+                'sockets' => [],
+                'socket_bonus_id' => 0,
+                'sell_price' => 0,
+                'description' => '',
+                'item_set_id' => 859,
+            ],
+        ], [859 => 4], [51154, 51153, 51152, 51151], [
+            "Sanctified Ahn'Kahar Blood Hunter's Handguards",
+            "Sanctified Ahn'Kahar Blood Hunter's Headpiece",
+            "Sanctified Ahn'Kahar Blood Hunter's Legguards",
+            "Sanctified Ahn'Kahar Blood Hunter's Spaulders",
+        ]);
+
+        self::assertNotNull($tooltip);
+        self::assertSame(4, $tooltip['item_set']['equipped_count']);
+        self::assertSame(
+            [true, true, true, true, false],
+            array_column($tooltip['item_set']['members'], 'equipped')
+        );
     }
 
     public function testExpandsGemAndEnchantStatShorthand(): void

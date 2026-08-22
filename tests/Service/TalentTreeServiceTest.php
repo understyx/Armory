@@ -84,4 +84,32 @@ class TalentTreeServiceTest extends TestCase
         $this->assertEquals(71, $parsed[0]['totalPoints']);
         $this->assertCount(3, $parsed[0]['trees']);
     }
+
+    public function testWarmaneTalentIconsReceiveLocalFallbackUrls(): void
+    {
+        $service = new TalentTreeService();
+        $talentTreesData = [
+            '0' => [[
+                'name' => 'Holy',
+                'points' => 51,
+                'iconUrl' => 'https://cdn.warmane.com/wotlk/icons/small/spell_holy_holybolt.jpg',
+                'tiers' => [[[
+                    'iconUrl' => 'https://cdn.warmane.com/wotlk/icons/medium/spell_holy_powerwordshield.jpg',
+                ]]],
+            ]],
+        ];
+
+        $parsed = $service->parseTalentTrees('Paladin', [], [], $talentTreesData);
+        $tree = $parsed[0]['trees'][0];
+
+        self::assertSame(
+            'https://cdn.warmane.com/wotlk/icons/small/spell_holy_holybolt.jpg',
+            $tree['iconUrl']
+        );
+        self::assertSame('/wow-icons/large/spell_holy_holybolt.jpg', $tree['iconFallbackUrl']);
+        self::assertSame(
+            '/wow-icons/large/spell_holy_powerwordshield.jpg',
+            $tree['tiers'][0][0]['iconFallbackUrl']
+        );
+    }
 }

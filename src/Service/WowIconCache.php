@@ -46,21 +46,8 @@ class WowIconCache
                 return $path;
             }
 
-            $response = $this->httpClient->request(
-                'GET',
-                'https://wow.zamimg.com/images/wow/icons/large/'.$iconName.'.jpg',
-                [
-                    'headers' => ['Accept' => 'image/jpeg'],
-                    'timeout' => 15,
-                ]
-            );
-
-            if ($response->getStatusCode() !== 200) {
-                return null;
-            }
-
-            $contents = $response->getContent();
-            if (!$this->isJpeg($contents)) {
+            $contents = $this->download($iconName);
+            if ($contents === null) {
                 return null;
             }
 
@@ -89,6 +76,36 @@ class WowIconCache
     private function isCachedIcon(string $path): bool
     {
         return is_file($path) && filesize($path) > 0;
+    }
+
+    private function download(string $iconName): ?string
+    {
+        $urls = [
+            'https://wow.zamimg.com/images/wow/icons/large/'.$iconName.'.jpg',
+            'https://cdn.warmane.com/wotlk/icons/medium/'.$iconName.'.jpg',
+        ];
+
+        foreach ($urls as $url) {
+            try {
+                $response = $this->httpClient->request('GET', $url, [
+                    'headers' => ['Accept' => 'image/jpeg'],
+                    'timeout' => 15,
+                ]);
+
+                if ($response->getStatusCode() !== 200) {
+                    continue;
+                }
+
+                $contents = $response->getContent();
+                if ($this->isJpeg($contents)) {
+                    return $contents;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return null;
     }
 
     private function isJpeg(string $contents): bool

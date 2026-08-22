@@ -44,7 +44,7 @@ The raw TrinityCore dump is intentionally ignored by Git. Client DBC lookups are
 
 Special item effects and item-set text are enriched into local cache tables. Cavern of Time is queried first because it reflects original 3.3.5 data; Wowhead is a fallback only, since WotLK Classic changed some item and trinket effects. The character page never waits for either provider. Missing data is queued for the Messenger worker and appears on a later view.
 
-Item and gem images use same-origin `/wow-icons/` URLs. On the first request, the server downloads the image and keeps its immutable copy in `var/wow-icons`; browsers never connect to Wowhead for these icons. Preserve that directory between deployments to keep the exact cached artwork.
+Item, gem, and talent images load from the Wowhead or Warmane CDN first. If that request fails, the browser retries through a same-origin `/wow-icons/` URL. The server obtains the fallback from the available CDN, keeps an immutable copy in `var/wow-icons`, and serves that copy thereafter. Preserve that directory between deployments to retain the cached artwork.
 
 Bulk prefilling is optional and must be requested explicitly:
 

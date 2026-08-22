@@ -21,6 +21,24 @@ if (dataElement) {
         return line;
     };
 
+    const setIconSource = (image, source, fallbackSource) => {
+        image.addEventListener('error', () => {
+            if (image.dataset.fallbackSrc) {
+                const fallback = image.dataset.fallbackSrc;
+                delete image.dataset.fallbackSrc;
+                image.src = fallback;
+            } else {
+                image.style.display = 'none';
+            }
+        });
+
+        if (fallbackSource) {
+            image.dataset.fallbackSrc = fallbackSource;
+        }
+
+        image.src = source;
+    };
+
     const buildTooltip = (item) => {
         const tooltip = document.createElement('div');
         tooltip.id = 'local-item-tooltip';
@@ -30,7 +48,7 @@ if (dataElement) {
         if (item.icon_url) {
             const icon = document.createElement('img');
             icon.className = `item-tooltip-icon q-${item.quality}`;
-            icon.src = item.icon_url;
+            setIconSource(icon, item.icon_url, item.icon_fallback_url);
             icon.alt = '';
             tooltip.appendChild(icon);
         }
@@ -79,7 +97,7 @@ if (dataElement) {
 
             if (socket.gem?.icon_url) {
                 const gemIcon = document.createElement('img');
-                gemIcon.src = socket.gem.icon_url;
+                setIconSource(gemIcon, socket.gem.icon_url, socket.gem.icon_fallback_url);
                 gemIcon.alt = '';
                 row.appendChild(gemIcon);
             } else {

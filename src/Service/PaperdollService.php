@@ -39,9 +39,9 @@ class PaperdollService
             $gemDetails = [];
             foreach ($rawGems as $gId) {
                 $gemEnchantId = (int)$gId;
-                if ($gemEnchantId > 0) {
-                    $gemDetails[] = $this->resolveGemFromEnchantId($gemEnchantId);
-                }
+                $gemDetails[] = $gemEnchantId > 0
+                    ? $this->resolveGemFromEnchantId($gemEnchantId)
+                    : null;
             }
 
             $enrichedItems[] = [
@@ -68,7 +68,8 @@ class PaperdollService
         }
 
         foreach ($enrichedItems as &$enrichedItem) {
-            $enrichedItem['icon_url'] = $this->iconUrl($enrichedItem['icon'] ?? null);
+            $enrichedItem['icon_url'] = $this->externalIconUrl($enrichedItem['icon'] ?? null);
+            $enrichedItem['icon_fallback_url'] = $this->localIconUrl($enrichedItem['icon'] ?? null);
         }
         unset($enrichedItem);
 
@@ -231,13 +232,15 @@ class PaperdollService
 
         // Generate icon URLs and propagate should_have_enchant to item data
         foreach ($enrichedItems as &$enrichedItem) {
-            $enrichedItem['icon_url'] = $this->iconUrl($enrichedItem['icon'] ?? null);
+            $enrichedItem['icon_url'] = $this->externalIconUrl($enrichedItem['icon'] ?? null);
+            $enrichedItem['icon_fallback_url'] = $this->localIconUrl($enrichedItem['icon'] ?? null);
         }
         unset($enrichedItem);
 
         foreach ($slots as $slotKey => &$slotData) {
             if ($slotData['item'] !== null) {
-                $slotData['item']['icon_url'] = $this->iconUrl($slotData['item']['icon'] ?? null);
+                $slotData['item']['icon_url'] = $this->externalIconUrl($slotData['item']['icon'] ?? null);
+                $slotData['item']['icon_fallback_url'] = $this->localIconUrl($slotData['item']['icon'] ?? null);
                 $slotData['item']['should_have_enchant'] = $slotData['should_have_enchant'];
             }
         }
@@ -262,7 +265,8 @@ class PaperdollService
                 'quality' => $gemData['quality'] ?? 4,
                 'effect' => EnchantDatabase::ENCHANTS[$gemEnchantId] ?? $gemData['name'],
                 'color_mask' => $this->inferGemColorMask($gemData['name'], $gemData['icon']),
-                'icon_url' => $this->iconUrl($cleanIcon),
+                'icon_url' => $this->externalIconUrl($cleanIcon),
+                'icon_fallback_url' => $this->localIconUrl($cleanIcon),
             ];
         }
 
@@ -277,7 +281,7 @@ class PaperdollService
             $iconName = 'inv_jewelcrafting_shadowspirit_02';
         } elseif (str_contains($textLower, 'all stats') || str_contains($textLower, 'all resist')) {
             $color = 'prismatic';
-            $iconName = 'inv_jewelcrafting_nightmaretear_01';
+            $iconName = 'inv_misc_gem_pearl_12';
         } else {
             $hasRed = preg_match('/\b(strength|agility|ap|sp|attack power|spell power|armor pen|expertise|parry|dodge)\b/i', $textLower);
             $hasBlue = preg_match('/\b(stamina|mp5|spirit|spell pen)\b/i', $textLower);
@@ -285,22 +289,22 @@ class PaperdollService
 
             if ($hasRed && $hasBlue && !$hasYellow) {
                 $color = 'purple';
-                $iconName = 'inv_jewelcrafting_dreadstone_02';
+                $iconName = 'inv_jewelcrafting_gem_40';
             } elseif ($hasRed && $hasYellow && !$hasBlue) {
                 $color = 'orange';
-                $iconName = 'inv_jewelcrafting_ametrine_02';
+                $iconName = 'inv_jewelcrafting_gem_39';
             } elseif ($hasYellow && $hasBlue && !$hasRed) {
                 $color = 'green';
-                $iconName = 'inv_jewelcrafting_eyeofzul_02';
+                $iconName = 'inv_jewelcrafting_gem_41';
             } elseif ($hasRed) {
                 $color = 'red';
-                $iconName = 'inv_jewelcrafting_crimsonruby_02';
+                $iconName = 'inv_jewelcrafting_gem_37';
             } elseif ($hasBlue) {
                 $color = 'blue';
-                $iconName = 'inv_jewelcrafting_skytanzanite_02';
+                $iconName = 'inv_jewelcrafting_gem_42';
             } elseif ($hasYellow) {
                 $color = 'yellow';
-                $iconName = 'inv_jewelcrafting_kingssamber_02';
+                $iconName = 'inv_jewelcrafting_gem_38';
             }
         }
 
@@ -312,11 +316,30 @@ class PaperdollService
             'quality' => 4,
             'effect' => $name,
             'color_mask' => $this->inferGemColorMask($name, $iconName),
-            'icon_url' => $this->iconUrl($iconName),
+            'icon_url' => $this->externalIconUrl($iconName),
+            'icon_fallback_url' => $this->localIconUrl($iconName),
         ];
     }
 
-    private function iconUrl(?string $iconName): ?string
+    private function externalIconUrl(?string $iconName): ?string
+    {
+        $cleanIcon = $this->cleanIconName($iconName);
+
+        return $cleanIcon === null
+            ? null
+            : 'https://wow.zamimg.com/images/wow/icons/large/'.rawurlencode($cleanIcon).'.jpg';
+    }
+
+    private function localIconUrl(?string $iconName): ?string
+    {
+        $cleanIcon = $this->cleanIconName($iconName);
+
+        return $cleanIcon === null
+            ? null
+            : '/wow-icons/large/'.rawurlencode($cleanIcon).'.jpg';
+    }
+
+    private function cleanIconName(?string $iconName): ?string
     {
         if ($iconName === null || trim($iconName) === '') {
             return null;
@@ -327,7 +350,7 @@ class PaperdollService
             return null;
         }
 
-        return '/wow-icons/large/'.rawurlencode($cleanIcon).'.jpg';
+        return $cleanIcon;
     }
 
     private function inferGemColorMask(string $name, string $icon): int
@@ -349,13 +372,31 @@ class PaperdollService
         if (str_contains($value, 'eye of zul') || str_contains($value, 'forest emerald')) {
             return 4 | 8;
         }
+        if (str_contains($value, 'gem_40') || str_contains($value, 'shadow crystal')) {
+            return 2 | 8;
+        }
+        if (str_contains($value, 'gem_39') || str_contains($value, 'huge citrine')) {
+            return 2 | 4;
+        }
+        if (str_contains($value, 'gem_41') || str_contains($value, 'dark jade')) {
+            return 4 | 8;
+        }
         if (str_contains($value, 'dragonseye03') || str_contains($value, "king's amber") || str_contains($value, 'autumn')) {
+            return 4;
+        }
+        if (str_contains($value, 'gem_38') || str_contains($value, 'sun crystal')) {
             return 4;
         }
         if (str_contains($value, 'dragonseye04') || str_contains($value, 'zircon') || str_contains($value, 'sapphire')) {
             return 8;
         }
+        if (str_contains($value, 'gem_42') || str_contains($value, 'chalcedony')) {
+            return 8;
+        }
         if (str_contains($value, 'dragonseye05') || str_contains($value, 'ruby')) {
+            return 2;
+        }
+        if (str_contains($value, 'gem_37') || str_contains($value, 'gem_28') || str_contains($value, 'gem_22') || str_contains($value, 'bloodstone')) {
             return 2;
         }
 

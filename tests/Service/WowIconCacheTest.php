@@ -76,4 +76,26 @@ class WowIconCacheTest extends TestCase
         self::assertNull($cache->get('inv_helmet_06'));
         self::assertFileDoesNotExist($this->cacheDirectory.'/inv_helmet_06.jpg');
     }
+
+    public function testUsesWarmaneWhenWowheadIsUnavailable(): void
+    {
+        $requestedUrls = [];
+        $client = new MockHttpClient(static function (string $method, string $url) use (&$requestedUrls): MockResponse {
+            $requestedUrls[] = $url;
+
+            return count($requestedUrls) === 1
+                ? new MockResponse('', ['http_code' => 503])
+                : new MockResponse("\xFF\xD8\xFF\xE0warmane", ['http_code' => 200]);
+        });
+        $cache = new WowIconCache($client, $this->cacheDirectory);
+
+        $path = $cache->get('spell_holy_holybolt');
+
+        self::assertNotNull($path);
+        self::assertSame("\xFF\xD8\xFF\xE0warmane", file_get_contents($path));
+        self::assertSame(
+            'https://cdn.warmane.com/wotlk/icons/medium/spell_holy_holybolt.jpg',
+            $requestedUrls[1]
+        );
+    }
 }

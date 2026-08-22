@@ -104,8 +104,8 @@
                 {% if scrapedAt %}
                     <div class="scraped-time">
                         Updated {{ scrapedAt|date('Y-m-d H:i') }} UTC
-                        {% if isStale %}
-                            <span class="stale-badge">Outdated</span>
+                        {% if staleAgeDays %}
+                            <span class="stale-notice">Hasn't been updated in {{ staleAgeDays }} {{ staleAgeDays == 1 ? 'day' : 'days' }} and could be out of date.</span>
                         {% endif %}
                     </div>
                 {% endif %}
@@ -156,7 +156,7 @@
                                            rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}{% if slot.item.transmog %}&amp;transmog={{ slot.item.transmog }}{% endif %}"
                                            target="_blank">
                                             {% if slot.item.icon_url %}
-                                                <img src="{{ slot.item.icon_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                                <img src="{{ slot.item.icon_url }}" data-fallback-src="{{ slot.item.icon_fallback_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';this.nextElementSibling.style.display='flex';}" />
                                             {% endif %}
                                             <div class="slot-fallback-symbol" {% if slot.item.icon_url %}style="display:none;"{% endif %}>{{ slot.fallback }}</div>
                                             <div class="slot-quality-glow"></div>
@@ -190,9 +190,11 @@
                                             {% if slot.item.gem_details is not empty %}
                                                 <div class="slot-gems-inline">
                                                     {% for gem in slot.item.gem_details %}
-                                                        <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
-                                                            <img src="{{ gem.icon_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="this.style.display='none';" />
-                                                        </a>
+                                                        {% if gem %}
+                                                            <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
+                                                                <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
+                                                            </a>
+                                                        {% endif %}
                                                     {% endfor %}
                                                 </div>
                                             {% endif %}
@@ -231,9 +233,11 @@
                                             {% if slot.item.gem_details is not empty %}
                                                 <div class="slot-gems-inline">
                                                     {% for gem in slot.item.gem_details %}
-                                                        <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
-                                                            <img src="{{ gem.icon_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="this.style.display='none';" />
-                                                        </a>
+                                                        {% if gem %}
+                                                            <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
+                                                                <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
+                                                            </a>
+                                                        {% endif %}
                                                     {% endfor %}
                                                 </div>
                                             {% endif %}
@@ -251,7 +255,7 @@
                                            rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}{% if slot.item.transmog %}&amp;transmog={{ slot.item.transmog }}{% endif %}"
                                            target="_blank">
                                             {% if slot.item.icon_url %}
-                                                <img src="{{ slot.item.icon_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                                <img src="{{ slot.item.icon_url }}" data-fallback-src="{{ slot.item.icon_fallback_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';this.nextElementSibling.style.display='flex';}" />
                                             {% endif %}
                                             <div class="slot-fallback-symbol" {% if slot.item.icon_url %}style="display:none;"{% endif %}>{{ slot.fallback }}</div>
                                             <div class="slot-quality-glow"></div>
@@ -284,7 +288,7 @@
                                        rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}{% if slot.item.transmog %}&amp;transmog={{ slot.item.transmog }}{% endif %}"
                                        target="_blank">
                                         {% if slot.item.icon_url %}
-                                            <img src="{{ slot.item.icon_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                            <img src="{{ slot.item.icon_url }}" data-fallback-src="{{ slot.item.icon_fallback_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';this.nextElementSibling.style.display='flex';}" />
                                         {% endif %}
                                         <div class="slot-fallback-symbol" {% if slot.item.icon_url %}style="display:none;"{% endif %}>{{ slot.fallback }}</div>
                                         <div class="slot-quality-glow"></div>
@@ -318,9 +322,11 @@
                                         {% if slot.item.gem_details is not empty %}
                                             <div class="slot-gems-inline">
                                                 {% for gem in slot.item.gem_details %}
-                                                    <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
-                                                        <img src="{{ gem.icon_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="this.style.display='none';" />
-                                                    </a>
+                                                    {% if gem %}
+                                                        <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
+                                                            <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
+                                                        </a>
+                                                    {% endif %}
                                                 {% endfor %}
                                             </div>
                                         {% endif %}
@@ -384,7 +390,7 @@
                                                                    class="talent-icon-box status-{{ talent.status }}"
                                                                    title="Spell #{{ talent.spellId }}: {{ talent.pointsText }}">
                                                                     {% if talent.iconUrl %}
-                                                                        <img src="{{ talent.iconUrl }}" alt="Talent" class="talent-icon-img" onerror="this.style.opacity='0';" />
+                                                                        <img src="{{ talent.iconUrl }}" data-fallback-src="{{ talent.iconFallbackUrl }}" alt="Talent" class="talent-icon-img" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.opacity='0';}" />
                                                                     {% endif %}
                                                                     <div class="talent-rank-badge status-{{ talent.status }}">
                                                                         {{ talent.pointsText }}
@@ -413,7 +419,7 @@
                                 {% for tree in spec.trees %}
                                     <div class="tree-footer-item">
                                         {% if tree.iconUrl %}
-                                            <img src="{{ tree.iconUrl }}" alt="{{ tree.name }}" class="tree-footer-icon" onerror="this.style.display='none';" />
+                                            <img src="{{ tree.iconUrl }}" data-fallback-src="{{ tree.iconFallbackUrl }}" alt="{{ tree.name }}" class="tree-footer-icon" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
                                         {% endif %}
                                         <span class="tree-footer-name">{{ tree.name }}</span>
                                         <span class="tree-footer-points">{{ tree.points }}</span>

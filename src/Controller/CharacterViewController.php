@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\CharacterSnapshot;
 use App\Repository\CharacterSnapshotRepository;
 use App\Service\ArmoryScraperService;
+use App\Service\CharacterUpdateThrottle;
 use App\Service\PaperdollService;
 use App\Service\TalentTreeService;
 use Psr\Log\LoggerInterface;
@@ -21,7 +22,8 @@ class CharacterViewController extends AbstractController
         private readonly CharacterSnapshotRepository $snapshotRepository,
         private readonly TalentTreeService $talentTreeService,
         private readonly PaperdollService $paperdollService,
-        private readonly LoggerInterface $logger
+        private readonly LoggerInterface $logger,
+        private readonly CharacterUpdateThrottle $updateThrottle,
     ) {
     }
 
@@ -58,15 +60,35 @@ class CharacterViewController extends AbstractController
 
         $now = new \DateTimeImmutable();
         $scrapedAt = $snapshot->getScrapedAt();
-        $isStale = $scrapedAt !== null && ($now->getTimestamp() - $scrapedAt->getTimestamp() > 86400);
+        $snapshotAgeSeconds = $scrapedAt === null
+            ? 0
+            : max(0, $now->getTimestamp() - $scrapedAt->getTimestamp());
+        $staleAgeDays = $snapshotAgeSeconds >= 86400
+            ? intdiv($snapshotAgeSeconds, 86400)
+            : null;
 
-        return $this->renderCharacterView($snapshot, $isStale, $warningMessage);
+        return $this->renderCharacterView($snapshot, $staleAgeDays, $warningMessage);
     }
 
     #[Route('/characters/{characterName}/{realmName}/refresh', name: 'app_character_refresh', methods: ['POST'])]
     #[Route('/character/{characterName}/{realmName}/refresh', name: 'app_character_refresh_legacy', methods: ['POST'])]
     public function refreshCharacter(string $characterName, string $realmName): Response
     {
+        $decision = $this->updateThrottle->claim($characterName, $realmName);
+        if (!$decision->accepted) {
+            $retryMinutes = max(1, (int) ceil($decision->retryAfterSeconds() / 60));
+            $this->addFlash('warning', sprintf(
+                'Character data can only be refreshed once every five minutes. Try again in about %d %s.',
+                $retryMinutes,
+                $retryMinutes === 1 ? 'minute' : 'minutes',
+            ));
+
+            return $this->redirectToRoute('app_character_view', [
+                'characterName' => $characterName,
+                'realmName' => $realmName,
+            ]);
+        }
+
         $existingSnapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
         $scrapeResult = $this->scrapeAndSave($characterName, $realmName);
 
@@ -182,7 +204,7 @@ class CharacterViewController extends AbstractController
         ];
     }
 
-    private function renderCharacterView(CharacterSnapshot $snapshot, bool $isStale = false, ?string $warningMessage = null): Response
+    private function renderCharacterView(CharacterSnapshot $snapshot, ?int $staleAgeDays = null, ?string $warningMessage = null): Response
     {
         $isWotlkServer = $this->talentTreeService->isWotlkServer(
             $snapshot->getRealm(),
@@ -229,7 +251,7 @@ class CharacterViewController extends AbstractController
             'pvpStats' => $snapshot->getPvpStats() ?? ['totalKills' => 0, 'killsToday' => 0, 'arenaTeams' => []],
             'matchHistory' => $snapshot->getMatchHistory() ?? [],
             'scrapedAt' => $snapshot->getScrapedAt(),
-            'isStale' => $isStale,
+            'staleAgeDays' => $staleAgeDays,
             'warningMessage' => $warningMessage,
         ]);
     }

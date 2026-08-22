@@ -147,6 +147,33 @@ class ArmoryScraperServiceTest extends TestCase
         $this->assertSame([3628, 3530], $items[0]['gems']);
     }
 
+    public function testExtractEquippedItemsDataPreservesEmptySocketBeforeGem(): void
+    {
+        $service = new ArmoryScraperService();
+        $html = '<a rel="item=50001&amp;gems=0:3375:0">Item Link</a>';
+
+        $items = $service->extractEquippedItemsData($html);
+
+        $this->assertSame([0, 3375], $items[0]['gems']);
+    }
+
+    public function testCheckGemsTreatsPreservedZeroAsAnEmptySocket(): void
+    {
+        $itemDatabase = $this->createMock(\App\Service\ItemDatabaseService::class);
+        $itemDatabase->method('getItem')->with(50001)->willReturn([
+            'type' => ItemTypes::HEAD->value,
+            'name' => 'Two Socket Helm',
+            'gem_slots' => 2,
+        ]);
+
+        $service = new ArmoryScraperService($itemDatabase);
+
+        $this->assertSame(
+            'Gems missing from: Two Socket Helm ❌',
+            $service->checkGems([['id' => 50001, 'gems' => [0, 3375]]])
+        );
+    }
+
     public function testExtractCharacterModelData(): void
     {
         $service = new ArmoryScraperService();

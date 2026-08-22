@@ -130,11 +130,11 @@ class ItemTooltipService
         if ($itemSet !== null && is_array($setDetails)) {
             $itemSet['name'] = (string) ($setDetails['name'] ?? sprintf('Item Set #%d', $setId));
             $equippedNameKeys = array_fill_keys(array_map(
-                static fn (string $name): string => strtolower(trim($name)),
+                self::normalizeSetMemberName(...),
                 $equippedItemNames
             ), true);
             $currentItemId = (int) ($item['id'] ?? 0);
-            $currentItemName = strtolower(trim((string) ($item['name'] ?? '')));
+            $currentItemName = self::normalizeSetMemberName((string) ($item['name'] ?? ''));
             $itemSet['members'] = array_map(
                 static function (array $member) use (
                     $equippedItemIds,
@@ -144,7 +144,7 @@ class ItemTooltipService
                 ): array {
                     $memberId = (int) ($member['item_id'] ?? 0);
                     $memberName = (string) ($member['name'] ?? 'Unknown Item');
-                    $memberNameKey = strtolower(trim($memberName));
+                    $memberNameKey = self::normalizeSetMemberName($memberName);
 
                     return [
                         'item_id' => $memberId,
@@ -173,6 +173,7 @@ class ItemTooltipService
             'name' => (string) ($item['name'] ?? 'Unknown Item'),
             'quality' => (int) ($item['quality'] ?? 1),
             'icon_url' => $item['icon_url'] ?? null,
+            'icon_fallback_url' => $item['icon_fallback_url'] ?? null,
             'heroic' => (((int) ($raw['flags'] ?? 0)) & self::HEROIC_TOOLTIP_FLAG) !== 0,
             'binding' => $this->bindingName((int) ($raw['bonding'] ?? 0)),
             'unique' => (int) ($raw['max_count'] ?? 0) === 1,
@@ -193,6 +194,15 @@ class ItemTooltipService
             'sell_price' => $this->moneyParts((int) ($raw['sell_price'] ?? 0)),
             'item_set' => $itemSet,
         ];
+    }
+
+    private static function normalizeSetMemberName(string $name): string
+    {
+        $name = strtolower(trim(str_replace(['‘', '’'], "'", $name)));
+
+        // Tier 10 upgrades keep the same set membership while adding this prefix.
+        // Set data can list the base item names even when the equipped pieces are upgraded.
+        return (string) preg_replace('/^sanctified\s+/i', '', $name);
     }
 
     /**

@@ -6,6 +6,8 @@ use App\Controller\CharacterViewController;
 use App\Entity\CharacterSnapshot;
 use App\Repository\CharacterSnapshotRepository;
 use App\Service\ArmoryScraperService;
+use App\Service\CharacterUpdateThrottle;
+use App\Service\CharacterUpdateThrottleDecision;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -57,7 +59,7 @@ class CharacterViewControllerTest extends KernelTestCase
             ],
             range(1, 11)
         ));
-        $snapshot->setScrapedAt(new \DateTimeImmutable());
+        $snapshot->setScrapedAt(new \DateTimeImmutable('-2 days'));
 
         $snapshotRepo = $this->createMock(CharacterSnapshotRepository::class);
         $snapshotRepo->expects($this->once())
@@ -78,7 +80,14 @@ class CharacterViewControllerTest extends KernelTestCase
         $container = self::getContainer();
         $twig = $container->get('twig');
 
-        $controller = new CharacterViewController($scraperService, $snapshotRepo, $talentTreeService, $paperdollService, $logger);
+        $controller = new CharacterViewController(
+            $scraperService,
+            $snapshotRepo,
+            $talentTreeService,
+            $paperdollService,
+            $logger,
+            $this->createMock(CharacterUpdateThrottle::class),
+        );
         $controller->setContainer($container);
 
         $response = $controller->viewCharacter('Understyx', 'Icecrown');
@@ -94,6 +103,8 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringContainsString('Fetch rankings from Uwu-logs', $response->getContent());
         $this->assertStringContainsString('/characters/Understyx/Icecrown/uwu-logs', $response->getContent());
         $this->assertStringContainsString('Rankings are fetched only when you request them.', $response->getContent());
+        $this->assertStringContainsString("Hasn't been updated in 2 days and could be out of date.", $response->getContent());
+        $this->assertStringNotContainsString('Outdated', $response->getContent());
         $this->assertStringContainsString('Show all 11 matches', $response->getContent());
         $this->assertSame(1, substr_count($response->getContent(), 'class="match-history-extra" hidden'));
         $this->assertLessThan(
@@ -125,7 +136,8 @@ class CharacterViewControllerTest extends KernelTestCase
             $snapshotRepo,
             $talentTreeService,
             $paperdollService,
-            $logger
+            $logger,
+            $this->createMock(CharacterUpdateThrottle::class),
         );
         $controller->setContainer(self::getContainer());
 
@@ -180,12 +192,18 @@ class CharacterViewControllerTest extends KernelTestCase
 
         $itemDbService = $this->createMock(\App\Service\ItemDatabaseService::class);
         $paperdollService = new \App\Service\PaperdollService($itemDbService);
+        $updateThrottle = $this->createMock(CharacterUpdateThrottle::class);
+        $updateThrottle->expects(self::once())
+            ->method('claim')
+            ->with('Understyx', 'Icecrown')
+            ->willReturn(new CharacterUpdateThrottleDecision(true, new \DateTimeImmutable('+5 minutes')));
         $controller = new CharacterViewController(
             $scraperService,
             $snapshotRepo,
             new \App\Service\TalentTreeService(),
             $paperdollService,
-            $this->createMock(LoggerInterface::class)
+            $this->createMock(LoggerInterface::class),
+            $updateThrottle,
         );
 
         $container = self::getContainer();
@@ -207,5 +225,49 @@ class CharacterViewControllerTest extends KernelTestCase
             $session->getFlashBag()->peek('warning')
         );
         self::assertSame([], $session->getFlashBag()->peek('success'));
+    }
+
+    public function testRefreshIsRejectedDuringFiveMinuteCooldown(): void
+    {
+        $snapshotRepo = $this->createMock(CharacterSnapshotRepository::class);
+        $snapshotRepo->expects(self::never())->method('findByNameAndRealm');
+        $scraperService = $this->createMock(ArmoryScraperService::class);
+        $scraperService->expects(self::never())->method('fetchArmoryHtml');
+        $updateThrottle = $this->createMock(CharacterUpdateThrottle::class);
+        $updateThrottle->expects(self::once())
+            ->method('claim')
+            ->with('Understyx', 'Icecrown')
+            ->willReturn(new CharacterUpdateThrottleDecision(false, new \DateTimeImmutable('+2 minutes')));
+
+        $paperdollService = new \App\Service\PaperdollService(
+            $this->createMock(\App\Service\ItemDatabaseService::class),
+        );
+        $controller = new CharacterViewController(
+            $scraperService,
+            $snapshotRepo,
+            new \App\Service\TalentTreeService(),
+            $paperdollService,
+            $this->createMock(LoggerInterface::class),
+            $updateThrottle,
+        );
+
+        $container = self::getContainer();
+        $session = new Session(new MockArraySessionStorage());
+        $request = new Request();
+        $request->setSession($session);
+        $container->get('request_stack')->push($request);
+        $controller->setContainer($container);
+
+        try {
+            $response = $controller->refreshCharacter('Understyx', 'Icecrown');
+        } finally {
+            $container->get('request_stack')->pop();
+        }
+
+        self::assertSame(Response::HTTP_FOUND, $response->getStatusCode());
+        self::assertSame(
+            ['Character data can only be refreshed once every five minutes. Try again in about 2 minutes.'],
+            $session->getFlashBag()->peek('warning'),
+        );
     }
 }

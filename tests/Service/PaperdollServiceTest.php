@@ -10,6 +10,54 @@ use PHPUnit\Framework\TestCase;
 
 class PaperdollServiceTest extends TestCase
 {
+    public function testPreservesSocketPositionWhenFirstGemSlotIsEmpty(): void
+    {
+        $mockItemDb = $this->createMock(ItemDatabaseService::class);
+        $mockItemDb->method('getItemsBulk')->willReturn([
+            50001 => [
+                'name' => 'Two Socket Helm',
+                'quality' => 3,
+                'type' => ItemTypes::HEAD->value,
+                'tooltip' => [
+                    'sockets' => [
+                        ['color' => 2, 'content' => 0],
+                        ['color' => 2, 'content' => 0],
+                    ],
+                    'socket_bonus_id' => 0,
+                ],
+            ],
+        ]);
+
+        $service = new PaperdollService($mockItemDb, new ItemTooltipService());
+        $result = $service->buildPaperdollSlots([
+            ['id' => 50001, 'gems' => [0, 3375]],
+        ]);
+
+        $item = $result['slots']['head']['item'];
+        $this->assertNull($item['gem_details'][0]);
+        $this->assertSame(3375, $item['gem_details'][1]['enchant_id']);
+        $this->assertNull($item['display_tooltip']['sockets'][0]['gem']);
+        $this->assertSame(
+            3375,
+            $item['display_tooltip']['sockets'][1]['gem']['enchant_id']
+        );
+    }
+
+    public function testResolvesBrightBloodstoneWithItsExactIcon(): void
+    {
+        $mockItemDb = $this->createMock(ItemDatabaseService::class);
+        $gem = (new PaperdollService($mockItemDb))->resolveGemFromEnchantId(3375);
+
+        $this->assertSame(39906, $gem['id']);
+        $this->assertSame('Bright Bloodstone', $gem['name']);
+        $this->assertSame(2, $gem['quality']);
+        $this->assertSame(2, $gem['color_mask']);
+        $this->assertSame(
+            'https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_gem_22.jpg',
+            $gem['icon_url']
+        );
+    }
+
     public function testBuildsDistinctDynamicTooltipsForTwoInstancesOfTheSameItem(): void
     {
         $mockItemDb = $this->createMock(ItemDatabaseService::class);
@@ -79,11 +127,20 @@ class PaperdollServiceTest extends TestCase
         $this->assertNotNull($slots['head']['item']);
         $this->assertSame('Helm of Light', $slots['head']['item']['name']);
         $this->assertSame(4, $slots['head']['item']['quality']);
-        $this->assertSame('/wow-icons/large/inv_helmet_06.jpg', $slots['head']['item']['icon_url']);
+        $this->assertSame('https://wow.zamimg.com/images/wow/icons/large/inv_helmet_06.jpg', $slots['head']['item']['icon_url']);
+        $this->assertSame('/wow-icons/large/inv_helmet_06.jpg', $slots['head']['item']['icon_fallback_url']);
         $this->assertNotEmpty($slots['head']['item']['gem_details']);
         $this->assertSame(41398, $slots['head']['item']['gem_details'][0]['id']);
         $this->assertSame(3628, $slots['head']['item']['gem_details'][0]['enchant_id']);
         $this->assertSame('Relentless Earthsiege Diamond', $slots['head']['item']['gem_details'][0]['name']);
+        $this->assertSame(
+            'https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_shadowspirit_02.jpg',
+            $slots['head']['item']['gem_details'][0]['icon_url']
+        );
+        $this->assertSame(
+            '/wow-icons/large/inv_jewelcrafting_shadowspirit_02.jpg',
+            $slots['head']['item']['gem_details'][0]['icon_fallback_url']
+        );
 
         // Rings check (finger1 and finger2)
         $this->assertNotNull($slots['finger1']['item']);
