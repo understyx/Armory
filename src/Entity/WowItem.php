@@ -13,7 +13,7 @@ class WowItem
     #[ORM\Column(name: 'item_id', type: 'bigint')]
     private ?int $itemId = null;
 
-    #[ORM\Column(length: 96, nullable: true)]
+    #[ORM\Column(length: 255, nullable: true)]
     private ?string $name = null;
 
     #[ORM\Column(name: 'item_level', type: 'integer', nullable: true)]
@@ -42,6 +42,18 @@ class WowItem
 
     #[ORM\Column(length: 64, nullable: true)]
     private ?string $icon = null;
+
+    #[ORM\Column(name: 'tooltip_data', type: 'json', nullable: true)]
+    private ?array $tooltipData = null;
+
+    #[ORM\Column(name: 'source_build', type: 'integer', nullable: true)]
+    private ?int $sourceBuild = null;
+
+    #[ORM\Column(name: 'gear_score_source', length: 32, nullable: true)]
+    private ?string $gearScoreSource = null;
+
+    #[ORM\Column(name: 'gear_score_version', length: 32, nullable: true)]
+    private ?string $gearScoreVersion = null;
 
     public function getItemId(): ?int
     {
@@ -171,6 +183,54 @@ class WowItem
     public function setIcon(?string $icon): static
     {
         $this->icon = $icon;
+
+        return $this;
+    }
+
+    public function getTooltipData(): ?array
+    {
+        return $this->tooltipData;
+    }
+
+    public function setTooltipData(?array $tooltipData): static
+    {
+        $this->tooltipData = $tooltipData;
+
+        return $this;
+    }
+
+    public function getSourceBuild(): ?int
+    {
+        return $this->sourceBuild;
+    }
+
+    public function setSourceBuild(?int $sourceBuild): static
+    {
+        $this->sourceBuild = $sourceBuild;
+
+        return $this;
+    }
+
+    public function getGearScoreSource(): ?string
+    {
+        return $this->gearScoreSource;
+    }
+
+    public function setGearScoreSource(?string $gearScoreSource): static
+    {
+        $this->gearScoreSource = $gearScoreSource;
+
+        return $this;
+    }
+
+    public function getGearScoreVersion(): ?string
+    {
+        return $this->gearScoreVersion;
+    }
+
+    public function setGearScoreVersion(?string $gearScoreVersion): static
+    {
+        $this->gearScoreVersion = $gearScoreVersion;
 
         return $this;
     }

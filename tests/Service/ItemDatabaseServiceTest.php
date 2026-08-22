@@ -23,6 +23,10 @@ class ItemDatabaseServiceTest extends TestCase
         $item->setGemSlots(2);
         $item->setGearScore(335);
         $item->setIcon('inv_helmet_134');
+        $item->setTooltipData(['armor' => 2000]);
+        $item->setSourceBuild(12340);
+        $item->setGearScoreSource('legacy-items.sql');
+        $item->setGearScoreVersion('legacy-items-sql-v1');
 
         $repo = $this->createMock(WowItemRepository::class);
         $repo->expects($this->once())
@@ -44,6 +48,9 @@ class ItemDatabaseServiceTest extends TestCase
         $this->assertEquals(2, $result['gem_slots']);
         $this->assertEquals(335.0, $result['gs']);
         $this->assertEquals('inv_helmet_134', $result['icon']);
+        $this->assertSame(['armor' => 2000], $result['tooltip']);
+        $this->assertSame(12340, $result['source_build']);
+        $this->assertSame('legacy-items.sql', $result['gear_score_source']);
     }
 
     public function testGetItemReturnsNullWhenNotFound(): void

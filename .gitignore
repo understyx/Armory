@@ -21,3 +21,6 @@
 
 # Kept locally as a standalone repository; the Symfony app only uses data/items.sql.
 /discordbot/
+
+# Local source dump used by app:import-trinity-items (too large for Git).
+/TDB_full_world_*.sql

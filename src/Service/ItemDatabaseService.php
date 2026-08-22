@@ -74,6 +74,10 @@ class ItemDatabaseService
             'gem_slots' => $item->getGemSlots() ?? 0,
             'gs' => (float) ($item->getGearScore() ?? 0),
             'icon' => $item->getIcon(),
+            'tooltip' => $item->getTooltipData(),
+            'source_build' => $item->getSourceBuild(),
+            'gear_score_source' => $item->getGearScoreSource(),
+            'gear_score_version' => $item->getGearScoreVersion(),
         ];
     }
 }

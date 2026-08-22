@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
-    <script type="text/javascript" src="https://cdn.cavernoftime.com/api/tooltip.js"></script>
+    <script type="module" src="{{ asset('item-tooltip.js') }}"></script>
     {% if characterModel %}
         <script src="https://code.jquery.com/jquery-3.7.1.min.js"
                 integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
@@ -120,10 +120,11 @@
                         {% for slotKey in ['head', 'neck', 'shoulder', 'back', 'chest', 'shirt', 'tabard', 'wrist'] %}
                             {% set slot = paperdollSlots[slotKey] %}
                             <div class="paperdoll-row left-row">
-                                <div class="paperdoll-slot" title="{{ slot.name }}{% if slot.item %}: {{ slot.item.name }}{% else %} (Empty){% endif %}">
+                                <div class="paperdoll-slot" aria-label="{{ slot.name }}{% if slot.item %}: {{ slot.item.name }}{% else %} (Empty){% endif %}">
                                     {% if slot.item %}
                                         <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
                                            class="slot-icon-box q-{{ slot.item.quality|default(1) }}"
+                                           data-item-tooltip="{{ slot.item.tooltip_key }}"
                                            rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}{% if slot.item.transmog %}&amp;transmog={{ slot.item.transmog }}{% endif %}"
                                            target="_blank">
                                             {% if slot.item.icon_url %}
@@ -146,6 +147,7 @@
                                     {% if slot.item %}
                                         <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
                                            class="slot-item-name q-{{ slot.item.quality|default(1) }}"
+                                           data-item-tooltip="{{ slot.item.tooltip_key }}"
                                            target="_blank"
                                            rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}">
                                             {{ slot.item.name }}
@@ -186,6 +188,7 @@
                                     {% if slot.item %}
                                         <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
                                            class="slot-item-name q-{{ slot.item.quality|default(1) }}"
+                                           data-item-tooltip="{{ slot.item.tooltip_key }}"
                                            target="_blank"
                                            rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}">
                                             {{ slot.item.name }}
@@ -212,10 +215,11 @@
                                     {% endif %}
                                 </div>
 
-                                <div class="paperdoll-slot" title="{{ slot.name }}{% if slot.item %}: {{ slot.item.name }}{% else %} (Empty){% endif %}">
+                                <div class="paperdoll-slot" aria-label="{{ slot.name }}{% if slot.item %}: {{ slot.item.name }}{% else %} (Empty){% endif %}">
                                     {% if slot.item %}
                                         <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
                                            class="slot-icon-box q-{{ slot.item.quality|default(1) }}"
+                                           data-item-tooltip="{{ slot.item.tooltip_key }}"
                                            rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}{% if slot.item.transmog %}&amp;transmog={{ slot.item.transmog }}{% endif %}"
                                            target="_blank">
                                             {% if slot.item.icon_url %}
@@ -244,10 +248,11 @@
                     {% for slotKey in ['mainhand', 'offhand', 'ranged'] %}
                         {% set slot = paperdollSlots[slotKey] %}
                         <div class="paperdoll-bottom-card">
-                            <div class="paperdoll-slot" title="{{ slot.name }}{% if slot.item %}: {{ slot.item.name }}{% else %} (Empty){% endif %}">
+                            <div class="paperdoll-slot" aria-label="{{ slot.name }}{% if slot.item %}: {{ slot.item.name }}{% else %} (Empty){% endif %}">
                                 {% if slot.item %}
                                     <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
                                        class="slot-icon-box q-{{ slot.item.quality|default(1) }}"
+                                       data-item-tooltip="{{ slot.item.tooltip_key }}"
                                        rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}{% if slot.item.transmog %}&amp;transmog={{ slot.item.transmog }}{% endif %}"
                                        target="_blank">
                                         {% if slot.item.icon_url %}
@@ -270,6 +275,7 @@
                                 {% if slot.item %}
                                     <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
                                        class="slot-item-name q-{{ slot.item.quality|default(1) }}"
+                                       data-item-tooltip="{{ slot.item.tooltip_key }}"
                                        target="_blank"
                                        rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}">
                                         {{ slot.item.name }}
@@ -1046,6 +1052,8 @@
             document.getElementById('match-details-modal').style.display = 'none';
         }
     </script>
+    <script id="item-tooltip-data" type="application/json">{{ itemTooltips|default({})|json_encode(constant('JSON_HEX_TAG') + constant('JSON_HEX_AMP') + constant('JSON_HEX_APOS') + constant('JSON_HEX_QUOT'))|raw }}</script>
+
     {% if characterModel %}
         <script id="character-model-data" type="application/json">{{ characterModel|json_encode|raw }}</script>
         <script type="module">

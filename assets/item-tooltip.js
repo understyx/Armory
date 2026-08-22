@@ -1,0 +1,219 @@
+const dataElement = document.getElementById('item-tooltip-data');
+
+if (dataElement) {
+    let tooltips = {};
+    try {
+        tooltips = JSON.parse(dataElement.textContent || '{}');
+    } catch (error) {
+        console.error('Unable to parse local item tooltip data.', error);
+    }
+
+    let activeTrigger = null;
+    let activeTooltip = null;
+    let touchPrimedTrigger = null;
+
+    const appendLine = (parent, text, className = '') => {
+        if (text === null || text === undefined || text === '') return null;
+        const line = document.createElement('div');
+        line.className = `item-tooltip-line ${className}`.trim();
+        line.textContent = text;
+        parent.appendChild(line);
+        return line;
+    };
+
+    const buildTooltip = (item) => {
+        const tooltip = document.createElement('div');
+        tooltip.id = 'local-item-tooltip';
+        tooltip.className = `item-tooltip item-tooltip-q-${item.quality}`;
+        tooltip.setAttribute('role', 'tooltip');
+
+        if (item.icon_url) {
+            const icon = document.createElement('img');
+            icon.className = `item-tooltip-icon q-${item.quality}`;
+            icon.src = item.icon_url;
+            icon.alt = '';
+            tooltip.appendChild(icon);
+        }
+
+        const content = document.createElement('div');
+        content.className = 'item-tooltip-content';
+        tooltip.appendChild(content);
+
+        appendLine(content, item.name, `item-tooltip-name q-${item.quality}`);
+        if (item.heroic) appendLine(content, 'Heroic', 'item-tooltip-positive');
+        appendLine(content, item.binding);
+        if (item.unique) appendLine(content, 'Unique');
+
+        if (item.slot || item.subclass) {
+            const typeRow = document.createElement('div');
+            typeRow.className = 'item-tooltip-split';
+            const slot = document.createElement('span');
+            slot.textContent = item.slot || '';
+            const subclass = document.createElement('span');
+            subclass.textContent = item.subclass || '';
+            typeRow.append(slot, subclass);
+            content.appendChild(typeRow);
+        }
+
+        if (item.damage) {
+            const damageRow = document.createElement('div');
+            damageRow.className = 'item-tooltip-split';
+            const range = document.createElement('span');
+            range.textContent = `${item.damage.min} - ${item.damage.max} Damage`;
+            const speed = document.createElement('span');
+            speed.textContent = item.damage.speed ? `Speed ${item.damage.speed}` : '';
+            damageRow.append(range, speed);
+            content.appendChild(damageRow);
+            if (item.damage.dps) appendLine(content, `(${item.damage.dps} damage per second)`);
+        }
+
+        if (item.armor > 0) appendLine(content, `${item.armor} Armor`);
+        if (item.block > 0) appendLine(content, `${item.block} Block`);
+        (item.primary_stats || []).forEach((stat) => appendLine(content, stat));
+
+        if (item.enchant) appendLine(content, item.enchant, 'item-tooltip-positive');
+
+        (item.sockets || []).forEach((socket) => {
+            const row = document.createElement('div');
+            row.className = `item-tooltip-socket ${socket.matches ? 'is-matched' : 'is-unmatched'}`;
+
+            if (socket.gem?.icon_url) {
+                const gemIcon = document.createElement('img');
+                gemIcon.src = socket.gem.icon_url;
+                gemIcon.alt = '';
+                row.appendChild(gemIcon);
+            } else {
+                const emptySocket = document.createElement('span');
+                emptySocket.className = `item-tooltip-socket-empty socket-${String(socket.color).toLowerCase()}`;
+                row.appendChild(emptySocket);
+            }
+
+            const socketText = document.createElement('span');
+            socketText.textContent = socket.gem?.effect || `${socket.color} Socket`;
+            row.appendChild(socketText);
+            content.appendChild(row);
+        });
+
+        if (item.socket_bonus) {
+            appendLine(
+                content,
+                `Socket Bonus: ${item.socket_bonus.text}${item.socket_bonus.active ? '' : ' (Inactive)'}`,
+                item.socket_bonus.active ? 'item-tooltip-positive' : 'item-tooltip-inactive'
+            );
+        }
+
+        if (item.required_level > 0) appendLine(content, `Requires Level ${item.required_level}`);
+        if (item.item_level > 0) appendLine(content, `Item Level ${item.item_level}`);
+        (item.equip_effects || []).forEach((effect) => appendLine(content, `Equip: ${effect}`, 'item-tooltip-positive'));
+        appendLine(content, item.description, 'item-tooltip-flavor');
+
+        if (item.sell_price) {
+            const price = document.createElement('div');
+            price.className = 'item-tooltip-price';
+            const label = document.createElement('span');
+            label.textContent = 'Sell Price:';
+            price.appendChild(label);
+            [['gold', 'gold'], ['silver', 'silver'], ['copper', 'copper']].forEach(([key, className]) => {
+                if (item.sell_price[key] <= 0 && key === 'gold') return;
+                const amount = document.createElement('span');
+                amount.className = 'item-tooltip-coin-amount';
+                amount.textContent = item.sell_price[key];
+                const coin = document.createElement('span');
+                coin.className = `item-tooltip-coin coin-${className}`;
+                price.append(amount, coin);
+            });
+            content.appendChild(price);
+        }
+
+        return tooltip;
+    };
+
+    const positionTooltip = (trigger, tooltip) => {
+        const margin = 10;
+        const triggerRect = trigger.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const icon = tooltip.querySelector('.item-tooltip-icon');
+        const iconOffset = icon && getComputedStyle(icon).display !== 'none' ? 55 : 0;
+        const minimumLeft = margin + iconOffset;
+        let left = triggerRect.right + margin;
+        let top = triggerRect.top;
+
+        if (left + tooltipRect.width > window.innerWidth - margin) {
+            left = triggerRect.left - tooltipRect.width - margin;
+        }
+        if (left < minimumLeft) {
+            left = Math.max(minimumLeft, Math.min(triggerRect.left, window.innerWidth - tooltipRect.width - margin));
+        }
+        top = Math.max(margin, Math.min(top, window.innerHeight - tooltipRect.height - margin));
+
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+    };
+
+    const hideTooltip = () => {
+        if (activeTrigger) activeTrigger.removeAttribute('aria-describedby');
+        activeTooltip?.remove();
+        activeTooltip = null;
+        activeTrigger = null;
+    };
+
+    const showTooltip = (trigger) => {
+        const item = tooltips[trigger.dataset.itemTooltip];
+        if (!item) return;
+        if (activeTrigger === trigger && activeTooltip?.isConnected) return;
+
+        hideTooltip();
+        activeTrigger = trigger;
+        activeTooltip = buildTooltip(item);
+        document.body.appendChild(activeTooltip);
+        trigger.setAttribute('aria-describedby', activeTooltip.id);
+        positionTooltip(trigger, activeTooltip);
+    };
+
+    const tooltipTriggerFrom = (target) => target instanceof Element ? target.closest('[data-item-tooltip]') : null;
+
+    document.addEventListener('pointerover', (event) => {
+        if (event.pointerType === 'touch') return;
+        const trigger = tooltipTriggerFrom(event.target);
+        if (trigger) showTooltip(trigger);
+    });
+
+    document.addEventListener('pointerout', (event) => {
+        if (event.pointerType === 'touch') return;
+        const trigger = tooltipTriggerFrom(event.target);
+        const destination = tooltipTriggerFrom(event.relatedTarget);
+        if (trigger && destination !== trigger) hideTooltip();
+    });
+
+    document.addEventListener('focusin', (event) => {
+        const trigger = tooltipTriggerFrom(event.target);
+        if (trigger) showTooltip(trigger);
+    });
+
+    document.addEventListener('focusout', (event) => {
+        const destination = tooltipTriggerFrom(event.relatedTarget);
+        if (!destination) hideTooltip();
+    });
+
+    document.addEventListener('click', (event) => {
+        const trigger = tooltipTriggerFrom(event.target);
+        const touchOnly = window.matchMedia('(hover: none)').matches;
+        if (touchOnly && trigger && touchPrimedTrigger !== trigger) {
+            event.preventDefault();
+            touchPrimedTrigger = trigger;
+            showTooltip(trigger);
+            return;
+        }
+        if (!trigger) {
+            touchPrimedTrigger = null;
+            hideTooltip();
+        }
+    }, true);
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') hideTooltip();
+    });
+
+    window.addEventListener('resize', hideTooltip);
+    window.addEventListener('scroll', hideTooltip, true);
+}

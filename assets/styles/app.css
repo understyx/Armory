@@ -26,6 +26,7 @@
     --quality-4: #a335ee;
     --quality-5: #ff8000;
     --quality-6: #e6cc80;
+    --quality-7: #00ccff;
 
     --class-dk: #c41f3b;
     --class-druid: #ff7d0a;
@@ -559,6 +560,7 @@ body {
 .gear-slot-item-icon.q-4 { border-color: var(--quality-4); box-shadow: 0 0 10px rgba(163, 53, 238, 0.6); }
 .gear-slot-item-icon.q-5 { border-color: var(--quality-5); box-shadow: 0 0 12px rgba(255, 128, 0, 0.7); }
 .gear-slot-item-icon.q-6 { border-color: var(--quality-6); box-shadow: 0 0 12px rgba(230, 204, 128, 0.7); }
+.gear-slot-item-icon.q-7 { border-color: var(--quality-7); box-shadow: 0 0 12px rgba(0, 204, 255, 0.7); }
 
 .slot-item-title {
     font-weight: 700;
@@ -1068,6 +1070,7 @@ body {
 .q-4 { color: var(--quality-4) !important; }
 .q-5 { color: var(--quality-5) !important; }
 .q-6 { color: var(--quality-6) !important; }
+.q-7 { color: var(--quality-7) !important; }
 
 /* Class Colors */
 .class-death-knight, .class-dk { color: var(--class-dk); }
@@ -1321,12 +1324,137 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Cavernoftime Tooltip Fixes */
-#wowhead-tooltip {
-    background: #121319 !important;
-    border: 1px solid #33394a !important;
-    border-radius: 6px !important;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.6) !important;
+/* Local WotLK item tooltip */
+.item-tooltip {
+    position: fixed;
+    z-index: 12000;
+    width: max-content;
+    min-width: 280px;
+    max-width: min(390px, calc(100vw - 20px));
+    padding: 9px 11px;
+    border: 1px solid #12628a;
+    border-radius: 2px;
+    background: rgba(3, 12, 17, 0.98);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.78);
+    color: #fff;
+    font: 500 13px/1.35 'Inter', system-ui, sans-serif;
+    pointer-events: none;
+}
+
+.item-tooltip-content {
+    min-width: 0;
+}
+
+.item-tooltip-icon {
+    position: absolute;
+    top: -2px;
+    right: calc(100% + 5px);
+    width: 48px;
+    height: 48px;
+    border: 2px solid currentColor;
+    border-radius: 3px;
+    background: #071017;
+    object-fit: cover;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.item-tooltip-name {
+    padding-right: 8px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.item-tooltip-line,
+.item-tooltip-split,
+.item-tooltip-socket,
+.item-tooltip-price {
+    min-height: 18px;
+}
+
+.item-tooltip-split {
+    display: flex;
+    justify-content: space-between;
+    gap: 28px;
+}
+
+.item-tooltip-positive {
+    color: #1eff00;
+}
+
+.item-tooltip-inactive {
+    color: #9d9d9d;
+}
+
+.item-tooltip-socket.is-matched { color: #fff; }
+.item-tooltip-socket.is-unmatched { color: #ff8040; }
+
+.item-tooltip-socket {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.item-tooltip-socket img,
+.item-tooltip-socket-empty {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 15px;
+    border: 1px solid #7d8493;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.socket-meta { background: #d7d7d7; }
+.socket-red { background: #cf202f; }
+.socket-yellow { background: #f2cf32; }
+.socket-blue { background: #256bd6; }
+.socket-prismatic { background: linear-gradient(135deg, #cf202f, #f2cf32, #256bd6); }
+
+.item-tooltip-flavor {
+    color: #ffd100;
+    font-style: italic;
+}
+
+.item-tooltip-price {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.item-tooltip-coin-amount {
+    margin-left: 2px;
+}
+
+.item-tooltip-coin {
+    width: 11px;
+    height: 11px;
+    border: 1px solid rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.65);
+}
+
+.coin-gold { background: #d9a821; }
+.coin-silver { background: #b8bec8; }
+.coin-copper { background: #a86335; }
+
+.item-tooltip-q-0 { border-color: var(--quality-0); }
+.item-tooltip-q-1 { border-color: #637180; }
+.item-tooltip-q-2 { border-color: var(--quality-2); }
+.item-tooltip-q-3 { border-color: var(--quality-3); }
+.item-tooltip-q-4 { border-color: var(--quality-4); }
+.item-tooltip-q-5 { border-color: var(--quality-5); }
+.item-tooltip-q-6 { border-color: var(--quality-6); }
+.item-tooltip-q-7 { border-color: var(--quality-7); }
+
+@media (max-width: 480px) {
+    .item-tooltip {
+        min-width: 0;
+        width: calc(100vw - 20px);
+    }
+
+    .item-tooltip-icon {
+        display: none;
+    }
 }
 
 /* ==========================================================================
@@ -1533,6 +1661,7 @@ body {
 .slot-ilvl-badge.q-4 { color: #a335ee; }
 .slot-ilvl-badge.q-5 { color: #ff8000; }
 .slot-ilvl-badge.q-6 { color: #e6cc80; }
+.slot-ilvl-badge.q-7 { color: #00ccff; }
 
 /* Slot Info Block (Name, Green Enchant, Gems) */
 .slot-info-block {
@@ -1656,6 +1785,7 @@ body {
 .slot-icon-box.q-4 { border-color: var(--quality-4); box-shadow: 0 0 14px rgba(163, 53, 238, 0.7); }
 .slot-icon-box.q-5 { border-color: var(--quality-5); box-shadow: 0 0 16px rgba(255, 128, 0, 0.8); }
 .slot-icon-box.q-6 { border-color: var(--quality-6); box-shadow: 0 0 16px rgba(230, 204, 128, 0.8); }
+.slot-icon-box.q-7 { border-color: var(--quality-7); box-shadow: 0 0 16px rgba(0, 204, 255, 0.75); }
 
 /* Full-layout character viewport */
 .paperdoll-viewport {

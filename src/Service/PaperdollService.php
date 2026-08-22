@@ -7,7 +7,8 @@ use App\Enum\ItemTypes;
 class PaperdollService
 {
     public function __construct(
-        private readonly ItemDatabaseService $itemDatabaseService
+        private readonly ItemDatabaseService $itemDatabaseService,
+        private readonly ?ItemTooltipService $itemTooltipService = null,
     ) {
     }
 
@@ -45,9 +46,12 @@ class PaperdollService
 
             $enrichedItems[] = [
                 'id' => $id,
+                'tooltip_key' => $id !== null ? $id . '-' . $index : null,
                 'name' => $item['name'] ?? ($dbData['name'] ?? ($id ? "Item #{$id}" : "Unknown Item")),
                 'quality' => $item['quality'] ?? ($dbData['quality'] ?? 1),
                 'type' => $item['type'] ?? ($dbData['type'] ?? null),
+                'class' => $item['class'] ?? ($dbData['class'] ?? null),
+                'subclass' => $item['subclass'] ?? ($dbData['subclass'] ?? null),
                 'icon' => $item['icon'] ?? ($dbData['icon'] ?? null),
                 'ilvl' => $item['ilvl'] ?? ($dbData['ilvl'] ?? 0),
                 'gs' => $item['gs'] ?? ($dbData['gs'] ?? 0),
@@ -56,8 +60,40 @@ class PaperdollService
                 'gems' => $rawGems,
                 'gem_details' => $gemDetails,
                 'transmog' => $item['transmog'] ?? null,
+                'tooltip' => $item['tooltip'] ?? ($dbData['tooltip'] ?? null),
                 'orig_index' => $index,
             ];
+        }
+
+        foreach ($enrichedItems as &$enrichedItem) {
+            $iconName = $enrichedItem['icon'] ?? null;
+            if (!empty($iconName)) {
+                $cleanIcon = strtolower(pathinfo($iconName, PATHINFO_FILENAME));
+                $enrichedItem['icon_url'] = "https://wow.zamimg.com/images/wow/icons/large/{$cleanIcon}.jpg";
+            } else {
+                $enrichedItem['icon_url'] = null;
+            }
+        }
+        unset($enrichedItem);
+
+        $setCounts = [];
+        foreach ($enrichedItems as $enrichedItem) {
+            $setId = (int) ($enrichedItem['tooltip']['item_set_id'] ?? 0);
+            if ($setId > 0) {
+                $setCounts[$setId] = ($setCounts[$setId] ?? 0) + 1;
+            }
+        }
+
+        $itemTooltips = [];
+        if ($this->itemTooltipService !== null) {
+            foreach ($enrichedItems as &$enrichedItem) {
+                $tooltip = $this->itemTooltipService->build($enrichedItem, $setCounts);
+                if ($tooltip !== null && $enrichedItem['tooltip_key'] !== null) {
+                    $enrichedItem['display_tooltip'] = $tooltip;
+                    $itemTooltips[$enrichedItem['tooltip_key']] = $tooltip;
+                }
+            }
+            unset($enrichedItem);
         }
 
         $slots = [
@@ -213,6 +249,7 @@ class PaperdollService
         return [
             'slots' => $slots,
             'enrichedItems' => $enrichedItems,
+            'tooltips' => $itemTooltips,
         ];
     }
 
@@ -226,6 +263,8 @@ class PaperdollService
                 'enchant_id' => $gemEnchantId,
                 'name' => $gemData['name'],
                 'quality' => $gemData['quality'] ?? 4,
+                'effect' => EnchantDatabase::ENCHANTS[$gemEnchantId] ?? $gemData['name'],
+                'color_mask' => $this->inferGemColorMask($gemData['name'], $gemData['icon']),
                 'icon_url' => "https://wow.zamimg.com/images/wow/icons/large/{$cleanIcon}.jpg",
             ];
         }
@@ -274,7 +313,41 @@ class PaperdollService
             'name' => $name,
             'color' => $color,
             'quality' => 4,
+            'effect' => $name,
+            'color_mask' => $this->inferGemColorMask($name, $iconUrl),
             'icon_url' => $iconUrl,
         ];
+    }
+
+    private function inferGemColorMask(string $name, string $icon): int
+    {
+        $value = strtolower($name . ' ' . $icon);
+
+        if (str_contains($value, 'diamond')) {
+            return 1;
+        }
+        if (str_contains($value, 'nightmare tear') || str_contains($value, 'prismatic')) {
+            return 2 | 4 | 8;
+        }
+        if (str_contains($value, 'dreadstone') || str_contains($value, 'twilight opal')) {
+            return 2 | 8;
+        }
+        if (str_contains($value, 'ametrine') || str_contains($value, 'monarch topaz')) {
+            return 2 | 4;
+        }
+        if (str_contains($value, 'eye of zul') || str_contains($value, 'forest emerald')) {
+            return 4 | 8;
+        }
+        if (str_contains($value, 'dragonseye03') || str_contains($value, "king's amber") || str_contains($value, 'autumn')) {
+            return 4;
+        }
+        if (str_contains($value, 'dragonseye04') || str_contains($value, 'zircon') || str_contains($value, 'sapphire')) {
+            return 8;
+        }
+        if (str_contains($value, 'dragonseye05') || str_contains($value, 'ruby')) {
+            return 2;
+        }
+
+        return 0;
     }
 }

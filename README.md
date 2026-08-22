@@ -30,7 +30,17 @@ DB_PASSWORD=raidbot
 DB_NAME=raidbot
 ```
 
-The item importer reads `data/items.sql` by default. A different SQL dump can be passed as its first argument to `php bin/console app:import-items`.
+For canonical item data and local tooltips, place a TrinityCore 3.3.5a full-world dump outside Git and run:
+
+```bash
+php bin/console doctrine:migrations:migrate --no-interaction
+php bin/console app:import-trinity-items /path/to/TDB_full_world_335.sql \
+  --gear-score-file=data/items.sql
+```
+
+The importer streams `item_template` from the full dump, uses TrinityCore for authoritative item fields, and uses `data/items.sql` only as the precomputed GearScore overlay. Existing icons and GearScores without a matching overlay row are preserved. The older `app:import-items` command remains available as a lightweight fallback.
+
+The raw TrinityCore dump is intentionally ignored by Git. Client DBC lookups are still required for exact meta-gem conditions and item-set bonus text; base item tooltips and ordinary socket matching work without them.
 
 ## Production deployment
 
@@ -96,7 +106,7 @@ the installer creates an HTTP-only virtual host and requires an `http://` URL.
 ```bash
 composer install --no-dev --prefer-dist --optimize-autoloader
 php bin/console doctrine:migrations:migrate --no-interaction
-php bin/console app:import-items
+php bin/console app:import-trinity-items /path/to/TDB_full_world_335.sql --gear-score-file=data/items.sql
 php bin/console asset-map:compile
 php bin/console cache:clear
 ```

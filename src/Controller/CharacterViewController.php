@@ -218,6 +218,7 @@ class CharacterViewController extends AbstractController
             'isWotlkServer' => $isWotlkServer,
             'equippedItems' => $paperdollData['enrichedItems'],
             'paperdollSlots' => $paperdollData['slots'],
+            'itemTooltips' => $paperdollData['tooltips'],
             'characterModel' => $snapshot->getCharacterModel(),
             'gearScore' => $snapshot->getGearScore(),
             'avgIlvl' => $snapshot->getAvgIlvl(),

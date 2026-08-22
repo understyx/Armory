@@ -4,11 +4,50 @@ namespace App\Tests\Service;
 
 use App\Enum\ItemTypes;
 use App\Service\ItemDatabaseService;
+use App\Service\ItemTooltipService;
 use App\Service\PaperdollService;
 use PHPUnit\Framework\TestCase;
 
 class PaperdollServiceTest extends TestCase
 {
+    public function testBuildsDistinctDynamicTooltipsForTwoInstancesOfTheSameItem(): void
+    {
+        $mockItemDb = $this->createMock(ItemDatabaseService::class);
+        $mockItemDb->method('getItemsBulk')->willReturn([
+            50002 => [
+                'name' => 'Ring of Testing',
+                'quality' => 4,
+                'type' => ItemTypes::RING->value,
+                'class' => 4,
+                'subclass' => 0,
+                'tooltip' => [
+                    'flags' => 0,
+                    'bonding' => 1,
+                    'max_count' => 0,
+                    'stats' => [],
+                    'damage' => [],
+                    'sockets' => [],
+                    'socket_bonus_id' => 0,
+                    'sell_price' => 0,
+                    'description' => '',
+                    'item_set_id' => 0,
+                ],
+            ],
+        ]);
+
+        $service = new PaperdollService($mockItemDb, new ItemTooltipService());
+        $result = $service->buildPaperdollSlots([
+            ['id' => 50002, 'enchant' => 1],
+            ['id' => 50002, 'enchant' => 2],
+        ]);
+
+        $this->assertCount(2, $result['tooltips']);
+        $this->assertArrayHasKey('50002-0', $result['tooltips']);
+        $this->assertArrayHasKey('50002-1', $result['tooltips']);
+        $this->assertSame('Rockbiter 3', $result['tooltips']['50002-0']['enchant']);
+        $this->assertSame('Frostbr& 1', $result['tooltips']['50002-1']['enchant']);
+    }
+
     public function testBuildPaperdollSlotsAssignsItemsByTypesAndFallbacks(): void
     {
         $mockItemDb = $this->createMock(ItemDatabaseService::class);
