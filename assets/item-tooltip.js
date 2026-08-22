@@ -123,11 +123,14 @@ if (dataElement) {
                 `${item.item_set.name} (${item.item_set.equipped_count}/${memberCount})`,
                 'item-tooltip-set-name'
             );
-            (item.item_set.members || []).forEach((member) => appendLine(
-                content,
-                member.name,
-                `item-tooltip-set-member ${member.equipped ? 'is-equipped' : ''}`
-            ));
+            (item.item_set.members || []).forEach((member) => {
+                const isEquipped = member.equipped || Number(member.item_id) === Number(item.id);
+                appendLine(
+                    content,
+                    member.name,
+                    `item-tooltip-set-member ${isEquipped ? 'is-equipped' : ''}`
+                );
+            });
             (item.item_set.bonuses || []).forEach((bonus) => appendLine(
                 content,
                 `(${bonus.required_count}) Set: ${bonus.description}`,
@@ -157,10 +160,26 @@ if (dataElement) {
         return tooltip;
     };
 
+    const itemAnchorRect = (trigger) => {
+        const container = trigger.closest('.paperdoll-row, .paperdoll-bottom-card') || trigger;
+        if (!container.classList.contains('paperdoll-row')) return container.getBoundingClientRect();
+
+        const parts = [...container.querySelectorAll(':scope > .paperdoll-slot, :scope > .slot-info-block')];
+        if (parts.length === 0) return container.getBoundingClientRect();
+
+        const rects = parts.map((part) => part.getBoundingClientRect());
+        const left = Math.min(...rects.map((rect) => rect.left));
+        const right = Math.max(...rects.map((rect) => rect.right));
+        const top = Math.min(...rects.map((rect) => rect.top));
+        const bottom = Math.max(...rects.map((rect) => rect.bottom));
+
+        return {left, right, top, bottom, width: right - left, height: bottom - top};
+    };
+
     const positionTooltip = (trigger, tooltip) => {
         const margin = 10;
         const itemContainer = trigger.closest('.paperdoll-row, .paperdoll-bottom-card') || trigger;
-        const anchorRect = itemContainer.getBoundingClientRect();
+        const anchorRect = itemAnchorRect(trigger);
         const tooltipRect = tooltip.getBoundingClientRect();
         const icon = tooltip.querySelector('.item-tooltip-icon');
         const iconOffset = icon && getComputedStyle(icon).display !== 'none' ? 55 : 0;

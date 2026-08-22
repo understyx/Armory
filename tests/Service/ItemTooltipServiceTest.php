@@ -126,7 +126,7 @@ class ItemTooltipServiceTest extends TestCase
         $this->assertTrue($tooltip['sockets'][2]['matches']);
         $this->assertTrue($tooltip['sockets'][2]['inferred']);
         $this->assertFalse($tooltip['sockets'][2]['counts_for_bonus']);
-        $this->assertSame('+20 Armor Penetration', $tooltip['sockets'][2]['gem']['effect']);
+        $this->assertSame('+20 Armor Penetration Rating', $tooltip['sockets'][2]['gem']['effect']);
         $this->assertTrue($tooltip['socket_bonus']['active']);
     }
 
@@ -174,5 +174,77 @@ class ItemTooltipServiceTest extends TestCase
         self::assertTrue($tooltip['item_set']['members'][0]['equipped']);
         self::assertTrue($tooltip['item_set']['bonuses'][0]['active']);
         self::assertFalse($tooltip['item_set']['bonuses'][1]['active']);
+    }
+
+    public function testHighlightsSingleEquippedSetPieceAcrossDifficultyIds(): void
+    {
+        $itemName = 'Sanctified Bloodmage Gloves';
+        $tooltip = (new ItemTooltipService())->build([
+            'id' => 51280,
+            'name' => $itemName,
+            'quality' => 4,
+            'item_set_details' => [
+                'name' => "Sanctified Bloodmage's Regalia",
+                // External databases may list another difficulty's item ID.
+                'members' => [
+                    ['item_id' => 51159, 'name' => $itemName],
+                    ['item_id' => 51158, 'name' => 'Sanctified Bloodmage Hood'],
+                ],
+                'bonuses' => [],
+            ],
+            'tooltip' => [
+                'flags' => 0,
+                'bonding' => 1,
+                'max_count' => 0,
+                'stats' => [],
+                'damage' => [],
+                'sockets' => [],
+                'socket_bonus_id' => 0,
+                'sell_price' => 0,
+                'description' => '',
+                'item_set_id' => 883,
+            ],
+        ], [883 => 1], [51280], [$itemName]);
+
+        self::assertNotNull($tooltip);
+        self::assertSame(1, $tooltip['item_set']['equipped_count']);
+        self::assertTrue($tooltip['item_set']['members'][0]['equipped']);
+        self::assertFalse($tooltip['item_set']['members'][1]['equipped']);
+    }
+
+    public function testExpandsGemAndEnchantStatShorthand(): void
+    {
+        $tooltip = (new ItemTooltipService())->build([
+            'id' => 1,
+            'name' => 'Shorthand Test Item',
+            'quality' => 4,
+            'enchant_name' => '+23 SP & +20 Crit & +20 Hit',
+            'gem_details' => [[
+                'effect' => '+10 Haste & +10 Expertise & +10 Armor Pen',
+                'color_mask' => 2,
+            ]],
+            'tooltip' => [
+                'flags' => 0,
+                'bonding' => 0,
+                'max_count' => 0,
+                'stats' => [],
+                'damage' => [],
+                'sockets' => [['color' => 2, 'content' => 0]],
+                'socket_bonus_id' => 0,
+                'sell_price' => 0,
+                'description' => '',
+                'item_set_id' => 0,
+            ],
+        ]);
+
+        self::assertNotNull($tooltip);
+        self::assertSame(
+            '+23 Spell Power & +20 Critical Strike Rating & +20 Hit Rating',
+            $tooltip['enchant']
+        );
+        self::assertSame(
+            '+10 Haste Rating & +10 Expertise Rating & +10 Armor Penetration Rating',
+            $tooltip['sockets'][0]['gem']['effect']
+        );
     }
 }

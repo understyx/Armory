@@ -24,9 +24,15 @@ class ItemTooltipService
      * @param array<string, mixed> $item
      * @param array<int, int> $setCounts
      * @param int[] $equippedItemIds
+     * @param string[] $equippedItemNames
      * @return array<string, mixed>|null
      */
-    public function build(array $item, array $setCounts = [], array $equippedItemIds = []): ?array
+    public function build(
+        array $item,
+        array $setCounts = [],
+        array $equippedItemIds = [],
+        array $equippedItemNames = [],
+    ): ?array
     {
         $raw = $item['tooltip'] ?? null;
         if (!is_array($raw)) {
@@ -123,12 +129,32 @@ class ItemTooltipService
         $setDetails = $item['item_set_details'] ?? null;
         if ($itemSet !== null && is_array($setDetails)) {
             $itemSet['name'] = (string) ($setDetails['name'] ?? sprintf('Item Set #%d', $setId));
+            $equippedNameKeys = array_fill_keys(array_map(
+                static fn (string $name): string => strtolower(trim($name)),
+                $equippedItemNames
+            ), true);
+            $currentItemId = (int) ($item['id'] ?? 0);
+            $currentItemName = strtolower(trim((string) ($item['name'] ?? '')));
             $itemSet['members'] = array_map(
-                static fn (array $member): array => [
-                    'item_id' => (int) ($member['item_id'] ?? 0),
-                    'name' => (string) ($member['name'] ?? 'Unknown Item'),
-                    'equipped' => in_array((int) ($member['item_id'] ?? 0), $equippedItemIds, true),
-                ],
+                static function (array $member) use (
+                    $equippedItemIds,
+                    $equippedNameKeys,
+                    $currentItemId,
+                    $currentItemName
+                ): array {
+                    $memberId = (int) ($member['item_id'] ?? 0);
+                    $memberName = (string) ($member['name'] ?? 'Unknown Item');
+                    $memberNameKey = strtolower(trim($memberName));
+
+                    return [
+                        'item_id' => $memberId,
+                        'name' => $memberName,
+                        'equipped' => in_array($memberId, $equippedItemIds, true)
+                            || ($currentItemId > 0 && $memberId === $currentItemId)
+                            || ($memberNameKey !== '' && isset($equippedNameKeys[$memberNameKey]))
+                            || ($currentItemName !== '' && $memberNameKey === $currentItemName),
+                    ];
+                },
                 $setDetails['members'] ?? []
             );
             $equippedCount = (int) $itemSet['equipped_count'];
@@ -222,7 +248,24 @@ class ItemTooltipService
             return null;
         }
 
-        return preg_replace('/\bArmor Pen\b(?!etration)/i', 'Armor Penetration', $text) ?? $text;
+        $expanded = preg_replace_callback(
+            '/(\+?\d+(?:\.\d+)?\s+)(Armor Pen(?:etration)?|Crit|Haste|Hit|Expertise|SP)(?:\s+Rating)?\b/i',
+            static function (array $matches): string {
+                $stat = match (strtolower($matches[2])) {
+                    'sp' => 'Spell Power',
+                    'crit' => 'Critical Strike Rating',
+                    'haste' => 'Haste Rating',
+                    'hit' => 'Hit Rating',
+                    'expertise' => 'Expertise Rating',
+                    default => 'Armor Penetration Rating',
+                };
+
+                return $matches[1] . $stat;
+            },
+            $text
+        );
+
+        return $expanded ?? $text;
     }
 
     private function bindingName(int $bonding): ?string

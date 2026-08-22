@@ -80,9 +80,13 @@ class PaperdollService
 
         $setCounts = [];
         $equippedItemIds = [];
+        $equippedItemNames = [];
         foreach ($enrichedItems as $enrichedItem) {
             if ((int) ($enrichedItem['id'] ?? 0) > 0) {
                 $equippedItemIds[] = (int) $enrichedItem['id'];
+            }
+            if (trim((string) ($enrichedItem['name'] ?? '')) !== '') {
+                $equippedItemNames[] = (string) $enrichedItem['name'];
             }
             $setId = (int) ($enrichedItem['tooltip']['item_set_id'] ?? 0);
             if ($setId > 0) {
@@ -93,7 +97,12 @@ class PaperdollService
         $itemTooltips = [];
         if ($this->itemTooltipService !== null) {
             foreach ($enrichedItems as &$enrichedItem) {
-                $tooltip = $this->itemTooltipService->build($enrichedItem, $setCounts, $equippedItemIds);
+                $tooltip = $this->itemTooltipService->build(
+                    $enrichedItem,
+                    $setCounts,
+                    $equippedItemIds,
+                    $equippedItemNames
+                );
                 if ($tooltip !== null && $enrichedItem['tooltip_key'] !== null) {
                     $enrichedItem['display_tooltip'] = $tooltip;
                     $itemTooltips[$enrichedItem['tooltip_key']] = $tooltip;
