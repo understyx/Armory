@@ -30,7 +30,7 @@ class CharacterViewControllerTest extends KernelTestCase
         $snapshot->setEquippedItems([]);
         $snapshot->setCharacterModel([
             'race' => 1,
-            'gender' => 1,
+            'gender' => 0,
             'skin' => 0,
             'face' => 0,
             'hairStyle' => 0,
@@ -86,6 +86,11 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
         $this->assertStringContainsString('Understyx', $response->getContent());
         $this->assertStringContainsString('6000', $response->getContent());
+        $this->assertStringContainsString('Level 80 Male Human', $response->getContent());
+        $this->assertStringContainsString('Interactive 3D model of Understyx, male', $response->getContent());
+        $this->assertStringContainsString('class="character-search character-page-search"', $response->getContent());
+        $this->assertStringContainsString('action="/characters"', $response->getContent());
+        $this->assertStringContainsString('<option value="Icecrown" selected>', $response->getContent());
         $this->assertStringContainsString('Fetch rankings from Uwu-logs', $response->getContent());
         $this->assertStringContainsString('/characters/Understyx/Icecrown/uwu-logs', $response->getContent());
         $this->assertStringContainsString('Rankings are fetched only when you request them.', $response->getContent());

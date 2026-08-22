@@ -206,6 +206,7 @@ class CharacterViewController extends AbstractController
             'realmName' => $snapshot->getRealm(),
             'characterDetails' => [
                 'level' => $snapshot->getLevel(),
+                'gender' => $snapshot->getGender(),
                 'race' => $snapshot->getRace(),
                 'class' => $snapshot->getClass(),
             ],

@@ -48,6 +48,7 @@ class ArmoryControllerTest extends TestCase
 
         self::assertSame('unchanged', $payload['status']);
         self::assertFalse($payload['updated']);
+        self::assertSame('Female', $payload['gender']);
         self::assertSame($storedAt->format(\DateTimeInterface::ATOM), $payload['scrapedAt']);
         self::assertSame('No new character data was available. The saved data was not changed.', $payload['warning']);
     }
@@ -65,6 +66,11 @@ class ArmoryControllerTest extends TestCase
             ->setProfessions([])
             ->setSpecializations([])
             ->setEquippedItems([])
+            ->setCharacterModel([
+                'race' => 1,
+                'gender' => 1,
+                'items' => [],
+            ])
             ->setTalentStrings([])
             ->setGlyphs([])
             ->setEnchantsStatus('')

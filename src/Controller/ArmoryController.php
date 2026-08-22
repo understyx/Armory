@@ -141,6 +141,7 @@ class ArmoryController extends AbstractController
             'characterName' => $snapshot->getName(),
             'realmName' => $snapshot->getRealm(),
             'level' => $snapshot->getLevel(),
+            'gender' => $snapshot->getGender(),
             'race' => $snapshot->getRace(),
             'class' => $snapshot->getClass(),
             'guild' => $snapshot->getGuild(),

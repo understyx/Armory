@@ -474,7 +474,16 @@ class ArmoryScraperService
         }
 
         $modelId = strtolower(preg_replace('/[^a-z]/i', '', $modelMatch['id']));
-        $gender = str_ends_with($modelId, 'female') ? 0 : 1;
+        $gender = match (true) {
+            str_ends_with($modelId, 'female') => 1,
+            str_ends_with($modelId, 'male') => 0,
+            default => null,
+        };
+
+        if ($gender === null) {
+            return null;
+        }
+
         $raceName = preg_replace('/(?:female|male)$/', '', $modelId);
         $race = [
             'human' => 1,

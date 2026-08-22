@@ -288,6 +288,10 @@ body {
     padding: 24px 16px;
 }
 
+.character-page-search {
+    margin-bottom: 20px;
+}
+
 /* Header Card */
 .header-card {
     background: var(--bg-card);

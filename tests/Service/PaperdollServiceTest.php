@@ -79,7 +79,7 @@ class PaperdollServiceTest extends TestCase
         $this->assertNotNull($slots['head']['item']);
         $this->assertSame('Helm of Light', $slots['head']['item']['name']);
         $this->assertSame(4, $slots['head']['item']['quality']);
-        $this->assertSame('https://wow.zamimg.com/images/wow/icons/large/inv_helmet_06.jpg', $slots['head']['item']['icon_url']);
+        $this->assertSame('/wow-icons/large/inv_helmet_06.jpg', $slots['head']['item']['icon_url']);
         $this->assertNotEmpty($slots['head']['item']['gem_details']);
         $this->assertSame(41398, $slots['head']['item']['gem_details'][0]['id']);
         $this->assertSame(3628, $slots['head']['item']['gem_details'][0]['enchant_id']);

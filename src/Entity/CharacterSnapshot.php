@@ -220,6 +220,15 @@ class CharacterSnapshot
         return $this->characterModel;
     }
 
+    public function getGender(): ?string
+    {
+        return match ($this->characterModel['gender'] ?? null) {
+            0, '0' => 'Male',
+            1, '1' => 'Female',
+            default => null,
+        };
+    }
+
     public function setCharacterModel(?array $characterModel): static
     {
         $this->characterModel = $characterModel;

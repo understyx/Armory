@@ -44,6 +44,8 @@ The raw TrinityCore dump is intentionally ignored by Git. Client DBC lookups are
 
 Special item effects and item-set text are enriched into local cache tables. Cavern of Time is queried first because it reflects original 3.3.5 data; Wowhead is a fallback only, since WotLK Classic changed some item and trinket effects. The character page never waits for either provider. Missing data is queued for the Messenger worker and appears on a later view.
 
+Item and gem images use same-origin `/wow-icons/` URLs. On the first request, the server downloads the image and keeps its immutable copy in `var/wow-icons`; browsers never connect to Wowhead for these icons. Preserve that directory between deployments to keep the exact cached artwork.
+
 Bulk prefilling is optional and must be requested explicitly:
 
 ```bash
@@ -135,6 +137,31 @@ php bin/console cache:clear
 ```
 
 Ensure the web-server user can write to `var/`. Run `php bin/console app:purge-snapshots` periodically if old character snapshots should be removed automatically.
+
+## Public character API
+
+Read the most recently cached character snapshot:
+
+```http
+GET /api/character/{name}/{realm}
+```
+
+The response contains `updatedAt`, basic character identity and progression data,
+equipped item/enchant/transmog/gem IDs, structured professions, and talent strings.
+This endpoint never contacts Warmane. It returns `404 Not Found` when no snapshot
+has been cached yet.
+
+Queue a fresh scrape with:
+
+```http
+POST /api/requestupdate/{name}/{realm}
+```
+
+Accepted requests return `202 Accepted`. A character may only be requested once
+every five minutes; requests made during that window return `429 Too Many Requests`
+with a `Retry-After` header. Refreshes are processed by the existing Messenger
+worker, so production must keep `armorystuff-messenger` (or an equivalent
+`messenger:consume async` process) running.
 
 ## Verification
 

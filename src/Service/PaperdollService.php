@@ -68,13 +68,7 @@ class PaperdollService
         }
 
         foreach ($enrichedItems as &$enrichedItem) {
-            $iconName = $enrichedItem['icon'] ?? null;
-            if (!empty($iconName)) {
-                $cleanIcon = strtolower(pathinfo($iconName, PATHINFO_FILENAME));
-                $enrichedItem['icon_url'] = "https://wow.zamimg.com/images/wow/icons/large/{$cleanIcon}.jpg";
-            } else {
-                $enrichedItem['icon_url'] = null;
-            }
+            $enrichedItem['icon_url'] = $this->iconUrl($enrichedItem['icon'] ?? null);
         }
         unset($enrichedItem);
 
@@ -237,25 +231,13 @@ class PaperdollService
 
         // Generate icon URLs and propagate should_have_enchant to item data
         foreach ($enrichedItems as &$enrichedItem) {
-            $iconName = $enrichedItem['icon'] ?? null;
-            if (!empty($iconName)) {
-                $cleanIcon = strtolower(pathinfo($iconName, PATHINFO_FILENAME));
-                $enrichedItem['icon_url'] = "https://wow.zamimg.com/images/wow/icons/large/{$cleanIcon}.jpg";
-            } else {
-                $enrichedItem['icon_url'] = null;
-            }
+            $enrichedItem['icon_url'] = $this->iconUrl($enrichedItem['icon'] ?? null);
         }
         unset($enrichedItem);
 
         foreach ($slots as $slotKey => &$slotData) {
             if ($slotData['item'] !== null) {
-                $iconName = $slotData['item']['icon'] ?? null;
-                if (!empty($iconName)) {
-                    $cleanIcon = strtolower(pathinfo($iconName, PATHINFO_FILENAME));
-                    $slotData['item']['icon_url'] = "https://wow.zamimg.com/images/wow/icons/large/{$cleanIcon}.jpg";
-                } else {
-                    $slotData['item']['icon_url'] = null;
-                }
+                $slotData['item']['icon_url'] = $this->iconUrl($slotData['item']['icon'] ?? null);
                 $slotData['item']['should_have_enchant'] = $slotData['should_have_enchant'];
             }
         }
@@ -280,22 +262,22 @@ class PaperdollService
                 'quality' => $gemData['quality'] ?? 4,
                 'effect' => EnchantDatabase::ENCHANTS[$gemEnchantId] ?? $gemData['name'],
                 'color_mask' => $this->inferGemColorMask($gemData['name'], $gemData['icon']),
-                'icon_url' => "https://wow.zamimg.com/images/wow/icons/large/{$cleanIcon}.jpg",
+                'icon_url' => $this->iconUrl($cleanIcon),
             ];
         }
 
         $name = EnchantDatabase::ENCHANTS[$gemEnchantId] ?? "Gem #{$gemEnchantId}";
         $textLower = strtolower($name);
 
-        $iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_gem_37.jpg';
+        $iconName = 'inv_jewelcrafting_gem_37';
         $color = 'default';
 
         if (preg_match('/(increased critical|spell reflect|reduced threat|restore mana|snare\/root|silence duration|stun duration|heal on your crits|shield block value|run speed)/i', $textLower)) {
             $color = 'meta';
-            $iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_shadowspirit_02.jpg';
+            $iconName = 'inv_jewelcrafting_shadowspirit_02';
         } elseif (str_contains($textLower, 'all stats') || str_contains($textLower, 'all resist')) {
             $color = 'prismatic';
-            $iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_nightmaretear_01.jpg';
+            $iconName = 'inv_jewelcrafting_nightmaretear_01';
         } else {
             $hasRed = preg_match('/\b(strength|agility|ap|sp|attack power|spell power|armor pen|expertise|parry|dodge)\b/i', $textLower);
             $hasBlue = preg_match('/\b(stamina|mp5|spirit|spell pen)\b/i', $textLower);
@@ -303,22 +285,22 @@ class PaperdollService
 
             if ($hasRed && $hasBlue && !$hasYellow) {
                 $color = 'purple';
-                $iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_dreadstone_02.jpg';
+                $iconName = 'inv_jewelcrafting_dreadstone_02';
             } elseif ($hasRed && $hasYellow && !$hasBlue) {
                 $color = 'orange';
-                $iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_ametrine_02.jpg';
+                $iconName = 'inv_jewelcrafting_ametrine_02';
             } elseif ($hasYellow && $hasBlue && !$hasRed) {
                 $color = 'green';
-                $iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_eyeofzul_02.jpg';
+                $iconName = 'inv_jewelcrafting_eyeofzul_02';
             } elseif ($hasRed) {
                 $color = 'red';
-                $iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_crimsonruby_02.jpg';
+                $iconName = 'inv_jewelcrafting_crimsonruby_02';
             } elseif ($hasBlue) {
                 $color = 'blue';
-                $iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_skytanzanite_02.jpg';
+                $iconName = 'inv_jewelcrafting_skytanzanite_02';
             } elseif ($hasYellow) {
                 $color = 'yellow';
-                $iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_kingssamber_02.jpg';
+                $iconName = 'inv_jewelcrafting_kingssamber_02';
             }
         }
 
@@ -329,9 +311,23 @@ class PaperdollService
             'color' => $color,
             'quality' => 4,
             'effect' => $name,
-            'color_mask' => $this->inferGemColorMask($name, $iconUrl),
-            'icon_url' => $iconUrl,
+            'color_mask' => $this->inferGemColorMask($name, $iconName),
+            'icon_url' => $this->iconUrl($iconName),
         ];
+    }
+
+    private function iconUrl(?string $iconName): ?string
+    {
+        if ($iconName === null || trim($iconName) === '') {
+            return null;
+        }
+
+        $cleanIcon = strtolower(pathinfo($iconName, PATHINFO_FILENAME));
+        if (!preg_match('/\A[a-z0-9][a-z0-9_-]{0,127}\z/', $cleanIcon)) {
+            return null;
+        }
+
+        return '/wow-icons/large/'.rawurlencode($cleanIcon).'.jpg';
     }
 
     private function inferGemColorMask(string $name, string $icon): int

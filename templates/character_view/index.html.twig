@@ -20,6 +20,34 @@
 <body>
     <div class="armory-wrapper">
 
+        <form class="character-search character-page-search" action="{{ path('app_characters') }}" method="get" aria-label="Search for another character">
+            <label class="visually-hidden" for="character-page-search">Character name</label>
+            <input
+                id="character-page-search"
+                class="character-search-input"
+                type="search"
+                name="character"
+                placeholder="Search another character"
+                autocomplete="off"
+                required
+            >
+
+            <label class="visually-hidden" for="character-page-realm">Realm</label>
+            <select id="character-page-realm" class="character-search-realm" name="realm" aria-label="Realm">
+                {% for realm in ['Icecrown', 'Lordaeron', 'Frostmourne', 'Blackrock'] %}
+                    <option value="{{ realm }}"{% if realm == realmName %} selected{% endif %}>{{ realm }}</option>
+                {% endfor %}
+            </select>
+
+            <button class="character-search-button" type="submit" aria-label="Search for character">
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <span>Search</span>
+            </button>
+        </form>
+
         {# Flash Messages #}
         {% for label, messages in app.flashes %}
             {% for message in messages %}
@@ -48,7 +76,7 @@
                     {% endif %}
                 </div>
                 <div class="char-details-sub">
-                    <span>Level {{ characterDetails.level }} {{ characterDetails.race }} <strong class="{{ classCss }}">{{ characterDetails.class }}</strong></span>
+                    <span>Level {{ characterDetails.level }}{% if characterDetails.gender %} {{ characterDetails.gender }}{% endif %} {{ characterDetails.race }} <strong class="{{ classCss }}">{{ characterDetails.class }}</strong></span>
                     {% if guild %}
                         <span>&bull; &lt;<span class="guild-name">{{ guild }}</span>&gt;</span>
                     {% endif %}
@@ -101,7 +129,7 @@
                                     id="character-model-viewer"
                                     class="character-model-viewer"
                                     role="img"
-                                    aria-label="Interactive 3D model of {{ characterName }}"
+                                    aria-label="Interactive 3D model of {{ characterName }}{% if characterDetails.gender %}, {{ characterDetails.gender|lower }}{% endif %}"
                                 ></div>
                                 <div id="character-model-status" class="character-model-status" role="status">
                                     <span class="model-loading-spinner" aria-hidden="true"></span>
@@ -163,7 +191,7 @@
                                                 <div class="slot-gems-inline">
                                                     {% for gem in slot.item.gem_details %}
                                                         <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
-                                                            <img src="{{ gem.icon_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="this.src='https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_gem_37.jpg';" />
+                                                            <img src="{{ gem.icon_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="this.style.display='none';" />
                                                         </a>
                                                     {% endfor %}
                                                 </div>
@@ -204,7 +232,7 @@
                                                 <div class="slot-gems-inline">
                                                     {% for gem in slot.item.gem_details %}
                                                         <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
-                                                            <img src="{{ gem.icon_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="this.src='https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_gem_37.jpg';" />
+                                                            <img src="{{ gem.icon_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="this.style.display='none';" />
                                                         </a>
                                                     {% endfor %}
                                                 </div>
@@ -291,7 +319,7 @@
                                             <div class="slot-gems-inline">
                                                 {% for gem in slot.item.gem_details %}
                                                     <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
-                                                        <img src="{{ gem.icon_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="this.src='https://wow.zamimg.com/images/wow/icons/large/inv_jewelcrafting_gem_37.jpg';" />
+                                                        <img src="{{ gem.icon_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="this.style.display='none';" />
                                                     </a>
                                                 {% endfor %}
                                             </div>

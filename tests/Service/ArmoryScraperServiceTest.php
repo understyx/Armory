@@ -169,7 +169,7 @@ class ArmoryScraperServiceTest extends TestCase
 
         $this->assertSame([
             'race' => 10,
-            'gender' => 1,
+            'gender' => 0,
             'skin' => 7,
             'face' => 4,
             'hairStyle' => 2,
@@ -177,6 +177,28 @@ class ArmoryScraperServiceTest extends TestCase
             'facialStyle' => 5,
             'items' => [[1, 63830], [3, 64706], [21, 30606], [22, 53563]],
         ], $service->extractCharacterModelData($html));
+    }
+
+    public function testExtractCharacterModelDataPreservesFemaleGender(): void
+    {
+        $service = new ArmoryScraperService();
+        $html = <<<'HTML'
+            <script>
+                var charactermodel = {
+                    sk: 2,
+                    models: {
+                        type: ModelViewer.Wow.Types.CHARACTER,
+                        id: 'draeneifemale'
+                    }
+                };
+            </script>
+            HTML;
+
+        $model = $service->extractCharacterModelData($html);
+
+        $this->assertNotNull($model);
+        $this->assertSame(11, $model['race']);
+        $this->assertSame(1, $model['gender']);
     }
 
     public function testExtractCharacterModelDataReturnsNullWithoutModelConfig(): void
