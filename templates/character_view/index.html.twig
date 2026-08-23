@@ -81,6 +81,23 @@
                         <span>&bull; &lt;<a class="guild-name" href="{{ path('app_guild_view', {'guildName': guild, 'realmName': realmName}) }}">{{ guild }}</a>&gt;</span>
                     {% endif %}
                 </div>
+
+                <div class="header-actions">
+                    <form action="{{ path('app_character_refresh', {'characterName': characterName, 'realmName': realmName}) }}" method="POST">
+                        <button type="submit" class="btn-refresh">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.13 15.57a10 10 0 1 0 0.57-8.38l5.67-5.67"/></svg>
+                            Refresh Data
+                        </button>
+                    </form>
+                    {% if scrapedAt %}
+                        <div class="scraped-time">
+                            Updated {{ scrapedAt|date('Y-m-d H:i') }} UTC
+                            {% if staleAgeDays %}
+                                <span class="stale-notice">Hasn't been updated in {{ staleAgeDays }} {{ staleAgeDays == 1 ? 'day' : 'days' }} and could be out of date.</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="stats-row">
@@ -100,22 +117,6 @@
                 </div>
             </div>
 
-            <div class="header-actions">
-                <form action="{{ path('app_character_refresh', {'characterName': characterName, 'realmName': realmName}) }}" method="POST">
-                    <button type="submit" class="btn-refresh">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.13 15.57a10 10 0 1 0 0.57-8.38l5.67-5.67"/></svg>
-                        Refresh Data
-                    </button>
-                </form>
-                {% if scrapedAt %}
-                    <div class="scraped-time">
-                        Updated {{ scrapedAt|date('Y-m-d H:i') }} UTC
-                        {% if staleAgeDays %}
-                            <span class="stale-notice">Hasn't been updated in {{ staleAgeDays }} {{ staleAgeDays == 1 ? 'day' : 'days' }} and could be out of date.</span>
-                        {% endif %}
-                    </div>
-                {% endif %}
-            </div>
         </div>
 
         {# SECTION 1: CHARACTER EQUIPMENT & ITEMS #}

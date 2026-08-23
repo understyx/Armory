@@ -451,11 +451,10 @@ body {
     padding: 24px;
     margin-bottom: 20px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 20px;
+    gap: 32px;
 }
 
 .char-main-info {
@@ -558,9 +557,9 @@ body {
 .rank-pending { color: var(--text-muted); font-style: italic; }
 
 .stats-row {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+    gap: 12px;
 }
 
 .stat-pill {
@@ -570,6 +569,10 @@ body {
     border-radius: 10px;
     text-align: center;
     min-width: 110px;
+    min-height: 112px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
@@ -595,9 +598,9 @@ body {
 /* Actions & Timestamp */
 .header-actions {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
+    align-items: center;
+    gap: 12px;
+    margin-top: 18px;
 }
 
 .scraped-time {
@@ -1239,8 +1242,8 @@ body {
 }
 
 .professions-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 12px;
 }
 
@@ -1254,6 +1257,16 @@ body {
     gap: 10px;
     font-weight: 600;
     color: var(--accent-gold);
+    width: max-content;
+    max-width: 100%;
+}
+
+.prof-icon {
+    flex-shrink: 0;
+}
+
+.prof-name {
+    white-space: nowrap;
 }
 
 /* Quality Colors */
@@ -2488,6 +2501,18 @@ body {
     overflow-y: auto;
 }
 
+@media (max-width: 980px) {
+    .header-card {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+        gap: 20px;
+    }
+
+    .stats-row {
+        width: 100%;
+    }
+}
+
 @media (max-width: 768px) {
     .armory-wrapper {
         padding: 12px 8px;
@@ -2540,7 +2565,12 @@ body {
         padding: 10px;
     }
 
+    .uwu-rank-pill {
+        grid-column: 1 / -1;
+    }
+
     .header-actions {
+        flex-direction: column;
         align-items: stretch;
     }
 
@@ -2654,7 +2684,11 @@ body {
     }
 
     .professions-grid {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+    }
+
+    .profession-card {
+        width: 100%;
     }
 
     .modal-overlay {
@@ -2675,6 +2709,13 @@ body {
     .modal-close {
         width: 44px;
         height: 44px;
+    }
+}
+
+@media (max-width: 360px) {
+    .prof-name {
+        white-space: normal;
+        overflow-wrap: anywhere;
     }
 }
 
