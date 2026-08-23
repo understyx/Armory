@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+    <script type="module" src="{{ asset('guild-roster-sort.js') }}"></script>
 </head>
 <body>
 <main class="armory-wrapper guild-page">
@@ -47,19 +48,29 @@
         </div>
         <div class="table-scroll">
             <table class="data-table guild-roster-table">
-                <thead><tr><th>Character</th><th>Class</th><th>Level</th><th>Guild rank</th><th>Achievement points</th><th>Professions</th><th>Best Uwu-logs parse</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th aria-sort="none"><button type="button" class="guild-sort-button" data-sort-column="0" data-sort-type="text">Character<span class="sort-indicator" aria-hidden="true"></span></button></th>
+                        <th aria-sort="none"><button type="button" class="guild-sort-button" data-sort-column="1" data-sort-type="text">Class<span class="sort-indicator" aria-hidden="true"></span></button></th>
+                        <th aria-sort="none"><button type="button" class="guild-sort-button" data-sort-column="2" data-sort-type="number">Level<span class="sort-indicator" aria-hidden="true"></span></button></th>
+                        <th aria-sort="none"><button type="button" class="guild-sort-button" data-sort-column="3" data-sort-type="text">Guild rank<span class="sort-indicator" aria-hidden="true"></span></button></th>
+                        <th aria-sort="none"><button type="button" class="guild-sort-button" data-sort-column="4" data-sort-type="number">Achievement points<span class="sort-indicator" aria-hidden="true"></span></button></th>
+                        <th aria-sort="none"><button type="button" class="guild-sort-button" data-sort-column="5" data-sort-type="text">Professions<span class="sort-indicator" aria-hidden="true"></span></button></th>
+                        <th aria-sort="none"><button type="button" class="guild-sort-button" data-sort-column="6" data-sort-type="number">Best Uwu-logs parse<span class="sort-indicator" aria-hidden="true"></span></button></th>
+                    </tr>
+                </thead>
                 <tbody>
                 {% for member in guild.members %}
                     {% set memberKey = member.name|lower %}
                     {% set rank = ranks[memberKey]|default(null) %}
-                    <tr>
-                        <td data-label="Character"><a class="guild-member-link" href="{{ path('app_character_view', {'characterName': member.name, 'realmName': guild.realm}) }}">{{ member.name }}</a>{% if member.race %}<span class="member-race">{{ member.race }}</span>{% endif %}</td>
-                        <td data-label="Class"><span class="class-{{ member.class|default('unknown')|lower|replace({' ': '-'}) }}">{{ member.class|default('Unknown') }}</span></td>
-                        <td data-label="Level">{{ member.level }}</td>
-                        <td data-label="Guild rank">{{ member.rank|default('—') }}</td>
-                        <td data-label="Achievement points">{{ member.achievementPoints|number_format }}</td>
-                        <td data-label="Professions">{{ member.professions is not empty ? member.professions|join(', ') : '—' }}</td>
-                        <td data-label="Best Uwu-logs parse" class="guild-uwu-rank">{% if rank %}<strong style="color: {{ rank.scoreColor }}">{{ rank.overallPoints|number_format(2) }} points</strong><span>{% if rank.overallRank > 0 %}#{{ rank.overallRank|number_format }}{% endif %}</span><span>{{ rank.specName(member.class|default(null)) }}</span>{% else %}<span class="rank-pending">Pending</span>{% endif %}</td>
+                    <tr data-sortable-row>
+                        <td data-label="Character" data-sort-value="{{ member.name }}"><a class="guild-member-link" href="{{ path('app_character_view', {'characterName': member.name, 'realmName': guild.realm}) }}">{{ member.name }}</a>{% if member.race %}<span class="member-race">{{ member.race }}</span>{% endif %}</td>
+                        <td data-label="Class" data-sort-value="{{ member.class|default('Unknown') }}"><span class="class-{{ member.class|default('unknown')|lower|replace({' ': '-'}) }}">{{ member.class|default('Unknown') }}</span></td>
+                        <td data-label="Level" data-sort-value="{{ member.level }}">{{ member.level }}</td>
+                        <td data-label="Guild rank" data-sort-value="{{ member.rank|default('') }}">{{ member.rank|default('—') }}</td>
+                        <td data-label="Achievement points" data-sort-value="{{ member.achievementPoints }}">{{ member.achievementPoints|number_format }}</td>
+                        <td data-label="Professions" data-sort-value="{{ member.professions|default([])|join(', ') }}">{{ member.professions is not empty ? member.professions|join(', ') : '—' }}</td>
+                        <td data-label="Best Uwu-logs parse" data-sort-value="{{ rank ? rank.overallPoints : '' }}" class="guild-uwu-rank">{% if rank %}<strong style="color: {{ rank.scoreColor }}">{{ rank.overallPoints|number_format(2) }} points</strong><span>{% if rank.overallRank > 0 %}#{{ rank.overallRank|number_format }}{% endif %}</span><span>{{ rank.specName(member.class|default(null)) }}</span>{% else %}<span class="rank-pending">Pending</span>{% endif %}</td>
                     </tr>
                 {% else %}
                     <tr><td colspan="7">No members were found in this guild roster.</td></tr>

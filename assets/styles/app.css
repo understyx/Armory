@@ -1317,6 +1317,48 @@ body {
     letter-spacing: 0.05em;
 }
 
+.guild-sort-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    letter-spacing: inherit;
+    text-align: left;
+    text-transform: inherit;
+    cursor: pointer;
+}
+
+.guild-sort-button:hover {
+    color: var(--text-primary);
+}
+
+.guild-sort-button:focus-visible {
+    border-radius: 3px;
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 3px;
+}
+
+.sort-indicator::after {
+    color: var(--text-muted);
+    content: '\2195';
+    font-size: 0.9rem;
+}
+
+.guild-roster-table th[aria-sort="ascending"] .sort-indicator::after {
+    color: var(--accent-blue);
+    content: '\2191';
+}
+
+.guild-roster-table th[aria-sort="descending"] .sort-indicator::after {
+    color: var(--accent-blue);
+    content: '\2193';
+}
+
 .data-table td {
     font-size: 0.95rem;
 }
