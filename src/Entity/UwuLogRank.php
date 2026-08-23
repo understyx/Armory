@@ -45,6 +45,18 @@ class UwuLogRank
     public function getPayload(): array { return $this->payload; }
     public function setPayload(array $payload): static { $this->payload = $payload; return $this; }
     public function getOverallPoints(): float { return (float) ($this->payload['overallPoints'] ?? 0.0); }
+    public function isBetterThan(?self $other): bool
+    {
+        if ($other === null || $this->getOverallPoints() > $other->getOverallPoints()) {
+            return true;
+        }
+        if ($this->getOverallPoints() < $other->getOverallPoints()) {
+            return false;
+        }
+
+        return $this->overallRank > 0
+            && ($other->overallRank === 0 || $this->overallRank < $other->overallRank);
+    }
     public function getScoreColor(): string
     {
         return match (true) {

@@ -42,6 +42,7 @@ final class GuildControllerTest extends WebTestCase
         self::assertSelectorTextContains('h1', '<Cadence>');
         self::assertSelectorTextContains('.guild-roster-table', 'Imtilted');
         self::assertSelectorTextContains('.guild-uwu-rank', '#42');
+        self::assertSelectorTextContains('.guild-uwu-rank', '85.00 points');
         self::assertSelectorTextContains('.guild-uwu-rank', 'Holy');
         self::assertSelectorExists('.guild-uwu-rank strong[style="color: #a335ee"]');
         self::assertSelectorExists('a[href="/characters/Imtilted/Icecrown"]');

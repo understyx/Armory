@@ -47,7 +47,7 @@
         </div>
         <div class="table-scroll">
             <table class="data-table guild-roster-table">
-                <thead><tr><th>Character</th><th>Class</th><th>Level</th><th>Guild rank</th><th>Achievement points</th><th>Professions</th><th>Uwu-logs rank</th></tr></thead>
+                <thead><tr><th>Character</th><th>Class</th><th>Level</th><th>Guild rank</th><th>Achievement points</th><th>Professions</th><th>Best Uwu-logs parse</th></tr></thead>
                 <tbody>
                 {% for member in guild.members %}
                     {% set memberKey = member.name|lower %}
@@ -59,7 +59,7 @@
                         <td data-label="Guild rank">{{ member.rank|default('—') }}</td>
                         <td data-label="Achievement points">{{ member.achievementPoints|number_format }}</td>
                         <td data-label="Professions">{{ member.professions is not empty ? member.professions|join(', ') : '—' }}</td>
-                        <td data-label="Uwu-logs rank" class="guild-uwu-rank">{% if rank %}<strong style="color: {{ rank.scoreColor }}">#{{ rank.overallRank|number_format }}</strong><span>{{ rank.specName(member.class|default(null)) }}</span>{% else %}<span class="rank-pending">Pending</span>{% endif %}</td>
+                        <td data-label="Best Uwu-logs parse" class="guild-uwu-rank">{% if rank %}<strong style="color: {{ rank.scoreColor }}">{{ rank.overallPoints|number_format(2) }} points</strong><span>{% if rank.overallRank > 0 %}#{{ rank.overallRank|number_format }}{% endif %}</span><span>{{ rank.specName(member.class|default(null)) }}</span>{% else %}<span class="rank-pending">Pending</span>{% endif %}</td>
                     </tr>
                 {% else %}
                     <tr><td colspan="7">No members were found in this guild roster.</td></tr>

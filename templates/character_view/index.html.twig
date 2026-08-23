@@ -93,8 +93,9 @@
                     <div class="stat-value">{{ avgIlvl }}</div>
                 </div>
                 <div class="stat-pill uwu-rank-pill">
-                    <div class="stat-label">Uwu-logs Rank</div>
-                    <div id="header-uwu-rank" class="stat-value" data-rank="{{ uwuRank ? uwuRank.overallRank : 0 }}"{% if uwuRank %} style="color: {{ uwuRank.scoreColor }}"{% endif %}>{% if uwuRank and uwuRank.overallRank > 0 %}#{{ uwuRank.overallRank|number_format }}{% else %}—{% endif %}</div>
+                    <div class="stat-label">Best Uwu-logs Parse</div>
+                    <div id="header-uwu-points" class="stat-value" data-points="{{ uwuRank ? uwuRank.overallPoints : 0 }}" data-rank="{{ uwuRank ? uwuRank.overallRank : 0 }}"{% if uwuRank %} style="color: {{ uwuRank.scoreColor }}"{% endif %}>{% if uwuRank %}{{ uwuRank.overallPoints|number_format(2) }}{% else %}—{% endif %}</div>
+                    <div id="header-uwu-rank" class="stat-rank">{% if uwuRank and uwuRank.overallRank > 0 %}#{{ uwuRank.overallRank|number_format }}{% endif %}</div>
                     <div id="header-uwu-spec" class="stat-meta">{% if uwuRank %}{{ uwuRank.specName(characterDetails.class) }}{% endif %}</div>
                 </div>
             </div>
@@ -859,12 +860,21 @@
                 }
 
                 renderUwuLogsRankings(data, specSelect.options[specSelect.selectedIndex].text);
-                const headerRank = document.getElementById('header-uwu-rank');
-                const currentBestRank = Number(headerRank?.dataset.rank || 0);
-                if (headerRank && data.overallRank > 0 && (currentBestRank <= 0 || data.overallRank < currentBestRank)) {
-                    headerRank.textContent = `#${Number(data.overallRank).toLocaleString()}`;
-                    headerRank.dataset.rank = String(data.overallRank);
-                    headerRank.style.color = getUwuScoreColor(data.overallPoints);
+                const headerPoints = document.getElementById('header-uwu-points');
+                const currentBestPoints = Number(headerPoints?.dataset.points || 0);
+                const currentBestRank = Number(headerPoints?.dataset.rank || 0);
+                const newPoints = Number(data.overallPoints || 0);
+                const newRank = Number(data.overallRank || 0);
+                const isBetterParse = newPoints > currentBestPoints
+                    || (newPoints === currentBestPoints && newRank > 0 && (currentBestRank <= 0 || newRank < currentBestRank));
+                if (headerPoints && isBetterParse) {
+                    headerPoints.textContent = newPoints.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    headerPoints.dataset.points = String(newPoints);
+                    headerPoints.dataset.rank = String(newRank);
+                    headerPoints.style.color = getUwuScoreColor(newPoints);
+                    document.getElementById('header-uwu-rank').textContent = newRank > 0
+                        ? `#${newRank.toLocaleString()}`
+                        : '';
                     document.getElementById('header-uwu-spec').textContent = specSelect.options[specSelect.selectedIndex].text;
                 }
                 status.className = 'uwu-logs-status is-success';

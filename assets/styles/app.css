@@ -515,12 +515,19 @@ body {
 }
 
 .stat-meta,
+.stat-rank,
 .guild-uwu-rank span,
 .member-race {
     display: block;
     margin-top: 0.2rem;
     color: var(--text-muted);
     font-size: 0.72rem;
+}
+
+.stat-rank {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 700;
 }
 
 .guild-header-card {
