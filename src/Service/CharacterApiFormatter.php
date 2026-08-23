@@ -6,12 +6,16 @@ use App\Entity\CharacterSnapshot;
 
 class CharacterApiFormatter
 {
+    public function __construct(private readonly ?CharacterStatCalculator $statCalculator = null)
+    {
+    }
+
     /**
      * @return array<string, mixed>
      */
     public function format(CharacterSnapshot $snapshot): array
     {
-        return [
+        $payload = [
             'updatedAt' => $snapshot->getScrapedAt()?->format(\DateTimeInterface::ATOM),
             'character' => [
                 'name' => $snapshot->getName(),
@@ -31,6 +35,18 @@ class CharacterApiFormatter
                 $snapshot->getTalentStrings(),
             ),
         ];
+
+        if ($this->statCalculator !== null) {
+            $payload['stats'] = $this->statCalculator->calculate(
+                (string) $snapshot->getRace(),
+                (string) $snapshot->getClass(),
+                (int) $snapshot->getLevel(),
+                $snapshot->getEquippedItems(),
+                $snapshot->getTalentTreesData() ?? [],
+            );
+        }
+
+        return $payload;
     }
 
     /**

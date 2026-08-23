@@ -373,7 +373,87 @@
             </div>
         </div>
 
-        {# SECTION 2: PROFESSIONS #}
+        {# SECTION 2: CALCULATED CHARACTER STATS #}
+        <div class="content-card section-card character-stats-section">
+            <div class="section-header stat-section-header">
+                <div>
+                    <h2>📊 Calculated Stats</h2>
+                    <p class="stat-section-intro">Level {{ calculatedStats.level|default(characterDetails.level) }} Wrath values, including equipped gear and permanent talents.</p>
+                </div>
+            </div>
+
+            {% if calculatedStats.available|default(false) %}
+                <div class="calculated-stat-table-wrap">
+                    <table class="calculated-stat-table">
+                        <thead>
+                            <tr>
+                                <th>Attribute</th>
+                                <th>Race</th>
+                                <th>Class base</th>
+                                <th>Level growth</th>
+                                <th>Gear</th>
+                                <th>Talents</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in calculatedStats.primary %}
+                                <tr>
+                                    <th scope="row">{{ stat.name }}</th>
+                                    <td>{{ stat.race >= 0 ? '+' : '' }}{{ stat.race }}</td>
+                                    <td>{{ stat.class }}</td>
+                                    <td>+{{ stat.level }}</td>
+                                    <td>{{ stat.gear >= 0 ? '+' : '' }}{{ stat.gear }}</td>
+                                    <td>{{ stat.talents >= 0 ? '+' : '' }}{{ stat.talents }}</td>
+                                    <td class="calculated-stat-total">{{ stat.total }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if calculatedStats.secondary is not empty %}
+                    <div class="secondary-stat-grid" aria-label="Equipment stats">
+                        {% for stat in calculatedStats.secondary %}
+                            <div class="secondary-stat-card">
+                                <span>{{ stat.name }}</span>
+                                <strong>{{ stat.value|number_format }}</strong>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if calculatedStats.ratings is not empty %}
+                    <h3 class="stat-subheading">Rating conversions</h3>
+                    <div class="rating-conversion-grid">
+                        {% for rating in calculatedStats.ratings %}
+                            <div class="rating-conversion-card">
+                                <span class="rating-conversion-name">{{ rating.name }}</span>
+                                <strong>{{ rating.percent|number_format(2) }}%</strong>
+                                <small>{{ rating.rating }} rating · {{ rating.ratingPerPercent }} per 1%</small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if calculatedStats.talentModifiers is not empty %}
+                    <div class="talent-modifier-summary">
+                        <strong>Applied talents:</strong>
+                        {% for talent in calculatedStats.talentModifiers %}
+                            <span>{{ talent.name }} ({{ talent.points }} {{ talent.points == 1 ? 'point' : 'points' }})</span>{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <ul class="stat-calculation-notes">
+                    {% for note in calculatedStats.notes %}<li>{{ note }}</li>{% endfor %}
+                </ul>
+            {% else %}
+                <p class="stat-unavailable">{{ calculatedStats.reason|default('Stats could not be calculated for this character.') }}</p>
+            {% endif %}
+        </div>
+
+        {# SECTION 3: PROFESSIONS #}
         <div class="content-card section-card professions-section">
             <div class="section-header">
                 <h2>📜 Professions</h2>
@@ -392,7 +472,7 @@
             {% endif %}
         </div>
 
-        {# SECTION 3: SPECIALIZATION & TALENT TREES #}
+        {# SECTION 4: SPECIALIZATION & TALENT TREES #}
         <div class="content-card section-card">
             <div class="section-header spec-section-header">
                 <h2>⚔️ Specialization & Talent Trees</h2>

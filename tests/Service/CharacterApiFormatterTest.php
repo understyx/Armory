@@ -4,6 +4,7 @@ namespace App\Tests\Service;
 
 use App\Entity\CharacterSnapshot;
 use App\Service\CharacterApiFormatter;
+use App\Service\CharacterStatCalculator;
 use PHPUnit\Framework\TestCase;
 
 class CharacterApiFormatterTest extends TestCase
@@ -31,7 +32,7 @@ class CharacterApiFormatterTest extends TestCase
             ->setTalentStrings(['012345', '543210'])
             ->setScrapedAt(new \DateTimeImmutable('2026-08-23T10:15:00+00:00'));
 
-        $payload = (new CharacterApiFormatter())->format($snapshot);
+        $payload = (new CharacterApiFormatter(new CharacterStatCalculator()))->format($snapshot);
 
         self::assertSame('2026-08-23T10:15:00+00:00', $payload['updatedAt']);
         self::assertSame([
@@ -61,5 +62,7 @@ class CharacterApiFormatterTest extends TestCase
             'spec1' => ['name' => 'Unholy', 'talentString' => '012345'],
             'spec2' => ['name' => 'Frost', 'talentString' => '543210'],
         ], $payload['talents']);
+        self::assertTrue($payload['stats']['available']);
+        self::assertSame(175, $payload['stats']['primary']['strength']['total']);
     }
 }

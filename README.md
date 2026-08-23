@@ -150,6 +150,10 @@ GET /api/character/{name}/{realm}
 
 The response contains `updatedAt`, basic character identity and progression data,
 equipped item/enchant/transmog/gem IDs, structured professions, and talent strings.
+It also includes a `stats` object with race, class, level-growth, gear, and permanent
+talent contributions, plus raw combat ratings and their level-specific percentage
+conversions. Temporary buffs, forms, procs, consumables, and conditional effects are
+not included.
 This endpoint never contacts Warmane. It returns `404 Not Found` when no snapshot
 has been cached yet.
 

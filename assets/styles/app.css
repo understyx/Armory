@@ -595,6 +595,121 @@ body {
     color: var(--accent-gold);
 }
 
+.stat-section-header {
+    align-items: flex-start;
+}
+
+.stat-section-intro {
+    margin: 0.35rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.calculated-stat-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+}
+
+.calculated-stat-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 660px;
+}
+
+.calculated-stat-table th,
+.calculated-stat-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.calculated-stat-table thead th {
+    background: var(--bg-slot);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.calculated-stat-table th:first-child {
+    text-align: left;
+}
+
+.calculated-stat-table tbody tr:last-child th,
+.calculated-stat-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.calculated-stat-total {
+    color: var(--accent-gold);
+    font-size: 1.08rem;
+    font-weight: 800;
+}
+
+.secondary-stat-grid,
+.rating-conversion-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.secondary-stat-card,
+.rating-conversion-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    background: var(--bg-slot);
+    border: 1px solid var(--border-subtle);
+    border-radius: 9px;
+}
+
+.secondary-stat-card span,
+.rating-conversion-name {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.secondary-stat-card strong,
+.rating-conversion-card strong {
+    color: var(--text-primary);
+    font-size: 1.2rem;
+}
+
+.rating-conversion-card small {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+}
+
+.stat-subheading {
+    margin: 20px 0 0;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.talent-modifier-summary,
+.stat-calculation-notes,
+.stat-unavailable {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+
+.talent-modifier-summary {
+    margin-top: 16px;
+}
+
+.talent-modifier-summary strong {
+    color: var(--text-secondary);
+}
+
+.stat-calculation-notes {
+    margin: 12px 0 0;
+    padding-left: 1.2rem;
+}
+
 /* Actions & Timestamp */
 .header-actions {
     display: flex;
