@@ -7,7 +7,6 @@ use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\ArmoryScraperService;
 use App\Service\CharacterUpdateThrottle;
-use App\Service\CharacterStatCalculator;
 use App\Service\PaperdollService;
 use App\Service\TalentTreeService;
 use Psr\Log\LoggerInterface;
@@ -27,7 +26,6 @@ class CharacterViewController extends AbstractController
         private readonly LoggerInterface $logger,
         private readonly CharacterUpdateThrottle $updateThrottle,
         private readonly ?UwuLogRankRepository $uwuRankRepository = null,
-        private readonly ?CharacterStatCalculator $characterStatCalculator = null,
     ) {
     }
 
@@ -227,14 +225,6 @@ class CharacterViewController extends AbstractController
             $snapshot->getClass()
         );
 
-        $calculatedStats = $this->characterStatCalculator?->calculate(
-            (string) $snapshot->getRace(),
-            (string) $snapshot->getClass(),
-            (int) $snapshot->getLevel(),
-            $paperdollData['enrichedItems'],
-            $snapshot->getTalentTreesData() ?? [],
-        ) ?? ['available' => false, 'reason' => 'Stat calculator is unavailable.'];
-
         return $this->render('character_view/index.html.twig', [
             'characterName' => $snapshot->getName(),
             'realmName' => $snapshot->getRealm(),
@@ -255,7 +245,6 @@ class CharacterViewController extends AbstractController
             'paperdollSlots' => $paperdollData['slots'],
             'itemTooltips' => $paperdollData['tooltips'],
             'transmogItems' => $paperdollData['transmogItems'],
-            'calculatedStats' => $calculatedStats,
             'characterModel' => $snapshot->getCharacterModel(),
             'gearScore' => $snapshot->getGearScore(),
             'avgIlvl' => $snapshot->getAvgIlvl(),

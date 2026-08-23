@@ -109,7 +109,6 @@ class CharacterViewControllerTest extends KernelTestCase
             $logger,
             $this->createMock(CharacterUpdateThrottle::class),
             $uwuRankRepository,
-            new \App\Service\CharacterStatCalculator(),
         );
         $controller->setContainer($container);
 
@@ -118,9 +117,7 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
         $this->assertStringContainsString('Understyx', $response->getContent());
         $this->assertStringContainsString('6000', $response->getContent());
-        $this->assertStringContainsString('Calculated Stats', $response->getContent());
-        $this->assertStringContainsString('Level growth', $response->getContent());
-        $this->assertStringContainsString('class="calculated-stat-total">175', $response->getContent());
+        $this->assertStringNotContainsString('Calculated Stats', $response->getContent());
         $this->assertStringContainsString('Best Uwu-logs Parse', $response->getContent());
         $this->assertStringContainsString('data-points="98" data-rank="1525" style="color: #ff3c00">98.00', $response->getContent());
         $this->assertStringContainsString('id="header-uwu-rank" class="stat-rank">#1,525', $response->getContent());
