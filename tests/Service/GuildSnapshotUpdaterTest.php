@@ -45,7 +45,7 @@ final class GuildSnapshotUpdaterTest extends TestCase
         $result = (new GuildSnapshotUpdater($scraper, $repository, $bus))->refresh('Cadence', 'Icecrown');
 
         self::assertSame(GuildRefreshResult::UPDATED, $result->status);
-        self::assertSame([15000, 30000, 1875000, 1890000, 3735000, 3750000], $delays);
-        self::assertSame(['1', '1', '2', '2', '3', '3'], $specs);
+        self::assertSame([35000, 70000, 105000, 140000, 175000, 210000], $delays);
+        self::assertSame(['1', '2', '3', '1', '2', '3'], $specs);
     }
 }

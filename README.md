@@ -65,7 +65,7 @@ Development environments must have an async worker running for lazy enrichment:
 php bin/console messenger:consume async --time-limit=3600
 ```
 
-Guild imports queue paced Uwu-logs rank checks for every roster member and specialization. Requests for one character are spaced by at least 30 minutes, results are cached, and a guild roster can be refreshed at most once per calendar day. Keep the Messenger worker running for these background rank sweeps.
+Guild imports queue paced Uwu-logs rank checks for every roster member and specialization. Requests are spaced by 35 seconds, per-character results are cached and throttled for 30 seconds, and a guild roster can be refreshed at most once per calendar day. Keep the Messenger worker running for these background rank sweeps.
 
 Production installs made with `bin/install-server` configure this worker as the `armorystuff-messenger` systemd service. Raw provider responses and parser versions are retained so cached pages can be reparsed if an external site changes its markup. External providers only supply display text; TrinityCore remains authoritative for item, spell-trigger, and set IDs. Custom items can be populated directly in the same cache tables when external databases do not know them.
 

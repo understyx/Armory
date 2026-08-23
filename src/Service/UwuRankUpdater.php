@@ -20,7 +20,7 @@ class UwuRankUpdater
             $characterName,
             $realmName,
             $spec,
-            new \DateTimeImmutable('-30 minutes'),
+            new \DateTimeImmutable('-30 seconds'),
         );
         if ($cached !== null && $cached->getPayload() !== []) {
             return $cached->getPayload() + [
@@ -31,11 +31,11 @@ class UwuRankUpdater
 
         $decision = $this->updateThrottle->claim($characterName, $realmName);
         if (!$decision->accepted) {
-            $minutes = max(1, (int) ceil(($decision->retryAt->getTimestamp() - time()) / 60));
+            $seconds = max(1, $decision->retryAt->getTimestamp() - time());
             throw new UwuLogsException(sprintf(
-                'Uwu-logs can only be updated once per character every 30 minutes. Try again in about %d %s.',
-                $minutes,
-                $minutes === 1 ? 'minute' : 'minutes',
+                'Uwu-logs can only be updated once per character every 30 seconds. Try again in about %d %s.',
+                $seconds,
+                $seconds === 1 ? 'second' : 'seconds',
             ), 429);
         }
 

@@ -6,7 +6,7 @@ use Doctrine\DBAL\Connection;
 
 class UwuLogUpdateThrottle
 {
-    public const COOLDOWN_SECONDS = 1800;
+    public const COOLDOWN_SECONDS = 30;
 
     public function __construct(private readonly Connection $connection)
     {
