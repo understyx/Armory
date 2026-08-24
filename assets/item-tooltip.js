@@ -183,18 +183,11 @@ if (dataElement) {
 
     const itemAnchorRect = (trigger) => {
         const container = trigger.closest('.paperdoll-row, .paperdoll-bottom-card') || trigger;
-        if (!container.classList.contains('paperdoll-row')) return container.getBoundingClientRect();
+        const iconBox = trigger.matches('.slot-icon-box')
+            ? trigger
+            : container.querySelector('.slot-icon-box');
 
-        const parts = [...container.querySelectorAll(':scope > .paperdoll-slot, :scope > .slot-info-block')];
-        if (parts.length === 0) return container.getBoundingClientRect();
-
-        const rects = parts.map((part) => part.getBoundingClientRect());
-        const left = Math.min(...rects.map((rect) => rect.left));
-        const right = Math.max(...rects.map((rect) => rect.right));
-        const top = Math.min(...rects.map((rect) => rect.top));
-        const bottom = Math.max(...rects.map((rect) => rect.bottom));
-
-        return {left, right, top, bottom, width: right - left, height: bottom - top};
+        return (iconBox || trigger).getBoundingClientRect();
     };
 
     const positionTooltip = (trigger, tooltip) => {

@@ -4,6 +4,7 @@ namespace App\Tests\Service;
 
 use App\Enum\ItemTypes;
 use App\Service\ArmoryScraperService;
+use App\Service\ItemDatabaseService;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -12,6 +13,24 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class ArmoryScraperServiceTest extends TestCase
 {
+    public function testCheckEnchantsIgnoresOffhandItemsButStillRequiresShieldEnchants(): void
+    {
+        $itemDatabase = $this->createMock(ItemDatabaseService::class);
+        $itemDatabase->method('getItem')
+            ->willReturnMap([
+                [50005, ['name' => 'Talisman of Testing', 'type' => ItemTypes::OFF_HAND->value]],
+                [50006, ['name' => 'Shield of Testing', 'type' => ItemTypes::SHIELD->value]],
+            ]);
+
+        $service = new ArmoryScraperService($itemDatabase);
+        $status = $service->checkEnchants([
+            ['id' => 50005, 'enchant' => null],
+            ['id' => 50006, 'enchant' => null],
+        ], 'Paladin', []);
+
+        $this->assertSame('Enchants missing from: Shield of Testing ❌', $status);
+    }
+
     public function testIsCloudflareBlock(): void
     {
         $service = new ArmoryScraperService();

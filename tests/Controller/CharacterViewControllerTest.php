@@ -122,6 +122,7 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringContainsString('id="achievements-tab"', $response->getContent());
         $this->assertStringContainsString('data-achievements-url="/characters/Understyx/Icecrown/achievements"', $response->getContent());
         $this->assertStringContainsString('Stats at level 80', $response->getContent());
+        $this->assertStringContainsString('Only Hit and Expertise are currently reliable', $response->getContent());
         $this->assertStringContainsString('href="/characters/Understyx/Icecrown/stats"', $response->getContent());
         $this->assertStringContainsString('Class at 80', $response->getContent());
         $this->assertStringContainsString('class="calculated-stat-total">175', $response->getContent());
@@ -287,6 +288,7 @@ class CharacterViewControllerTest extends KernelTestCase
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
         self::assertStringContainsString('Stat calculation breakdown', $content);
+        self::assertStringContainsString('Only Hit and Expertise are currently reliable', $content);
         self::assertStringContainsString('Equipped item contributions', $content);
         self::assertStringContainsString('Expertise Test Helm', $content);
         self::assertStringContainsString('Raw item stat mapping', $content);

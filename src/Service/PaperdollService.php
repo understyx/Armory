@@ -257,7 +257,13 @@ class PaperdollService
             if ($slotData['item'] !== null) {
                 $slotData['item']['icon_url'] = $this->externalIconUrl($slotData['item']['icon'] ?? null);
                 $slotData['item']['icon_fallback_url'] = $this->localIconUrl($slotData['item']['icon'] ?? null);
-                $slotData['item']['should_have_enchant'] = $slotData['should_have_enchant'];
+                $itemType = $slotData['item']['type'] !== null ? (int) $slotData['item']['type'] : null;
+                $shouldHaveEnchant = $slotData['should_have_enchant'];
+                if ($slotKey === 'offhand' && $itemType === ItemTypes::OFF_HAND->value) {
+                    $shouldHaveEnchant = false;
+                }
+                $slotData['should_have_enchant'] = $shouldHaveEnchant;
+                $slotData['item']['should_have_enchant'] = $shouldHaveEnchant;
             }
         }
         unset($slotData);

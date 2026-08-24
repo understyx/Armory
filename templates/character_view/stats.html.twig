@@ -36,6 +36,10 @@
             {% if scrapedAt %}<span class="scraped-time">Snapshot: {{ scrapedAt|date('Y-m-d H:i') }} UTC</span>{% endif %}
         </header>
 
+        <div class="alert-banner alert-warning" role="alert">
+            ⚠️ Only Hit and Expertise are currently reliable. All other displayed stats may be inaccurate.
+        </div>
+
         <section class="content-card section-card stats-debug-intro">
             <div>
                 <h2>Stat calculation breakdown</h2>

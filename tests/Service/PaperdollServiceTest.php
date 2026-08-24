@@ -264,4 +264,34 @@ class PaperdollServiceTest extends TestCase
             $result['slots']['offhand']['item']['name']
         );
     }
+
+    public function testOnlyShieldsRequireEnchantsAmongNonWeaponOffhandItems(): void
+    {
+        $mockItemDb = $this->createMock(ItemDatabaseService::class);
+        $mockItemDb->method('getItemsBulk')
+            ->willReturnCallback(static fn (array $ids): array => array_filter([
+                50005 => [
+                    'name' => 'Talisman of Testing',
+                    'quality' => 4,
+                    'type' => ItemTypes::OFF_HAND->value,
+                    'icon' => 'inv_offhand_outlandraid_03blue',
+                ],
+                50006 => [
+                    'name' => 'Shield of Testing',
+                    'quality' => 4,
+                    'type' => ItemTypes::SHIELD->value,
+                    'icon' => 'inv_shield_48',
+                ],
+            ], static fn (int $id): bool => in_array($id, $ids, true), ARRAY_FILTER_USE_KEY));
+
+        $service = new PaperdollService($mockItemDb);
+
+        $offhandResult = $service->buildPaperdollSlots([['id' => 50005]]);
+        $shieldResult = $service->buildPaperdollSlots([['id' => 50006]]);
+
+        $this->assertFalse($offhandResult['slots']['offhand']['should_have_enchant']);
+        $this->assertFalse($offhandResult['slots']['offhand']['item']['should_have_enchant']);
+        $this->assertTrue($shieldResult['slots']['offhand']['should_have_enchant']);
+        $this->assertTrue($shieldResult['slots']['offhand']['item']['should_have_enchant']);
+    }
 }

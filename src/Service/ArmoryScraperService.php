@@ -998,10 +998,12 @@ class ArmoryScraperService
                     $shouldHaveEnchant = $enchantingProfFound;
                     break;
                 case ItemTypes::SHIELD->value:
-                case ItemTypes::OFF_HAND->value:
                     if ($charClass && !in_array($charClass, ['Mage', 'Warlock', 'Priest', 'Druid'])) {
                         $shouldHaveEnchant = true;
                     }
+                    break;
+                case ItemTypes::OFF_HAND->value:
+                    $shouldHaveEnchant = false;
                     break;
                 case ItemTypes::RANGED->value:
                     if ($charClass && !in_array($charClass, ['Mage', 'Warlock', 'Priest', 'Druid', 'Warrior', 'Rogue'])) {
