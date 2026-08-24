@@ -595,6 +595,192 @@ body {
     color: var(--accent-gold);
 }
 
+.gear-header-actions,
+.character-tab-list,
+.stats-spec-tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.character-tab-list,
+.stats-spec-tabs {
+    padding: 4px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 9px;
+    background: var(--bg-slot);
+}
+
+.character-tab,
+.stats-spec-tab {
+    padding: 7px 14px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.character-tab:hover,
+.stats-spec-tab:hover {
+    color: var(--text-primary);
+}
+
+.character-tab.active,
+.stats-spec-tab.active {
+    background: var(--accent-blue);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.character-tab-panel[hidden],
+.stats-spec-panel[hidden] {
+    display: none;
+}
+
+.stats-panel-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 18px;
+}
+
+.stats-panel-heading h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.15rem;
+}
+
+.stats-panel-heading p {
+    margin: 0.35rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+}
+
+.calculated-stat-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+}
+
+.calculated-stat-table {
+    width: 100%;
+    min-width: 620px;
+    border-collapse: collapse;
+}
+
+.calculated-stat-table th,
+.calculated-stat-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.calculated-stat-table thead th {
+    background: var(--bg-slot);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.calculated-stat-table th:first-child {
+    text-align: left;
+}
+
+.calculated-stat-table tbody tr:last-child th,
+.calculated-stat-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.calculated-stat-table td small {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+.calculated-stat-total {
+    color: var(--accent-gold);
+    font-size: 1.08rem;
+    font-weight: 800;
+}
+
+.secondary-stat-grid,
+.rating-conversion-grid,
+.hit-bonus-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.secondary-stat-card,
+.rating-conversion-card,
+.hit-bonus-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 9px;
+    background: var(--bg-slot);
+}
+
+.secondary-stat-card span,
+.rating-conversion-name,
+.hit-bonus-card span {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.secondary-stat-card strong,
+.rating-conversion-card strong,
+.hit-bonus-card strong {
+    color: var(--text-primary);
+    font-size: 1.2rem;
+}
+
+.hit-bonus-card strong {
+    color: var(--accent-green);
+}
+
+.rating-conversion-card small {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+}
+
+.stat-subheading {
+    margin: 20px 0 0;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.talent-modifier-summary,
+.stat-calculation-notes,
+.stat-unavailable {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+
+.talent-modifier-summary {
+    margin-top: 16px;
+}
+
+.talent-modifier-summary strong {
+    color: var(--text-secondary);
+}
+
+.stat-calculation-notes {
+    margin: 12px 0 0;
+    padding-left: 1.2rem;
+}
+
 /* Actions & Timestamp */
 .header-actions {
     display: flex;
@@ -2477,6 +2663,8 @@ body {
 .btn-uwu-logs:focus-visible,
 .uwu-spec-select:focus-visible,
 .uwu-points-trigger:focus-visible,
+.character-tab:focus-visible,
+.stats-spec-tab:focus-visible,
 .spec-toggle-btn:focus-visible,
 .modal-close:focus-visible {
     outline: 3px solid rgba(74, 158, 255, 0.45);
@@ -2639,6 +2827,26 @@ body {
     .section-header h2 {
         font-size: 1.12rem;
         line-height: 1.35;
+    }
+
+    .gear-header-actions,
+    .stats-panel-heading {
+        align-items: stretch;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .character-tab-list,
+    .stats-spec-tabs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .character-tab,
+    .stats-spec-tab {
+        min-height: 42px;
+        padding: 7px 8px;
     }
 
     .spec-toggle-group {

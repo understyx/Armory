@@ -65,4 +65,30 @@ class CharacterStatCalculatorTest extends TestCase
         self::assertSame(0.3, $at80['ratings']['melee_hit_rating']['percent']);
         self::assertSame(0.38, $at80['ratings']['spell_hit_rating']['percent']);
     }
+
+    public function testItAppliesFlatTalentHitBonusesForTheSelectedSpecialization(): void
+    {
+        $talents = ['1' => [[
+            'tiers' => [[
+                ['spellId' => 53622, 'pointsText' => '3/3'],
+            ]],
+        ]]];
+
+        $result = (new CharacterStatCalculator())->calculate(
+            'Dwarf',
+            'Hunter',
+            72,
+            [],
+            $talents,
+            '1',
+        );
+
+        self::assertSame(3.0, $result['hitBonuses']['Melee and ranged attacks']);
+        self::assertSame('Focused Aim', $result['talentModifiers'][0]['name']);
+        self::assertSame(['Melee and ranged attacks' => 3.0], $result['talentModifiers'][0]['hit']);
+        self::assertSame(
+            $result['primary']['agility']['race'] + $result['primary']['agility']['classAtLevel'],
+            $result['primary']['agility']['base'],
+        );
+    }
 }

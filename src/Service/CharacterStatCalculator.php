@@ -33,10 +33,10 @@ final class CharacterStatCalculator
     ];
 
     /**
-     * Permanent passive talent effects that change character-sheet attributes.
-     * Values are per allocated point; conditional forms, buffs and procs are intentionally omitted.
+     * Permanent passive talent effects that change attributes or add hit chance.
+     * Values are per allocated point; buffs and procs are intentionally omitted.
      *
-     * @var array<int, array{name: string, percent: array<string, float>}>
+     * @var array<int, array{name: string, percent?: array<string, float>, hit?: array<string, float>}>
      */
     private const TALENT_EFFECTS = [
         20262 => ['name' => 'Divine Strength', 'percent' => ['strength' => 0.03]],
@@ -59,6 +59,18 @@ final class CharacterStatCalculator
         33851 => ['name' => 'Survival of the Fittest', 'percent' => ['strength' => 0.02, 'agility' => 0.02, 'stamina' => 0.02, 'intellect' => 0.02, 'spirit' => 0.02]],
         34151 => ['name' => 'Living Spirit', 'percent' => ['spirit' => 0.05]],
         17003 => ['name' => 'Heart of the Wild', 'percent' => ['intellect' => 0.04]],
+        29590 => ['name' => 'Precision', 'hit' => ['Melee weapons' => 1.0]],
+        13705 => ['name' => 'Precision', 'hit' => ['Weapon and poison attacks' => 1.0]],
+        53620 => ['name' => 'Focused Aim', 'hit' => ['Melee and ranged attacks' => 1.0]],
+        15260 => ['name' => 'Shadow Focus', 'hit' => ['Shadow spells' => 1.0]],
+        48962 => ['name' => 'Virulence', 'hit' => ['Spells' => 1.0]],
+        49226 => ['name' => 'Nerves of Cold Steel', 'hit' => ['One-handed melee weapons' => 1.0]],
+        30672 => ['name' => 'Elemental Precision', 'hit' => ['Fire, Frost and Nature spells' => 1.0]],
+        30816 => ['name' => 'Dual Wield Specialization', 'hit' => ['Attacks while dual wielding' => 2.0]],
+        11222 => ['name' => 'Arcane Focus', 'hit' => ['Arcane spells' => 1.0]],
+        29438 => ['name' => 'Precision', 'hit' => ['Spells' => 1.0]],
+        18174 => ['name' => 'Suppression', 'hit' => ['Spells' => 1.0]],
+        33592 => ['name' => 'Balance of Power', 'hit' => ['Spells' => 2.0]],
     ];
 
     /** The armory links the currently learned rank rather than always linking rank one. */
@@ -83,6 +95,18 @@ final class CharacterStatCalculator
         33852 => 33851, 33853 => 33851,
         34152 => 34151, 34153 => 34151,
         17004 => 17003, 17005 => 17003, 17006 => 17003, 17007 => 17003,
+        29591 => 29590, 29592 => 29590,
+        13832 => 13705, 13843 => 13705, 13844 => 13705, 13845 => 13705,
+        53621 => 53620, 53622 => 53620,
+        15327 => 15260, 15328 => 15260,
+        49567 => 48962, 49568 => 48962,
+        50137 => 49226, 50138 => 49226,
+        30673 => 30672, 30674 => 30672,
+        30818 => 30816, 30819 => 30816,
+        12839 => 11222, 12840 => 11222,
+        29439 => 29438, 29440 => 29438,
+        18175 => 18174, 18176 => 18174,
+        33596 => 33592,
     ];
 
     /** Rating required for one percentage point at anchor levels. */
@@ -206,7 +230,10 @@ final class CharacterStatCalculator
                 'race' => $base['race'][$stat],
                 'class' => $base['class'][$stat],
                 'level' => $base['level'][$stat],
+                'classAtLevel' => $base['class'][$stat] + $base['level'][$stat],
+                'base' => $base['total'][$stat],
                 'gear' => $gear[$stat] ?? 0,
+                'talentPercent' => round(($talents['percent'][$stat] ?? 0.0) * 100, 2),
                 'talents' => $talentValue,
                 'total' => $beforeTalents + $talentValue,
             ];
@@ -241,6 +268,7 @@ final class CharacterStatCalculator
             'primary' => $primary,
             'secondary' => $secondary,
             'ratings' => $ratings,
+            'hitBonuses' => $talents['hit'],
             'talentModifiers' => $talents['effects'],
             'gearBreakdown' => $gearSources,
             'notes' => [
@@ -349,13 +377,14 @@ final class CharacterStatCalculator
         return $this->nonZero($totals);
     }
 
-    /** @param mixed $rawSpec @return array{percent: array<string, float>, effects: array<int, array<string, mixed>>} */
+    /** @param mixed $rawSpec @return array{percent: array<string, float>, hit: array<string, float>, effects: array<int, array<string, mixed>>} */
     private function talentModifiers(mixed $rawSpec): array
     {
         $percent = [];
+        $hit = [];
         $effects = [];
         if (!is_array($rawSpec)) {
-            return ['percent' => [], 'effects' => []];
+            return ['percent' => [], 'hit' => [], 'effects' => []];
         }
 
         foreach ($rawSpec as $tree) {
@@ -372,17 +401,28 @@ final class CharacterStatCalculator
                         continue;
                     }
                     $applied = [];
-                    foreach ($definition['percent'] as $stat => $perPoint) {
+                    foreach ($definition['percent'] ?? [] as $stat => $perPoint) {
                         $amount = $perPoint * $points;
                         $percent[$stat] = ($percent[$stat] ?? 0.0) + $amount;
                         $applied[$stat] = round($amount * 100, 2);
                     }
-                    $effects[] = ['name' => $definition['name'], 'points' => $points, 'percent' => $applied];
+                    $appliedHit = [];
+                    foreach ($definition['hit'] ?? [] as $scope => $perPoint) {
+                        $amount = $perPoint * $points;
+                        $hit[$scope] = ($hit[$scope] ?? 0.0) + $amount;
+                        $appliedHit[$scope] = round($amount, 2);
+                    }
+                    $effects[] = [
+                        'name' => $definition['name'],
+                        'points' => $points,
+                        'percent' => $applied,
+                        'hit' => $appliedHit,
+                    ];
                 }
             }
         }
 
-        return ['percent' => $percent, 'effects' => $effects];
+        return ['percent' => $percent, 'hit' => $hit, 'effects' => $effects];
     }
 
     /** @param array<int, float> $anchors */

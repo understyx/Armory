@@ -122,24 +122,31 @@
         {# SECTION 1: CHARACTER EQUIPMENT & ITEMS #}
         <div class="content-card section-card">
             <div class="section-header gear-section-header">
-                <h2>🛡️ Character Items & Gear</h2>
-                {% if transmogItems is not empty %}
-                    <details class="transmog-menu">
-                        <summary class="btn-transmog">Get transmog</summary>
-                        <div class="transmog-list">
-                            {% for transmog in transmogItems %}
-                                <a
-                                    href="https://wotlk.cavernoftime.com/item={{ transmog.id }}"
-                                    class="transmog-list-item q-{{ transmog.quality|default(4) }}"
-                                    target="_blank"
-                                    rel="noopener"
-                                >{{ transmog.name }}</a>
-                            {% endfor %}
-                        </div>
-                    </details>
-                {% endif %}
+                <h2>🛡️ Character</h2>
+                <div class="gear-header-actions">
+                    <div class="character-tab-list" role="tablist" aria-label="Character details">
+                        <button id="equipment-tab" class="character-tab active" type="button" role="tab" aria-selected="true" aria-controls="equipment-panel" onclick="setCharacterTab('equipment', this)">Equipment</button>
+                        <button id="stats-tab" class="character-tab" type="button" role="tab" aria-selected="false" aria-controls="stats-panel" onclick="setCharacterTab('stats', this)">Stats</button>
+                    </div>
+                    {% if transmogItems is not empty %}
+                        <details class="transmog-menu" data-equipment-action>
+                            <summary class="btn-transmog">Get transmog</summary>
+                            <div class="transmog-list">
+                                {% for transmog in transmogItems %}
+                                    <a
+                                        href="https://wotlk.cavernoftime.com/item={{ transmog.id }}"
+                                        class="transmog-list-item q-{{ transmog.quality|default(4) }}"
+                                        target="_blank"
+                                        rel="noopener"
+                                    >{{ transmog.name }}</a>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    {% endif %}
+                </div>
             </div>
 
+            <div id="equipment-panel" class="character-tab-panel" role="tabpanel" aria-labelledby="equipment-tab">
             <div class="paperdoll-container">
                 <div class="paperdoll-main-layout">
 
@@ -370,6 +377,128 @@
                 <div class="status-card {% if 'missing' in gemsStatus %}status-warn{% else %}status-ok{% endif %}">
                     <strong>Gems:</strong> {{ gemsStatus }}
                 </div>
+            </div>
+            </div>
+
+            <div id="stats-panel" class="character-tab-panel" role="tabpanel" aria-labelledby="stats-tab" hidden>
+                <div class="stats-panel-heading">
+                    <div>
+                        <h3>Stats at level {{ characterDetails.level }}</h3>
+                        <p>Current character only: (race + class at this level + equipped gear) × permanent talent multipliers.</p>
+                    </div>
+                    {% if calculatedStatsBySpec|length > 1 %}
+                        <div class="stats-spec-tabs" role="tablist" aria-label="Stats specialization">
+                            {% for entry in calculatedStatsBySpec %}
+                                <button
+                                    id="stats-spec-tab-{{ entry.specId }}"
+                                    class="stats-spec-tab{% if loop.first %} active{% endif %}"
+                                    type="button"
+                                    role="tab"
+                                    aria-selected="{{ loop.first ? 'true' : 'false' }}"
+                                    aria-controls="stats-spec-panel-{{ entry.specId }}"
+                                    onclick="setStatsSpec('{{ entry.specId }}', this)"
+                                >{{ entry.specName }}{% if entry.pointsSummary %} ({{ entry.pointsSummary }}){% endif %}</button>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% for entry in calculatedStatsBySpec %}
+                    {% set calculatedStats = entry.stats %}
+                    <div
+                        id="stats-spec-panel-{{ entry.specId }}"
+                        class="stats-spec-panel"
+                        role="tabpanel"
+                        aria-labelledby="stats-spec-tab-{{ entry.specId }}"
+                        {% if not loop.first %}hidden{% endif %}
+                    >
+                        {% if calculatedStats.available|default(false) %}
+                            <div class="calculated-stat-table-wrap">
+                                <table class="calculated-stat-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Attribute</th>
+                                            <th>Race</th>
+                                            <th>Class at {{ calculatedStats.level }}</th>
+                                            <th>Gear</th>
+                                            <th>Talent</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for stat in calculatedStats.primary %}
+                                            <tr>
+                                                <th scope="row">{{ stat.name }}</th>
+                                                <td>{{ stat.race >= 0 ? '+' : '' }}{{ stat.race }}</td>
+                                                <td>{{ stat.classAtLevel }}</td>
+                                                <td>{{ stat.gear >= 0 ? '+' : '' }}{{ stat.gear }}</td>
+                                                <td>
+                                                    {{ stat.talents >= 0 ? '+' : '' }}{{ stat.talents }}
+                                                    {% if stat.talentPercent != 0 %}<small>({{ stat.talentPercent }}%)</small>{% endif %}
+                                                </td>
+                                                <td class="calculated-stat-total">{{ stat.total }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {% if calculatedStats.secondary is not empty %}
+                                <h4 class="stat-subheading">Gear stats</h4>
+                                <div class="secondary-stat-grid" aria-label="Equipment stats">
+                                    {% for stat in calculatedStats.secondary %}
+                                        <div class="secondary-stat-card">
+                                            <span>{{ stat.name }}</span>
+                                            <strong>{{ stat.value|number_format }}</strong>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            {% if calculatedStats.ratings is not empty %}
+                                <h4 class="stat-subheading">Rating conversions at level {{ calculatedStats.level }}</h4>
+                                <div class="rating-conversion-grid">
+                                    {% for rating in calculatedStats.ratings %}
+                                        <div class="rating-conversion-card">
+                                            <span class="rating-conversion-name">{{ rating.name }}</span>
+                                            <strong>{{ rating.percent|number_format(2) }}%</strong>
+                                            <small>{{ rating.rating }} rating</small>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            {% if calculatedStats.hitBonuses is not empty %}
+                                <h4 class="stat-subheading">Talent hit bonuses</h4>
+                                <div class="hit-bonus-grid">
+                                    {% for scope, percent in calculatedStats.hitBonuses %}
+                                        <div class="hit-bonus-card">
+                                            <span>{{ scope }}</span>
+                                            <strong>+{{ percent|number_format(2) }}%</strong>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            {% if calculatedStats.talentModifiers is not empty %}
+                                <div class="talent-modifier-summary">
+                                    <strong>Applied talents:</strong>
+                                    {% for talent in calculatedStats.talentModifiers %}
+                                        <span>{{ talent.name }} ({{ talent.points }} {{ talent.points == 1 ? 'point' : 'points' }})</span>{% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            <ul class="stat-calculation-notes">
+                                {% for note in calculatedStats.notes %}<li>{{ note }}</li>{% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="stat-unavailable">{{ calculatedStats.reason|default('Stats could not be calculated for this character.') }}</p>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <p class="stat-unavailable">Stats could not be calculated for this character.</p>
+                {% endfor %}
             </div>
         </div>
 
@@ -804,6 +933,31 @@
     </div>
 
     <script>
+        function setCharacterTab(tabName, button) {
+            document.querySelectorAll('.character-tab-panel').forEach(panel => {
+                panel.hidden = panel.id !== tabName + '-panel';
+            });
+            document.querySelectorAll('.character-tab').forEach(tab => {
+                const isActive = tab === button;
+                tab.classList.toggle('active', isActive);
+                tab.setAttribute('aria-selected', String(isActive));
+            });
+
+            const transmogAction = document.querySelector('[data-equipment-action]');
+            if (transmogAction) transmogAction.hidden = tabName !== 'equipment';
+        }
+
+        function setStatsSpec(specId, button) {
+            document.querySelectorAll('.stats-spec-panel').forEach(panel => {
+                panel.hidden = panel.id !== 'stats-spec-panel-' + specId;
+            });
+            document.querySelectorAll('.stats-spec-tab').forEach(tab => {
+                const isActive = tab === button;
+                tab.classList.toggle('active', isActive);
+                tab.setAttribute('aria-selected', String(isActive));
+            });
+        }
+
         function setSpec(specId, btnElement) {
             document.querySelectorAll('.spec-pane').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.glyph-spec-pane').forEach(el => el.classList.remove('active'));
