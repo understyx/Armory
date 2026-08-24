@@ -19,6 +19,39 @@ class WarmaneParserException extends \RuntimeException
 
 class ArmoryScraperService
 {
+    private const ICC_ACHIEVEMENT_CATEGORIES = [
+        15041 => [
+            'raidSize' => 10,
+            'achievements' => [
+                4531 => ['section' => 'Lower Spire', 'difficulty' => 'normal'],
+                4628 => ['section' => 'Lower Spire', 'difficulty' => 'heroic'],
+                4528 => ['section' => 'The Plagueworks', 'difficulty' => 'normal'],
+                4629 => ['section' => 'The Plagueworks', 'difficulty' => 'heroic'],
+                4529 => ['section' => 'The Crimson Hall', 'difficulty' => 'normal'],
+                4630 => ['section' => 'The Crimson Hall', 'difficulty' => 'heroic'],
+                4527 => ['section' => 'The Frostwing Halls', 'difficulty' => 'normal'],
+                4631 => ['section' => 'The Frostwing Halls', 'difficulty' => 'heroic'],
+                4530 => ['section' => 'The Lich King', 'difficulty' => 'normal'],
+                4583 => ['section' => 'The Lich King', 'difficulty' => 'heroic'],
+            ],
+        ],
+        15042 => [
+            'raidSize' => 25,
+            'achievements' => [
+                4604 => ['section' => 'Lower Spire', 'difficulty' => 'normal'],
+                4632 => ['section' => 'Lower Spire', 'difficulty' => 'heroic'],
+                4605 => ['section' => 'The Plagueworks', 'difficulty' => 'normal'],
+                4633 => ['section' => 'The Plagueworks', 'difficulty' => 'heroic'],
+                4606 => ['section' => 'The Crimson Hall', 'difficulty' => 'normal'],
+                4634 => ['section' => 'The Crimson Hall', 'difficulty' => 'heroic'],
+                4607 => ['section' => 'The Frostwing Halls', 'difficulty' => 'normal'],
+                4635 => ['section' => 'The Frostwing Halls', 'difficulty' => 'heroic'],
+                4597 => ['section' => 'The Lich King', 'difficulty' => 'normal'],
+                4584 => ['section' => 'The Lich King', 'difficulty' => 'heroic'],
+            ],
+        ],
+    ];
+
     private HttpClientInterface $httpClient;
     private ?LoggerInterface $logger;
     private ?ItemDatabaseService $itemDatabaseService;
@@ -154,6 +187,113 @@ class ArmoryScraperService
         );
 
         return $this->fetchWithRetry($url);
+    }
+
+    /**
+     * Fetches the HTML fragment returned by Warmane's achievements category request.
+     */
+    public function fetchAchievementCategoryHtml(string $character, string $realm, int $category): ?string
+    {
+        if (!isset(self::ICC_ACHIEVEMENT_CATEGORIES[$category])) {
+            throw new \InvalidArgumentException(sprintf('Unsupported ICC achievement category: %d', $category));
+        }
+
+        $url = sprintf(
+            'https://armory.warmane.com/character/%s/%s/achievements',
+            rawurlencode(ucfirst(trim($character))),
+            rawurlencode(ucfirst(trim($realm))),
+        );
+
+        try {
+            $response = $this->httpClient->request('POST', $url, [
+                'headers' => [
+                    'User-Agent' => 'Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0',
+                    'Accept' => 'application/json, text/javascript, */*; q=0.01',
+                    'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'Referer' => $url,
+                    'X-Requested-With' => 'XMLHttpRequest',
+                ],
+                'body' => ['category' => (string) $category],
+                'timeout' => 10,
+            ]);
+
+            if ($response->getStatusCode() !== 200) {
+                $this->log('warning', sprintf('Warmane achievement category %d returned HTTP %d.', $category, $response->getStatusCode()));
+                return null;
+            }
+
+            $payload = json_decode($response->getContent(false), true);
+            return is_array($payload) && is_string($payload['content'] ?? null)
+                ? $payload['content']
+                : null;
+        } catch (ExceptionInterface $e) {
+            $this->log('error', sprintf('Failed to fetch Warmane achievement category %d: %s', $category, $e->getMessage()), ['exception' => $e]);
+            return null;
+        }
+    }
+
+    /**
+     * @return array{raidSize: int, category: int, achievements: list<array<string, mixed>>}
+     */
+    public function extractIccAchievements(string $html, int $category): array
+    {
+        $categoryConfig = self::ICC_ACHIEVEMENT_CATEGORIES[$category] ?? null;
+        if ($categoryConfig === null) {
+            throw new \InvalidArgumentException(sprintf('Unsupported ICC achievement category: %d', $category));
+        }
+
+        $dom = new DOMDocument();
+        @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $html);
+        $xpath = new DOMXPath($dom);
+        $achievements = [];
+
+        foreach ($xpath->query("//div[contains(concat(' ', normalize-space(@class), ' '), ' achievement ')]") as $node) {
+            if (!$node instanceof \DOMElement || !preg_match('/^ach(\d+)$/', $node->getAttribute('id'), $matches)) {
+                continue;
+            }
+
+            $achievementId = (int) $matches[1];
+            $achievementConfig = $categoryConfig['achievements'][$achievementId] ?? null;
+            if ($achievementConfig === null) {
+                continue;
+            }
+
+            $readText = static function (DOMXPath $xpath, \DOMElement $node, string $class): ?string {
+                $result = $xpath->query(".//div[contains(concat(' ', normalize-space(@class), ' '), ' {$class} ')]", $node)->item(0);
+                if ($result === null) {
+                    return null;
+                }
+
+                $value = trim(preg_replace('/\s+/', ' ', $result->textContent) ?? '');
+                return $value !== '' ? $value : null;
+            };
+
+            $iconNode = $xpath->query(".//div[contains(concat(' ', normalize-space(@class), ' '), ' icon ')]//img", $node)->item(0);
+            $iconUrl = $iconNode instanceof \DOMElement ? trim($iconNode->getAttribute('src')) : null;
+            if ($iconUrl !== null && str_starts_with($iconUrl, 'http://')) {
+                $iconUrl = 'https://' . substr($iconUrl, 7);
+            }
+
+            $className = ' ' . preg_replace('/\s+/', ' ', trim($node->getAttribute('class'))) . ' ';
+            $earnedText = $readText($xpath, $node, 'date');
+            $achievements[] = [
+                'id' => $achievementId,
+                'section' => $achievementConfig['section'],
+                'difficulty' => $achievementConfig['difficulty'],
+                'title' => $readText($xpath, $node, 'title') ?? $achievementConfig['section'],
+                'description' => $readText($xpath, $node, 'description') ?? '',
+                'points' => (int) ($readText($xpath, $node, 'points') ?? 0),
+                'iconUrl' => $iconUrl,
+                'earned' => !str_contains($className, ' locked '),
+                'earnedDate' => $earnedText !== null ? preg_replace('/^Earned\s+/i', '', $earnedText) : null,
+            ];
+        }
+
+        return [
+            'raidSize' => $categoryConfig['raidSize'],
+            'category' => $category,
+            'achievements' => $achievements,
+        ];
     }
 
     /** Fetches a Warmane guild page. */

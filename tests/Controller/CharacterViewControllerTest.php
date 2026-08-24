@@ -119,12 +119,14 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringContainsString('Understyx', $response->getContent());
         $this->assertStringContainsString('6000', $response->getContent());
         $this->assertStringContainsString('id="stats-tab"', $response->getContent());
+        $this->assertStringContainsString('id="achievements-tab"', $response->getContent());
+        $this->assertStringContainsString('data-achievements-url="/characters/Understyx/Icecrown/achievements"', $response->getContent());
         $this->assertStringContainsString('Stats at level 80', $response->getContent());
         $this->assertStringContainsString('href="/characters/Understyx/Icecrown/stats"', $response->getContent());
         $this->assertStringContainsString('Class at 80', $response->getContent());
         $this->assertStringContainsString('class="calculated-stat-total">175', $response->getContent());
         $this->assertStringNotContainsString('Level growth', $response->getContent());
-        $this->assertStringContainsString('Best Uwu-logs Parse', $response->getContent());
+        $this->assertStringContainsString('Uwu-logs overall points', $response->getContent());
         $this->assertStringContainsString('data-points="98" data-rank="1525" style="color: #ff3c00">98.00', $response->getContent());
         $this->assertStringContainsString('id="header-uwu-rank" class="stat-rank">#1,525', $response->getContent());
         $this->assertStringContainsString('id="header-uwu-spec" class="stat-meta">Unholy', $response->getContent());
@@ -139,7 +141,7 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringContainsString('Get transmog', $response->getContent());
         $this->assertStringContainsString('https://wotlk.evowow.com/?item=60001', $response->getContent());
         $this->assertStringContainsString('<script type="module" src="/assets/item-tooltip-', $response->getContent());
-        $this->assertStringContainsString('<script type="text/javascript" src="http://cdn.cavernoftime.com/api/tooltip.js"></script>', $response->getContent());
+        $this->assertStringContainsString('<script type="text/javascript" src="https://cdn.cavernoftime.com/api/tooltip.js"></script>', $response->getContent());
         $this->assertStringNotContainsString('rel="item=', $response->getContent());
         $this->assertStringContainsString('Crown of Purple Testing', $response->getContent());
         $this->assertStringContainsString('Fetch rankings from Uwu-logs', $response->getContent());
@@ -153,6 +155,73 @@ class CharacterViewControllerTest extends KernelTestCase
             strpos($response->getContent(), 'Specialization & Talent Trees'),
             strpos($response->getContent(), 'Professions')
         );
+    }
+
+    public function testAchievementsEndpointRendersIccTenAndTwentyFiveProgress(): void
+    {
+        $scraperService = $this->createMock(ArmoryScraperService::class);
+        $scraperService->expects(self::exactly(2))
+            ->method('fetchAchievementCategoryHtml')
+            ->willReturnMap([
+                ['Puredecay', 'Icecrown', 15041, '<div>icc10</div>'],
+                ['Puredecay', 'Icecrown', 15042, '<div>icc25</div>'],
+            ]);
+        $scraperService->expects(self::exactly(2))
+            ->method('extractIccAchievements')
+            ->willReturnMap([
+                ['<div>icc10</div>', 15041, [
+                    'raidSize' => 10,
+                    'category' => 15041,
+                    'achievements' => [[
+                        'id' => 4531,
+                        'section' => 'Lower Spire',
+                        'difficulty' => 'normal',
+                        'title' => 'Storming the Citadel (10 player)',
+                        'description' => 'Defeat the first four bosses.',
+                        'points' => 10,
+                        'iconUrl' => null,
+                        'earned' => true,
+                        'earnedDate' => '07/14/2018',
+                    ]],
+                ]],
+                ['<div>icc25</div>', 15042, [
+                    'raidSize' => 25,
+                    'category' => 15042,
+                    'achievements' => [[
+                        'id' => 4584,
+                        'section' => 'The Lich King',
+                        'difficulty' => 'heroic',
+                        'title' => 'The Light of Dawn',
+                        'description' => 'Defeat the Lich King on Heroic.',
+                        'points' => 10,
+                        'iconUrl' => null,
+                        'earned' => false,
+                        'earnedDate' => null,
+                    ]],
+                ]],
+            ]);
+
+        $controller = new CharacterViewController(
+            $scraperService,
+            $this->createMock(CharacterSnapshotRepository::class),
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $this->createMock(CharacterUpdateThrottle::class),
+        );
+        $controller->setContainer(self::getContainer());
+
+        $response = $controller->viewCharacterAchievements('Puredecay', 'Icecrown');
+        $content = $response->getContent();
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertStringContainsString('ICC 10', $content);
+        self::assertStringContainsString('ICC 25', $content);
+        self::assertStringContainsString('Storming the Citadel (10 player)', $content);
+        self::assertStringContainsString('✓ Earned', $content);
+        self::assertStringContainsString('The Light of Dawn', $content);
+        self::assertStringContainsString('Not earned', $content);
+        self::assertStringContainsString('https://armory.warmane.com/character/Puredecay/Icecrown/achievements', $content);
     }
 
     public function testStatsDebugPageShowsEveryCalculationSource(): void

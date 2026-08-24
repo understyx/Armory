@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
     <script type="module" src="{{ asset('item-tooltip.js') }}"></script>
-    <script type="text/javascript" src="http://cdn.cavernoftime.com/api/tooltip.js"></script>
+    <script type="text/javascript" src="https://cdn.cavernoftime.com/api/tooltip.js"></script>
     {% if characterModel %}
         <script src="https://code.jquery.com/jquery-3.7.1.min.js"
                 integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
@@ -111,7 +111,7 @@
                     <div class="stat-value">{{ avgIlvl }}</div>
                 </div>
                 <div class="stat-pill uwu-rank-pill">
-                    <div class="stat-label">Best Uwu-logs Parse</div>
+                    <div class="stat-label">Uwu-logs overall points</div>
                     <div id="header-uwu-points" class="stat-value" data-points="{{ uwuRank ? uwuRank.overallPoints : 0 }}" data-rank="{{ uwuRank ? uwuRank.overallRank : 0 }}"{% if uwuRank %} style="color: {{ uwuRank.scoreColor }}"{% endif %}>{% if uwuRank %}{{ uwuRank.overallPoints|number_format(2) }}{% else %}—{% endif %}</div>
                     <div id="header-uwu-rank" class="stat-rank">{% if uwuRank and uwuRank.overallRank > 0 %}#{{ uwuRank.overallRank|number_format }}{% endif %}</div>
                     <div id="header-uwu-spec" class="stat-meta">{% if uwuRank %}{{ uwuRank.specName(characterDetails.class) }}{% endif %}</div>
@@ -128,6 +128,7 @@
                     <div class="character-tab-list" role="tablist" aria-label="Character details">
                         <button id="equipment-tab" class="character-tab active" type="button" role="tab" aria-selected="true" aria-controls="equipment-panel" onclick="setCharacterTab('equipment', this)">Equipment</button>
                         <button id="stats-tab" class="character-tab" type="button" role="tab" aria-selected="false" aria-controls="stats-panel" onclick="setCharacterTab('stats', this)">Stats</button>
+                        <button id="achievements-tab" class="character-tab" type="button" role="tab" aria-selected="false" aria-controls="achievements-panel" data-achievements-url="{{ path('app_character_achievements', {'characterName': characterName, 'realmName': realmName}) }}" onclick="setCharacterTab('achievements', this)">Achievements</button>
                     </div>
                     {% if transmogItems is not empty %}
                         <details class="transmog-menu" data-equipment-action>
@@ -512,6 +513,13 @@
                 {% else %}
                     <p class="stat-unavailable">Stats could not be calculated for this character.</p>
                 {% endfor %}
+            </div>
+
+            <div id="achievements-panel" class="character-tab-panel" role="tabpanel" aria-labelledby="achievements-tab" aria-live="polite" hidden>
+                <div class="achievements-loading">
+                    <span class="model-loading-spinner" aria-hidden="true"></span>
+                    Loading ICC achievements…
+                </div>
             </div>
         </div>
 
@@ -958,6 +966,28 @@
 
             const transmogAction = document.querySelector('[data-equipment-action]');
             if (transmogAction) transmogAction.hidden = tabName !== 'equipment';
+
+            if (tabName === 'achievements') loadIccAchievements(button);
+        }
+
+        async function loadIccAchievements(button) {
+            const panel = document.getElementById('achievements-panel');
+            if (!panel || panel.dataset.loaded === 'true' || panel.dataset.loading === 'true') return;
+
+            panel.dataset.loading = 'true';
+            try {
+                const response = await fetch(button.dataset.achievementsUrl, {
+                    headers: { 'Accept': 'text/html' }
+                });
+                if (!response.ok) throw new Error('Achievements request failed');
+
+                panel.innerHTML = await response.text();
+                panel.dataset.loaded = 'true';
+            } catch (error) {
+                panel.innerHTML = '<div class="achievements-error">Warmane achievements are temporarily unavailable. Please try again later.</div>';
+            } finally {
+                delete panel.dataset.loading;
+            }
         }
 
         function setStatsSpec(specId, button) {

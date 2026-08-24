@@ -5,6 +5,8 @@ namespace App\Tests\Service;
 use App\Enum\ItemTypes;
 use App\Service\ArmoryScraperService;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -50,6 +52,58 @@ class ArmoryScraperServiceTest extends TestCase
         $this->assertNotNull($result);
         $this->assertStringContainsString('Understyx', $result);
         $this->assertCount(1, $sleptDelays);
+    }
+
+    public function testFetchAchievementCategoryPostsCategoryAndReturnsFragment(): void
+    {
+        $httpClient = new MockHttpClient(static function (string $method, string $url, array $options): MockResponse {
+            self::assertSame('POST', $method);
+            self::assertSame('https://armory.warmane.com/character/Puredecay/Icecrown/achievements', $url);
+            self::assertStringContainsString('category=15041', $options['body']);
+
+            return new MockResponse(json_encode(['content' => '<div class="achievement"></div>']));
+        });
+
+        $service = new ArmoryScraperService(null, null, $httpClient);
+
+        self::assertSame(
+            '<div class="achievement"></div>',
+            $service->fetchAchievementCategoryHtml('puredecay', 'icecrown', 15041),
+        );
+    }
+
+    public function testExtractIccAchievementsKeepsOnlyWingAndLichKingProgress(): void
+    {
+        $html = <<<'HTML'
+            <div class="achievement" id="ach4531">
+                <div class="points"><div>10</div></div>
+                <div class="icon"><img src="http://cdn.warmane.com/wotlk/icons/large/lower-spire.jpg"></div>
+                <div class="title">Storming the Citadel (10 player)</div>
+                <div class="description">Defeat the first four bosses.</div>
+                <div class="date">Earned 07/14/2018</div>
+            </div>
+            <div class="achievement locked" id="ach4583">
+                <div class="points"><div>10</div></div>
+                <div class="title">Bane of the Fallen King</div>
+                <div class="description">Defeat the Lich King on Heroic.</div>
+            </div>
+            <div class="achievement" id="ach4534">
+                <div class="title">Boned (10 player)</div>
+            </div>
+            HTML;
+
+        $result = (new ArmoryScraperService())->extractIccAchievements($html, 15041);
+
+        self::assertSame(10, $result['raidSize']);
+        self::assertSame(15041, $result['category']);
+        self::assertCount(2, $result['achievements']);
+        self::assertSame('Lower Spire', $result['achievements'][0]['section']);
+        self::assertSame('https://cdn.warmane.com/wotlk/icons/large/lower-spire.jpg', $result['achievements'][0]['iconUrl']);
+        self::assertTrue($result['achievements'][0]['earned']);
+        self::assertSame('07/14/2018', $result['achievements'][0]['earnedDate']);
+        self::assertSame('heroic', $result['achievements'][1]['difficulty']);
+        self::assertFalse($result['achievements'][1]['earned']);
+        self::assertNull($result['achievements'][1]['earnedDate']);
     }
 
     public function testExtractGuildSummaryParsesRosterAndMetadata(): void

@@ -48,7 +48,7 @@ final class GuildControllerTest extends WebTestCase
         self::assertSelectorCount(7, '.guild-roster-table .guild-sort-button');
         self::assertSelectorCount(3, '.guild-roster-table .guild-sort-button[data-sort-type="number"]');
         self::assertSelectorExists('.guild-roster-table td[data-label="Achievement points"][data-sort-value="1695"]');
-        self::assertSelectorExists('.guild-roster-table td[data-label="Best Uwu-logs parse"][data-sort-value="85"]');
+        self::assertSelectorExists('.guild-roster-table td[data-label="Uwu-logs overall points"][data-sort-value="85"]');
         self::assertSelectorExists('script[src*="guild-roster-sort"]');
         self::assertSelectorExists('a[href="/characters/Imtilted/Icecrown"]');
         self::assertSelectorTextContains('body', 'limited to once per day');

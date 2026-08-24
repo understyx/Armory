@@ -1,0 +1,48 @@
+<div class="achievements-panel-heading">
+    <div>
+        <h3>Icecrown Citadel progression</h3>
+        <p>Wing clears and Lich King kills reported by Warmane.</p>
+    </div>
+    <a href="{{ sourceUrl }}" target="_blank" rel="noopener">View on Warmane</a>
+</div>
+
+<div class="icc-achievement-groups">
+    {% for group in achievementGroups %}
+        <section class="icc-achievement-group" aria-labelledby="icc-{{ group.raidSize }}-heading">
+            <div class="icc-achievement-group-heading">
+                <h4 id="icc-{{ group.raidSize }}-heading">ICC {{ group.raidSize }}</h4>
+                <span>{{ group.achievements|filter(achievement => achievement.earned)|length }}/{{ group.achievements|length }} earned</span>
+            </div>
+
+            <div class="icc-achievement-list">
+                {% for achievement in group.achievements %}
+                    <article class="icc-achievement{% if achievement.earned %} is-earned{% else %} is-locked{% endif %}">
+                        <div class="icc-achievement-icon" aria-hidden="true">
+                            {% if achievement.iconUrl %}
+                                <img src="{{ achievement.iconUrl }}" alt="" loading="lazy">
+                            {% endif %}
+                        </div>
+                        <div class="icc-achievement-copy">
+                            <div class="icc-achievement-meta">
+                                <span class="icc-achievement-section">{{ achievement.section }}</span>
+                                <span class="icc-difficulty icc-difficulty-{{ achievement.difficulty }}">{{ achievement.difficulty|capitalize }}</span>
+                            </div>
+                            <h5>{{ achievement.title }}</h5>
+                            <p>{{ achievement.description }}</p>
+                        </div>
+                        <div class="icc-achievement-status">
+                            {% if achievement.earned %}
+                                <strong>✓ Earned</strong>
+                                {% if achievement.earnedDate %}<span>{{ achievement.earnedDate }}</span>{% endif %}
+                            {% else %}
+                                <strong>Not earned</strong>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% else %}
+                    <div class="achievements-error">No ICC {{ group.raidSize }} achievements were returned.</div>
+                {% endfor %}
+            </div>
+        </section>
+    {% endfor %}
+</div>
