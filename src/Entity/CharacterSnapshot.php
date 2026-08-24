@@ -75,6 +75,10 @@ class CharacterSnapshot
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $matchHistory = null;
 
+    /** @var array<string, array<string, string|null>>|null */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $raidAchievements = null;
+
     #[ORM\Column]
     private ?\DateTimeImmutable $scrapedAt = null;
 
@@ -328,6 +332,20 @@ class CharacterSnapshot
     public function setMatchHistory(?array $matchHistory): static
     {
         $this->matchHistory = $matchHistory;
+
+        return $this;
+    }
+
+    /** @return array<string, array<string, string|null>>|null */
+    public function getRaidAchievements(): ?array
+    {
+        return $this->raidAchievements;
+    }
+
+    /** @param array<string, array<string, string|null>>|null $raidAchievements */
+    public function setRaidAchievements(?array $raidAchievements): static
+    {
+        $this->raidAchievements = $raidAchievements;
 
         return $this;
     }

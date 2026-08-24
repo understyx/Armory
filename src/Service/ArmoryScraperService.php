@@ -271,7 +271,13 @@ class ArmoryScraperService
     /**
      * Fetches the HTML fragment returned by Warmane's achievements category request.
      */
-    public function fetchAchievementCategoryHtml(string $character, string $realm, int $category): ?string
+    public function fetchAchievementCategoryHtml(
+        string $character,
+        string $realm,
+        int $category,
+        array $retryDelays = [1, 2, 4, 8, 16],
+        ?callable $sleepFunc = null,
+    ): ?string
     {
         if (!isset(self::RAID_ACHIEVEMENT_CATEGORIES[$category])) {
             throw new \InvalidArgumentException(sprintf('Unsupported raid achievement category: %d', $category));
@@ -283,32 +289,56 @@ class ArmoryScraperService
             rawurlencode(ucfirst(trim($realm))),
         );
 
-        try {
-            $response = $this->httpClient->request('POST', $url, [
-                'headers' => [
-                    'User-Agent' => 'Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0',
-                    'Accept' => 'application/json, text/javascript, */*; q=0.01',
-                    'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
-                    'Referer' => $url,
-                    'X-Requested-With' => 'XMLHttpRequest',
-                ],
-                'body' => ['category' => (string) $category],
-                'timeout' => 10,
-            ]);
+        $maxRetries = count($retryDelays);
+        for ($attempt = 0; $attempt <= $maxRetries; $attempt++) {
+            try {
+                $response = $this->httpClient->request('POST', $url, [
+                    'headers' => [
+                        'User-Agent' => 'Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0',
+                        'Accept' => 'application/json, text/javascript, */*; q=0.01',
+                        'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'Referer' => $url,
+                        'X-Requested-With' => 'XMLHttpRequest',
+                    ],
+                    'body' => ['category' => (string) $category],
+                    'timeout' => 10,
+                ]);
 
-            if ($response->getStatusCode() !== 200) {
-                $this->log('warning', sprintf('Warmane achievement category %d returned HTTP %d.', $category, $response->getStatusCode()));
-                return null;
+                $statusCode = $response->getStatusCode();
+                $content = $response->getContent(false);
+                $payload = $statusCode === 200 && !$this->isCloudflareBlock($content)
+                    ? json_decode($content, true)
+                    : null;
+                if (is_array($payload) && is_string($payload['content'] ?? null)) {
+                    return $payload['content'];
+                }
+
+                $this->log('warning', sprintf(
+                    'Warmane achievement category %d attempt %d failed with HTTP %d.',
+                    $category,
+                    $attempt + 1,
+                    $statusCode,
+                ));
+            } catch (ExceptionInterface $e) {
+                $this->log('error', sprintf(
+                    'Warmane achievement category %d attempt %d failed: %s',
+                    $category,
+                    $attempt + 1,
+                    $e->getMessage(),
+                ), ['exception' => $e]);
             }
 
-            $payload = json_decode($response->getContent(false), true);
-            return is_array($payload) && is_string($payload['content'] ?? null)
-                ? $payload['content']
-                : null;
-        } catch (ExceptionInterface $e) {
-            $this->log('error', sprintf('Failed to fetch Warmane achievement category %d: %s', $category, $e->getMessage()), ['exception' => $e]);
-            return null;
+            if ($attempt < $maxRetries) {
+                $delay = $retryDelays[$attempt] ?? 1;
+                if ($sleepFunc !== null) {
+                    $sleepFunc($delay);
+                } else {
+                    sleep($delay);
+                }
+            }
         }
+
+        return null;
     }
 
     /**
@@ -368,6 +398,46 @@ class ArmoryScraperService
                 'iconUrl' => $iconUrl,
                 'earned' => !str_contains($className, ' locked '),
                 'earnedDate' => $earnedText !== null ? preg_replace('/^Earned\s+/i', '', $earnedText) : null,
+            ];
+        }
+
+        return [
+            'raidSize' => $categoryConfig['raidSize'],
+            'category' => $category,
+            'achievements' => $achievements,
+        ];
+    }
+
+    /**
+     * Reconstructs a category for display when Warmane is unavailable.
+     *
+     * @param array<string, string|null> $earnedDatesById
+     * @return array{raidSize: int, category: int, achievements: list<array<string, mixed>>}
+     */
+    public function buildRaidAchievementsFromCache(array $earnedDatesById, int $category): array
+    {
+        $categoryConfig = self::RAID_ACHIEVEMENT_CATEGORIES[$category] ?? null;
+        if ($categoryConfig === null) {
+            throw new \InvalidArgumentException(sprintf('Unsupported raid achievement category: %d', $category));
+        }
+
+        $achievements = [];
+        foreach ($categoryConfig['achievements'] as $achievementId => $config) {
+            $cacheKey = (string) $achievementId;
+            $earned = array_key_exists($cacheKey, $earnedDatesById);
+            $achievements[] = [
+                'id' => $achievementId,
+                'group' => $config['group'],
+                'raid' => $config['raid'],
+                'section' => $config['section'],
+                'difficulty' => $config['difficulty'],
+                'sort' => $config['sort'],
+                'title' => $config['section'],
+                'description' => '',
+                'points' => 0,
+                'iconUrl' => null,
+                'earned' => $earned,
+                'earnedDate' => $earned ? $earnedDatesById[$cacheKey] : null,
             ];
         }
 

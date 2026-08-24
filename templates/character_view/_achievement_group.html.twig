@@ -23,7 +23,7 @@
                                     {% endif %}
                                 </div>
                                 <h5>{{ achievement.title }}</h5>
-                                <p>{{ achievement.description }}</p>
+                                {% if achievement.description %}<p>{{ achievement.description }}</p>{% endif %}
                             </div>
                             <div class="icc-achievement-status">
                                 {% if achievement.earned %}

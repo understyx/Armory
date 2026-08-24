@@ -91,6 +91,28 @@ class ArmoryScraperServiceTest extends TestCase
         );
     }
 
+    public function testFetchAchievementCategoryRetriesUntilItSucceeds(): void
+    {
+        $httpClient = new MockHttpClient([
+            new MockResponse('Error 1015', ['http_code' => 429]),
+            new MockResponse(json_encode(['content' => '<div id="success"></div>'])),
+        ]);
+        $sleptDelays = [];
+
+        $result = (new ArmoryScraperService(null, null, $httpClient))->fetchAchievementCategoryHtml(
+            'Puredecay',
+            'Icecrown',
+            15041,
+            [0],
+            static function (int $delay) use (&$sleptDelays): void {
+                $sleptDelays[] = $delay;
+            },
+        );
+
+        self::assertSame('<div id="success"></div>', $result);
+        self::assertSame([0], $sleptDelays);
+    }
+
     public function testExtractRaidAchievementsKeepsOnlyConfiguredProgressionEntries(): void
     {
         $html = <<<'HTML'
@@ -192,6 +214,21 @@ class ArmoryScraperServiceTest extends TestCase
         self::assertSame([3159], array_column($result['achievements'], 'id'));
         self::assertSame('hard-mode', $result['achievements'][0]['difficulty']);
         self::assertSame('Alone in the Darkness (10 player)', $result['achievements'][0]['title']);
+    }
+
+    public function testBuildRaidAchievementsFromCacheRestoresOnlyEarnedIdsAndDates(): void
+    {
+        $result = (new ArmoryScraperService())->buildRaidAchievementsFromCache([
+            '3918' => '07/14/2020',
+            '3810' => '08/01/2020',
+        ], 15001);
+        $byId = array_column($result['achievements'], null, 'id');
+
+        self::assertFalse($byId[3917]['earned']);
+        self::assertTrue($byId[3918]['earned']);
+        self::assertSame('07/14/2020', $byId[3918]['earnedDate']);
+        self::assertTrue($byId[3810]['earned']);
+        self::assertSame('08/01/2020', $byId[3810]['earnedDate']);
     }
 
     public function testExtractGuildSummaryParsesRosterAndMetadata(): void

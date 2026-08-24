@@ -221,12 +221,39 @@ class CharacterViewController extends AbstractController
             throw $this->createNotFoundException('Unknown achievement group.');
         }
 
+        $snapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
+        $cachedCategories = $snapshot?->getRaidAchievements() ?? [];
+        $cacheChanged = false;
         $categoryResults = [];
         foreach ($groupConfig['categories'] as $category) {
             $html = $this->armoryScraperService->fetchAchievementCategoryHtml($characterName, $realmName, $category);
             if ($html !== null) {
-                $categoryResults[] = $this->armoryScraperService->extractRaidAchievements($html, $category);
+                $result = $this->armoryScraperService->extractRaidAchievements($html, $category);
+                $categoryResults[] = $result;
+
+                $earnedDates = [];
+                foreach ($result['achievements'] as $achievement) {
+                    if ($achievement['earned'] ?? false) {
+                        $earnedDates[(string) $achievement['id']] = $achievement['earnedDate'] ?? null;
+                    }
+                }
+
+                if (($cachedCategories[(string) $category] ?? null) !== $earnedDates) {
+                    $cachedCategories[(string) $category] = $earnedDates;
+                    $cacheChanged = true;
+                }
+            } elseif (array_key_exists((string) $category, $cachedCategories)
+                && is_array($cachedCategories[(string) $category])) {
+                $categoryResults[] = $this->armoryScraperService->buildRaidAchievementsFromCache(
+                    $cachedCategories[(string) $category],
+                    $category,
+                );
             }
+        }
+
+        if ($snapshot !== null && $cacheChanged) {
+            $snapshot->setRaidAchievements($cachedCategories);
+            $this->snapshotRepository->save($snapshot);
         }
 
         if ($categoryResults === []) {

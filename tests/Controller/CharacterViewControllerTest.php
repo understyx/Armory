@@ -189,6 +189,18 @@ class CharacterViewControllerTest extends KernelTestCase
 
     public function testIccAchievementGroupFetchesOnlyItsCategoriesAndRendersResult(): void
     {
+        $snapshot = (new CharacterSnapshot())
+            ->setName('Puredecay')
+            ->setRealm('Icecrown');
+        $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
+        $snapshotRepository->expects(self::once())
+            ->method('findByNameAndRealm')
+            ->with('Puredecay', 'Icecrown')
+            ->willReturn($snapshot);
+        $snapshotRepository->expects(self::once())
+            ->method('save')
+            ->with($snapshot);
+
         $scraperService = $this->createMock(ArmoryScraperService::class);
         $scraperService->expects(self::exactly(4))
             ->method('fetchAchievementCategoryHtml')
@@ -204,7 +216,11 @@ class CharacterViewControllerTest extends KernelTestCase
             ->willReturnCallback(static fn(string $html, int $category): array => [
                 'raidSize' => in_array($category, [15042, 14923], true) ? 25 : 10,
                 'category' => $category,
-                'achievements' => [],
+                'achievements' => $category === 15041 ? [[
+                    'id' => 4583,
+                    'earned' => true,
+                    'earnedDate' => '11/02/2020',
+                ]] : [],
             ]);
         $scraperService->expects(self::once())
             ->method('groupRaidAchievements')
@@ -231,7 +247,7 @@ class CharacterViewControllerTest extends KernelTestCase
 
         $controller = new CharacterViewController(
             $scraperService,
-            $this->createMock(CharacterSnapshotRepository::class),
+            $snapshotRepository,
             new \App\Service\TalentTreeService(),
             new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
             $this->createMock(LoggerInterface::class),
@@ -246,6 +262,49 @@ class CharacterViewControllerTest extends KernelTestCase
         self::assertStringContainsString('10-player', $content);
         self::assertStringContainsString('25-player', $content);
         self::assertStringContainsString('Bane of the Fallen King', $content);
+        self::assertStringContainsString('✓ Earned', $content);
+        self::assertSame('11/02/2020', $snapshot->getRaidAchievements()['15041']['4583']);
+    }
+
+    public function testAchievementGroupFallsBackToSavedIdsAndDatesWhenWarmaneFails(): void
+    {
+        $snapshot = (new CharacterSnapshot())
+            ->setName('Puredecay')
+            ->setRealm('Icecrown')
+            ->setRaidAchievements([
+                '15001' => ['3918' => '07/14/2020', '3810' => '08/01/2020'],
+                '15002' => ['3812' => '07/15/2020'],
+            ]);
+        $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
+        $snapshotRepository->expects(self::once())->method('findByNameAndRealm')->willReturn($snapshot);
+        $snapshotRepository->expects(self::never())->method('save');
+
+        $realScraper = new ArmoryScraperService();
+        $scraperService = $this->createMock(ArmoryScraperService::class);
+        $scraperService->expects(self::exactly(2))->method('fetchAchievementCategoryHtml')->willReturn(null);
+        $scraperService->expects(self::exactly(2))
+            ->method('buildRaidAchievementsFromCache')
+            ->willReturnCallback(static fn(array $cached, int $category): array => $realScraper->buildRaidAchievementsFromCache($cached, $category));
+        $scraperService->expects(self::once())
+            ->method('groupRaidAchievements')
+            ->willReturnCallback(static fn(array $results): array => $realScraper->groupRaidAchievements($results));
+
+        $controller = new CharacterViewController(
+            $scraperService,
+            $snapshotRepository,
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $this->createMock(CharacterUpdateThrottle::class),
+        );
+        $controller->setContainer(self::getContainer());
+
+        $response = $controller->viewCharacterAchievementGroup('Puredecay', 'Icecrown', 'togc');
+        $content = $response->getContent();
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertStringContainsString('08/01/2020', $content);
+        self::assertStringContainsString('Tribute to Insanity', $content);
         self::assertStringContainsString('✓ Earned', $content);
     }
 
