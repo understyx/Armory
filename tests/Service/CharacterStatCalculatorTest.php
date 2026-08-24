@@ -148,7 +148,11 @@ class CharacterStatCalculatorTest extends TestCase
 
     public function testSpellCriticalStrikeIncludesIntellectClassBaseAndRating(): void
     {
-        $result = (new CharacterStatCalculator())->calculate('Human', 'Mage', 80, [[
+        $calculator = new CharacterStatCalculator();
+        $nakedResult = $calculator->calculate('Human', 'Mage', 80, []);
+        self::assertSame(1.99, $nakedResult['ratings']['spell_crit_rating']['totalPercent']);
+
+        $result = $calculator->calculate('Human', 'Mage', 80, [[
             'tooltip' => ['stats' => [
                 ['type' => 5, 'value' => 100],
                 ['type' => 21, 'value' => 46],

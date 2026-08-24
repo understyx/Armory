@@ -167,6 +167,7 @@ final class CharacterStatCalculator
         'druid' => ['melee' => 7.4755, 'spell' => 1.8515],
     ];
 
+    // https://github.com/Poli93/wotlk/blob/563e4a08cb15729f1fdcbcf68e6d68224553bfef/sim/core/mana.go#L48-L49
     private const INTELLECT_PER_SPELL_CRIT_AT_LEVEL_80 = 166.66667;
 
     public function __construct(
