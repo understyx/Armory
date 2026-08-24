@@ -438,12 +438,18 @@ final class CharacterStatCalculator
             'ranged attack power' => 'ranged_attack_power', 'rap' => 'ranged_attack_power',
             'spell power' => 'spell_power', 'sp' => 'spell_power', 'mana per 5' => 'mana_per_5',
             'mp5' => 'mana_per_5', 'spell penetration' => 'spell_penetration',
-            'block value' => 'block_value', 'defense rating' => 'defense_rating',
-            'dodge rating' => 'dodge_rating', 'parry rating' => 'parry_rating',
+            'spell pen' => 'spell_penetration', 'block value' => 'block_value',
+            'defense rating' => 'defense_rating', 'defense' => 'defense_rating',
+            'dodge rating' => 'dodge_rating', 'dodge' => 'dodge_rating',
+            'parry rating' => 'parry_rating', 'parry' => 'parry_rating',
             'block rating' => 'block_rating', 'hit rating' => 'all_hit_rating',
-            'critical strike rating' => 'all_crit_rating', 'crit rating' => 'all_crit_rating',
-            'haste rating' => 'all_haste_rating', 'resilience rating' => 'resilience_rating',
-            'expertise rating' => 'expertise_rating', 'armor penetration rating' => 'armor_penetration_rating',
+            'hit' => 'all_hit_rating', 'critical strike rating' => 'all_crit_rating',
+            'crit rating' => 'all_crit_rating', 'crit' => 'all_crit_rating',
+            'haste rating' => 'all_haste_rating', 'haste' => 'all_haste_rating',
+            'resilience rating' => 'resilience_rating', 'resilience' => 'resilience_rating',
+            'expertise rating' => 'expertise_rating', 'expertise' => 'expertise_rating',
+            'armor penetration rating' => 'armor_penetration_rating',
+            'armor penetration' => 'armor_penetration_rating', 'armor pen' => 'armor_penetration_rating',
         ];
         uksort($aliases, static fn (string $left, string $right): int => strlen($right) <=> strlen($left));
         $pattern = '/([+-]?\d+)\s+(?:to\s+)?('.implode('|', array_map(static fn (string $name): string => preg_quote($name, '/'), array_keys($aliases))).')\b/i';

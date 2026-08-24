@@ -116,4 +116,33 @@ class CharacterStatCalculatorTest extends TestCase
         self::assertSame('expertise', $result['ratings']['expertise_rating']['unitLabel']);
         self::assertSame(8.197, $result['ratings']['expertise_rating']['ratingPerUnit']);
     }
+
+    public function testItReadsEveryStatFromLegacyGemEffectText(): void
+    {
+        $result = (new CharacterStatCalculator())->calculate('Human', 'Warrior', 80, [[
+            'name' => 'Gem Test Item',
+            'tooltip' => ['stats' => []],
+            'gem_details' => [
+                ['name' => 'Fractured Cardinal Ruby', 'effect' => '+20 Armor Pen'],
+                ['name' => 'Etched Ametrine', 'effect' => '+10 Strength & +10 Hit'],
+            ],
+        ]]);
+
+        self::assertSame(
+            ['armor_penetration_rating' => 20],
+            $result['itemBreakdown'][0]['gems'][0]['stats'],
+        );
+        self::assertSame(
+            [
+                'strength' => 10,
+                'melee_hit_rating' => 10,
+                'ranged_hit_rating' => 10,
+                'spell_hit_rating' => 10,
+            ],
+            $result['itemBreakdown'][0]['gems'][1]['stats'],
+        );
+        self::assertArrayNotHasKey('armor', $result['gearTotals']);
+        self::assertSame(20, $result['gearTotals']['armor_penetration_rating']);
+        self::assertSame(10, $result['gearTotals']['strength']);
+    }
 }
