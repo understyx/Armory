@@ -183,15 +183,15 @@ class CharacterViewController extends AbstractController
     #[Route('/character/{characterName}/{realmName}/achievements', name: 'app_character_achievements_legacy', methods: ['GET'])]
     public function viewCharacterAchievements(string $characterName, string $realmName): Response
     {
-        $achievementGroups = [];
-        foreach ([15041, 15042] as $category) {
+        $categoryResults = [];
+        foreach ([14922, 14923, 14961, 14962, 15001, 15002, 15041, 15042] as $category) {
             $html = $this->armoryScraperService->fetchAchievementCategoryHtml($characterName, $realmName, $category);
             if ($html !== null) {
-                $achievementGroups[] = $this->armoryScraperService->extractIccAchievements($html, $category);
+                $categoryResults[] = $this->armoryScraperService->extractRaidAchievements($html, $category);
             }
         }
 
-        if ($achievementGroups === []) {
+        if ($categoryResults === []) {
             return new JsonResponse(
                 ['error' => 'Warmane achievements are temporarily unavailable.'],
                 Response::HTTP_BAD_GATEWAY,
@@ -199,7 +199,7 @@ class CharacterViewController extends AbstractController
         }
 
         return $this->render('character_view/_achievements.html.twig', [
-            'achievementGroups' => $achievementGroups,
+            'achievementGroups' => $this->armoryScraperService->groupRaidAchievements($categoryResults),
             'sourceUrl' => sprintf(
                 'https://armory.warmane.com/character/%s/%s/achievements',
                 rawurlencode($characterName),

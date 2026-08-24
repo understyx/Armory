@@ -19,35 +19,108 @@ class WarmaneParserException extends \RuntimeException
 
 class ArmoryScraperService
 {
-    private const ICC_ACHIEVEMENT_CATEGORIES = [
+    private const RAID_ACHIEVEMENT_GROUPS = [
+        'icc_rs' => 'ICC + RS',
+        'toc_onyxia' => 'ToC + Onyxia',
+        'ulduar' => 'Ulduar',
+        'naxx_eoe_os' => 'Naxx + EoE + OS',
+    ];
+
+    private const RAID_ACHIEVEMENT_CATEGORIES = [
+        14922 => [
+            'raidSize' => 10,
+            'achievements' => [
+                4817 => ['group' => 'icc_rs', 'raid' => 'Ruby Sanctum', 'section' => 'Halion', 'difficulty' => 'normal', 'sort' => 60],
+                4818 => ['group' => 'icc_rs', 'raid' => 'Ruby Sanctum', 'section' => 'Halion', 'difficulty' => 'heroic', 'sort' => 60],
+                4396 => ['group' => 'toc_onyxia', 'raid' => "Onyxia's Lair", 'section' => 'Onyxia', 'difficulty' => 'normal', 'sort' => 20],
+                562 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Arachnid Quarter', 'difficulty' => 'normal', 'sort' => 10],
+                564 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Construct Quarter', 'difficulty' => 'normal', 'sort' => 20],
+                566 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Plague Quarter', 'difficulty' => 'normal', 'sort' => 30],
+                568 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Military Quarter', 'difficulty' => 'normal', 'sort' => 40],
+                572 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Sapphiron', 'difficulty' => 'normal', 'sort' => 50],
+                574 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => "Kel'Thuzad", 'difficulty' => 'normal', 'sort' => 60],
+                622 => ['group' => 'naxx_eoe_os', 'raid' => 'Eye of Eternity', 'section' => 'Malygos', 'difficulty' => 'normal', 'sort' => 70],
+                1876 => ['group' => 'naxx_eoe_os', 'raid' => 'Obsidian Sanctum', 'section' => 'Sartharion', 'difficulty' => 'normal', 'sort' => 80],
+            ],
+        ],
+        14923 => [
+            'raidSize' => 25,
+            'achievements' => [
+                4815 => ['group' => 'icc_rs', 'raid' => 'Ruby Sanctum', 'section' => 'Halion', 'difficulty' => 'normal', 'sort' => 60],
+                4816 => ['group' => 'icc_rs', 'raid' => 'Ruby Sanctum', 'section' => 'Halion', 'difficulty' => 'heroic', 'sort' => 60],
+                4397 => ['group' => 'toc_onyxia', 'raid' => "Onyxia's Lair", 'section' => 'Onyxia', 'difficulty' => 'normal', 'sort' => 20],
+                563 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Arachnid Quarter', 'difficulty' => 'normal', 'sort' => 10],
+                565 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Construct Quarter', 'difficulty' => 'normal', 'sort' => 20],
+                567 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Plague Quarter', 'difficulty' => 'normal', 'sort' => 30],
+                569 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Military Quarter', 'difficulty' => 'normal', 'sort' => 40],
+                573 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Sapphiron', 'difficulty' => 'normal', 'sort' => 50],
+                575 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => "Kel'Thuzad", 'difficulty' => 'normal', 'sort' => 60],
+                623 => ['group' => 'naxx_eoe_os', 'raid' => 'Eye of Eternity', 'section' => 'Malygos', 'difficulty' => 'normal', 'sort' => 70],
+                625 => ['group' => 'naxx_eoe_os', 'raid' => 'Obsidian Sanctum', 'section' => 'Sartharion', 'difficulty' => 'normal', 'sort' => 80],
+            ],
+        ],
+        14961 => [
+            'raidSize' => 10,
+            'achievements' => [
+                2886 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'The Siege', 'difficulty' => 'normal', 'sort' => 10],
+                2888 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'The Antechamber', 'difficulty' => 'normal', 'sort' => 20],
+                2890 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'The Keepers', 'difficulty' => 'normal', 'sort' => 30],
+                2892 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'Descent into Madness', 'difficulty' => 'normal', 'sort' => 40],
+                3036 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'Algalon', 'difficulty' => 'normal', 'sort' => 50],
+            ],
+        ],
+        14962 => [
+            'raidSize' => 25,
+            'achievements' => [
+                2887 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'The Siege', 'difficulty' => 'normal', 'sort' => 10],
+                2889 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'The Antechamber', 'difficulty' => 'normal', 'sort' => 20],
+                2891 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'The Keepers', 'difficulty' => 'normal', 'sort' => 30],
+                2893 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'Descent into Madness', 'difficulty' => 'normal', 'sort' => 40],
+                3037 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'Algalon', 'difficulty' => 'normal', 'sort' => 50],
+            ],
+        ],
+        15001 => [
+            'raidSize' => 10,
+            'achievements' => [
+                3917 => ['group' => 'toc_onyxia', 'raid' => 'Trial of the Crusader', 'section' => 'Full clear', 'difficulty' => 'normal', 'sort' => 10],
+                3918 => ['group' => 'toc_onyxia', 'raid' => 'Trial of the Crusader', 'section' => 'Full clear', 'difficulty' => 'heroic', 'sort' => 10],
+            ],
+        ],
+        15002 => [
+            'raidSize' => 25,
+            'achievements' => [
+                3916 => ['group' => 'toc_onyxia', 'raid' => 'Trial of the Crusader', 'section' => 'Full clear', 'difficulty' => 'normal', 'sort' => 10],
+                3812 => ['group' => 'toc_onyxia', 'raid' => 'Trial of the Crusader', 'section' => 'Full clear', 'difficulty' => 'heroic', 'sort' => 10],
+            ],
+        ],
         15041 => [
             'raidSize' => 10,
             'achievements' => [
-                4531 => ['section' => 'Lower Spire', 'difficulty' => 'normal'],
-                4628 => ['section' => 'Lower Spire', 'difficulty' => 'heroic'],
-                4528 => ['section' => 'The Plagueworks', 'difficulty' => 'normal'],
-                4629 => ['section' => 'The Plagueworks', 'difficulty' => 'heroic'],
-                4529 => ['section' => 'The Crimson Hall', 'difficulty' => 'normal'],
-                4630 => ['section' => 'The Crimson Hall', 'difficulty' => 'heroic'],
-                4527 => ['section' => 'The Frostwing Halls', 'difficulty' => 'normal'],
-                4631 => ['section' => 'The Frostwing Halls', 'difficulty' => 'heroic'],
-                4530 => ['section' => 'The Lich King', 'difficulty' => 'normal'],
-                4583 => ['section' => 'The Lich King', 'difficulty' => 'heroic'],
+                4531 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'Lower Spire', 'difficulty' => 'normal', 'sort' => 10],
+                4628 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'Lower Spire', 'difficulty' => 'heroic', 'sort' => 10],
+                4528 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Plagueworks', 'difficulty' => 'normal', 'sort' => 20],
+                4629 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Plagueworks', 'difficulty' => 'heroic', 'sort' => 20],
+                4529 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Crimson Hall', 'difficulty' => 'normal', 'sort' => 30],
+                4630 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Crimson Hall', 'difficulty' => 'heroic', 'sort' => 30],
+                4527 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Frostwing Halls', 'difficulty' => 'normal', 'sort' => 40],
+                4631 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Frostwing Halls', 'difficulty' => 'heroic', 'sort' => 40],
+                4530 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Lich King', 'difficulty' => 'normal', 'sort' => 50],
+                4583 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Lich King', 'difficulty' => 'heroic', 'sort' => 50],
             ],
         ],
         15042 => [
             'raidSize' => 25,
             'achievements' => [
-                4604 => ['section' => 'Lower Spire', 'difficulty' => 'normal'],
-                4632 => ['section' => 'Lower Spire', 'difficulty' => 'heroic'],
-                4605 => ['section' => 'The Plagueworks', 'difficulty' => 'normal'],
-                4633 => ['section' => 'The Plagueworks', 'difficulty' => 'heroic'],
-                4606 => ['section' => 'The Crimson Hall', 'difficulty' => 'normal'],
-                4634 => ['section' => 'The Crimson Hall', 'difficulty' => 'heroic'],
-                4607 => ['section' => 'The Frostwing Halls', 'difficulty' => 'normal'],
-                4635 => ['section' => 'The Frostwing Halls', 'difficulty' => 'heroic'],
-                4597 => ['section' => 'The Lich King', 'difficulty' => 'normal'],
-                4584 => ['section' => 'The Lich King', 'difficulty' => 'heroic'],
+                4604 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'Lower Spire', 'difficulty' => 'normal', 'sort' => 10],
+                4632 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'Lower Spire', 'difficulty' => 'heroic', 'sort' => 10],
+                4605 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Plagueworks', 'difficulty' => 'normal', 'sort' => 20],
+                4633 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Plagueworks', 'difficulty' => 'heroic', 'sort' => 20],
+                4606 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Crimson Hall', 'difficulty' => 'normal', 'sort' => 30],
+                4634 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Crimson Hall', 'difficulty' => 'heroic', 'sort' => 30],
+                4607 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Frostwing Halls', 'difficulty' => 'normal', 'sort' => 40],
+                4635 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Frostwing Halls', 'difficulty' => 'heroic', 'sort' => 40],
+                4597 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Lich King', 'difficulty' => 'normal', 'sort' => 50],
+                4584 => ['group' => 'icc_rs', 'raid' => 'Icecrown Citadel', 'section' => 'The Lich King', 'difficulty' => 'heroic', 'sort' => 50],
             ],
         ],
     ];
@@ -194,8 +267,8 @@ class ArmoryScraperService
      */
     public function fetchAchievementCategoryHtml(string $character, string $realm, int $category): ?string
     {
-        if (!isset(self::ICC_ACHIEVEMENT_CATEGORIES[$category])) {
-            throw new \InvalidArgumentException(sprintf('Unsupported ICC achievement category: %d', $category));
+        if (!isset(self::RAID_ACHIEVEMENT_CATEGORIES[$category])) {
+            throw new \InvalidArgumentException(sprintf('Unsupported raid achievement category: %d', $category));
         }
 
         $url = sprintf(
@@ -235,11 +308,11 @@ class ArmoryScraperService
     /**
      * @return array{raidSize: int, category: int, achievements: list<array<string, mixed>>}
      */
-    public function extractIccAchievements(string $html, int $category): array
+    public function extractRaidAchievements(string $html, int $category): array
     {
-        $categoryConfig = self::ICC_ACHIEVEMENT_CATEGORIES[$category] ?? null;
+        $categoryConfig = self::RAID_ACHIEVEMENT_CATEGORIES[$category] ?? null;
         if ($categoryConfig === null) {
-            throw new \InvalidArgumentException(sprintf('Unsupported ICC achievement category: %d', $category));
+            throw new \InvalidArgumentException(sprintf('Unsupported raid achievement category: %d', $category));
         }
 
         $dom = new DOMDocument();
@@ -278,8 +351,11 @@ class ArmoryScraperService
             $earnedText = $readText($xpath, $node, 'date');
             $achievements[] = [
                 'id' => $achievementId,
+                'group' => $achievementConfig['group'],
+                'raid' => $achievementConfig['raid'],
                 'section' => $achievementConfig['section'],
                 'difficulty' => $achievementConfig['difficulty'],
+                'sort' => $achievementConfig['sort'],
                 'title' => $readText($xpath, $node, 'title') ?? $achievementConfig['section'],
                 'description' => $readText($xpath, $node, 'description') ?? '',
                 'points' => (int) ($readText($xpath, $node, 'points') ?? 0),
@@ -294,6 +370,88 @@ class ArmoryScraperService
             'category' => $category,
             'achievements' => $achievements,
         ];
+    }
+
+    /**
+     * Groups raid progression into display sections and hides a normal clear when
+     * the corresponding heroic achievement has already been earned.
+     *
+     * @param list<array{raidSize: int, category: int, achievements: list<array<string, mixed>>}> $categoryResults
+     * @return list<array{key: string, title: string, raidSizes: list<array{raidSize: int, achievements: list<array<string, mixed>>}>}>
+     */
+    public function groupRaidAchievements(array $categoryResults): array
+    {
+        $allAchievements = [];
+        foreach ($categoryResults as $result) {
+            foreach ($result['achievements'] ?? [] as $achievement) {
+                $achievement['raidSize'] = (int) ($result['raidSize'] ?? 0);
+                $allAchievements[] = $achievement;
+            }
+        }
+
+        $earnedHeroicKeys = [];
+        foreach ($allAchievements as $achievement) {
+            if (($achievement['difficulty'] ?? null) === 'heroic' && ($achievement['earned'] ?? false)) {
+                $earnedHeroicKeys[$this->raidAchievementPairKey($achievement)] = true;
+            }
+        }
+
+        $grouped = [];
+        foreach (self::RAID_ACHIEVEMENT_GROUPS as $key => $title) {
+            $grouped[$key] = [
+                'key' => $key,
+                'title' => $title,
+                'raidSizes' => [
+                    10 => ['raidSize' => 10, 'achievements' => []],
+                    25 => ['raidSize' => 25, 'achievements' => []],
+                ],
+            ];
+        }
+
+        foreach ($allAchievements as $achievement) {
+            $groupKey = (string) ($achievement['group'] ?? '');
+            $raidSize = (int) ($achievement['raidSize'] ?? 0);
+            if (!isset($grouped[$groupKey]['raidSizes'][$raidSize])) {
+                continue;
+            }
+
+            if (($achievement['difficulty'] ?? null) === 'normal'
+                && isset($earnedHeroicKeys[$this->raidAchievementPairKey($achievement)])) {
+                continue;
+            }
+
+            $grouped[$groupKey]['raidSizes'][$raidSize]['achievements'][] = $achievement;
+        }
+
+        foreach ($grouped as &$group) {
+            foreach ($group['raidSizes'] as &$raidSizeGroup) {
+                usort($raidSizeGroup['achievements'], static function (array $left, array $right): int {
+                    $sortComparison = ((int) ($left['sort'] ?? 0)) <=> ((int) ($right['sort'] ?? 0));
+                    if ($sortComparison !== 0) {
+                        return $sortComparison;
+                    }
+
+                    return (($left['difficulty'] ?? '') === 'normal' ? 0 : 1)
+                        <=> (($right['difficulty'] ?? '') === 'normal' ? 0 : 1);
+                });
+            }
+            unset($raidSizeGroup);
+            $group['raidSizes'] = array_values($group['raidSizes']);
+        }
+        unset($group);
+
+        return array_values($grouped);
+    }
+
+    /** @param array<string, mixed> $achievement */
+    private function raidAchievementPairKey(array $achievement): string
+    {
+        return implode('|', [
+            (string) ($achievement['group'] ?? ''),
+            (string) ($achievement['raid'] ?? ''),
+            (string) ($achievement['section'] ?? ''),
+            (string) ($achievement['raidSize'] ?? ''),
+        ]);
     }
 
     /** Fetches a Warmane guild page. */
@@ -856,7 +1014,7 @@ class ArmoryScraperService
     public function calculateGearScore(array $equippedItemsData, array $dbItemData = []): int
     {
         $gearscore = 0.0;
-        $weaponGearScores = [];
+        $weapons = [];
 
         foreach ($equippedItemsData as $itemInstance) {
             $itemId = $itemInstance['id'];
@@ -874,18 +1032,25 @@ class ArmoryScraperService
             }
 
             if ($this->isEquippedWeaponType($itemType)) {
-                $weaponGearScores[] = $itemGs;
+                $weapons[] = ['type' => $itemType, 'gs' => $itemGs];
             } else {
                 $gearscore += $itemGs;
             }
         }
 
-        if (!empty($weaponGearScores)) {
-            // Main-hand and off-hand together represent one weapon slot in the total.
-            $gearscore += array_sum($weaponGearScores) / count($weaponGearScores);
+        if ($weapons !== []) {
+            // GearScore 3.1.20 applies a 0.5 Titan's Grip multiplier to both
+            // weapons when a character has two weapons and either is two-handed.
+            $hasTwoHandedWeapon = in_array(
+                ItemTypes::WEAPON_2H->value,
+                array_column($weapons, 'type'),
+                true
+            );
+            $weaponMultiplier = count($weapons) >= 2 && $hasTwoHandedWeapon ? 0.5 : 1.0;
+            $gearscore += array_sum(array_column($weapons, 'gs')) * $weaponMultiplier;
         }
 
-        return (int)round($gearscore);
+        return (int)floor($gearscore);
     }
 
 

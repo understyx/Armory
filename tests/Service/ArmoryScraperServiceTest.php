@@ -91,7 +91,7 @@ class ArmoryScraperServiceTest extends TestCase
         );
     }
 
-    public function testExtractIccAchievementsKeepsOnlyWingAndLichKingProgress(): void
+    public function testExtractRaidAchievementsKeepsOnlyConfiguredProgressionEntries(): void
     {
         $html = <<<'HTML'
             <div class="achievement" id="ach4531">
@@ -111,11 +111,13 @@ class ArmoryScraperServiceTest extends TestCase
             </div>
             HTML;
 
-        $result = (new ArmoryScraperService())->extractIccAchievements($html, 15041);
+        $result = (new ArmoryScraperService())->extractRaidAchievements($html, 15041);
 
         self::assertSame(10, $result['raidSize']);
         self::assertSame(15041, $result['category']);
         self::assertCount(2, $result['achievements']);
+        self::assertSame('icc_rs', $result['achievements'][0]['group']);
+        self::assertSame('Icecrown Citadel', $result['achievements'][0]['raid']);
         self::assertSame('Lower Spire', $result['achievements'][0]['section']);
         self::assertSame('https://cdn.warmane.com/wotlk/icons/large/lower-spire.jpg', $result['achievements'][0]['iconUrl']);
         self::assertTrue($result['achievements'][0]['earned']);
@@ -123,6 +125,38 @@ class ArmoryScraperServiceTest extends TestCase
         self::assertSame('heroic', $result['achievements'][1]['difficulty']);
         self::assertFalse($result['achievements'][1]['earned']);
         self::assertNull($result['achievements'][1]['earnedDate']);
+    }
+
+    public function testGroupRaidAchievementsHidesNormalClearWhenHeroicIsEarned(): void
+    {
+        $base = [
+            'group' => 'icc_rs',
+            'raid' => 'Icecrown Citadel',
+            'section' => 'Lower Spire',
+            'sort' => 10,
+            'title' => 'Clear',
+            'description' => '',
+            'points' => 10,
+            'iconUrl' => null,
+            'earnedDate' => null,
+        ];
+        $results = [[
+            'raidSize' => 10,
+            'category' => 15041,
+            'achievements' => [
+                $base + ['id' => 4531, 'difficulty' => 'normal', 'earned' => true],
+                $base + ['id' => 4628, 'difficulty' => 'heroic', 'earned' => true],
+                array_merge($base, ['id' => 4528, 'section' => 'The Plagueworks', 'sort' => 20, 'difficulty' => 'normal', 'earned' => true]),
+                array_merge($base, ['id' => 4629, 'section' => 'The Plagueworks', 'sort' => 20, 'difficulty' => 'heroic', 'earned' => false]),
+            ],
+        ]];
+
+        $groups = (new ArmoryScraperService())->groupRaidAchievements($results);
+        $iccTen = $groups[0]['raidSizes'][0]['achievements'];
+
+        self::assertSame(['ICC + RS', 'ToC + Onyxia', 'Ulduar', 'Naxx + EoE + OS'], array_column($groups, 'title'));
+        self::assertSame([4628, 4528, 4629], array_column($iccTen, 'id'));
+        self::assertNotContains(4531, array_column($iccTen, 'id'));
     }
 
     public function testExtractGuildSummaryParsesRosterAndMetadata(): void
@@ -180,7 +214,7 @@ class ArmoryScraperServiceTest extends TestCase
         $this->assertIsFloat($avgIlvl);
     }
 
-    public function testCalculateGearScoreAveragesTwoEquippedWeapons(): void
+    public function testCalculateGearScoreAveragesTwoHandersForTitansGrip(): void
     {
         $service = new ArmoryScraperService();
         $equippedItems = [
@@ -195,6 +229,74 @@ class ArmoryScraperServiceTest extends TestCase
         ];
 
         $this->assertSame(420, $service->calculateGearScore($equippedItems, $itemData));
+    }
+
+    public function testCalculateGearScoreSumsOrdinaryMainhandAndOffhandWeapons(): void
+    {
+        $service = new ArmoryScraperService();
+        $equippedItems = [
+            ['id' => 1],
+            ['id' => 2],
+            ['id' => 3],
+        ];
+        $itemData = [
+            1 => ['type' => ItemTypes::HEAD->value, 'gs' => 100],
+            2 => ['type' => ItemTypes::WEAPON_MAINHAND->value, 'gs' => 300],
+            3 => ['type' => ItemTypes::WEAPON_OFFHAND->value, 'gs' => 340],
+        ];
+
+        $this->assertSame(740, $service->calculateGearScore($equippedItems, $itemData));
+    }
+
+    public function testCalculateGearScoreFloorsTitansGripHalfPointLikeAddon(): void
+    {
+        $service = new ArmoryScraperService();
+        $equippedItems = [
+            ['id' => 1],
+            ['id' => 2],
+            ['id' => 3],
+        ];
+        $itemData = [
+            1 => ['type' => ItemTypes::HEAD->value, 'gs' => 100],
+            2 => ['type' => ItemTypes::WEAPON_2H->value, 'gs' => 300],
+            3 => ['type' => ItemTypes::WEAPON_2H->value, 'gs' => 341],
+        ];
+
+        $this->assertSame(420, $service->calculateGearScore($equippedItems, $itemData));
+    }
+
+    public function testCalculateGearScoreMatchesTfWarriorAddonResult(): void
+    {
+        $service = new ArmoryScraperService();
+        $items = [
+            [ItemTypes::HEAD->value, 531],
+            [ItemTypes::NECK->value, 310],
+            [ItemTypes::SHOULDER->value, 398],
+            [ItemTypes::BACK->value, 290],
+            [ItemTypes::CHEST->value, 531],
+            [ItemTypes::WRIST->value, 310],
+            [ItemTypes::GLOVES->value, 398],
+            [ItemTypes::WAIST->value, 398],
+            [ItemTypes::LEGS->value, 531],
+            [ItemTypes::FEET->value, 413],
+            [ItemTypes::RING->value, 298],
+            [ItemTypes::RING->value, 298],
+            [ItemTypes::TRINKET->value, 310],
+            [ItemTypes::TRINKET->value, 298],
+            [ItemTypes::WEAPON_2H->value, 1433],
+            [ItemTypes::WEAPON_2H->value, 1103],
+            [ItemTypes::RANGED->value, 174],
+        ];
+        $equippedItems = [];
+        $itemData = [];
+
+        foreach ($items as $index => [$type, $gearScore]) {
+            $itemId = $index + 1;
+            $equippedItems[] = ['id' => $itemId];
+            $itemData[$itemId] = ['type' => $type, 'gs' => $gearScore];
+        }
+
+        $this->assertSame(6756, $service->calculateGearScore($equippedItems, $itemData));
     }
 
     public function testCalculateAvgIlvlAveragesTwoEquippedWeaponsAsOneSlot(): void

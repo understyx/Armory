@@ -158,47 +158,51 @@ class CharacterViewControllerTest extends KernelTestCase
         );
     }
 
-    public function testAchievementsEndpointRendersIccTenAndTwentyFiveProgress(): void
+    public function testAchievementsEndpointRendersGroupedWrathRaidProgress(): void
     {
         $scraperService = $this->createMock(ArmoryScraperService::class);
-        $scraperService->expects(self::exactly(2))
+        $scraperService->expects(self::exactly(8))
             ->method('fetchAchievementCategoryHtml')
-            ->willReturnMap([
-                ['Puredecay', 'Icecrown', 15041, '<div>icc10</div>'],
-                ['Puredecay', 'Icecrown', 15042, '<div>icc25</div>'],
+            ->willReturnCallback(static fn(string $character, string $realm, int $category): string => sprintf('<div>%d</div>', $category));
+        $scraperService->expects(self::exactly(8))
+            ->method('extractRaidAchievements')
+            ->willReturnCallback(static fn(string $html, int $category): array => [
+                'raidSize' => $category % 2 === 0 ? 25 : 10,
+                'category' => $category,
+                'achievements' => [],
             ]);
-        $scraperService->expects(self::exactly(2))
-            ->method('extractIccAchievements')
-            ->willReturnMap([
-                ['<div>icc10</div>', 15041, [
-                    'raidSize' => 10,
-                    'category' => 15041,
-                    'achievements' => [[
-                        'id' => 4531,
-                        'section' => 'Lower Spire',
-                        'difficulty' => 'normal',
-                        'title' => 'Storming the Citadel (10 player)',
-                        'description' => 'Defeat the first four bosses.',
-                        'points' => 10,
-                        'iconUrl' => null,
-                        'earned' => true,
-                        'earnedDate' => '07/14/2018',
-                    ]],
+        $scraperService->expects(self::once())
+            ->method('groupRaidAchievements')
+            ->willReturn([
+                [
+                    'key' => 'icc_rs',
+                    'title' => 'ICC + RS',
+                    'raidSizes' => [
+                        ['raidSize' => 10, 'achievements' => [[
+                            'id' => 4583,
+                            'raid' => 'Icecrown Citadel',
+                            'section' => 'The Lich King',
+                            'difficulty' => 'heroic',
+                            'title' => 'Bane of the Fallen King',
+                            'description' => 'Defeat the Lich King on Heroic.',
+                            'iconUrl' => null,
+                            'earned' => true,
+                            'earnedDate' => '11/02/2020',
+                        ]]],
+                        ['raidSize' => 25, 'achievements' => []],
+                    ],
+                ],
+                ['key' => 'toc_onyxia', 'title' => 'ToC + Onyxia', 'raidSizes' => [
+                    ['raidSize' => 10, 'achievements' => []],
+                    ['raidSize' => 25, 'achievements' => []],
                 ]],
-                ['<div>icc25</div>', 15042, [
-                    'raidSize' => 25,
-                    'category' => 15042,
-                    'achievements' => [[
-                        'id' => 4584,
-                        'section' => 'The Lich King',
-                        'difficulty' => 'heroic',
-                        'title' => 'The Light of Dawn',
-                        'description' => 'Defeat the Lich King on Heroic.',
-                        'points' => 10,
-                        'iconUrl' => null,
-                        'earned' => false,
-                        'earnedDate' => null,
-                    ]],
+                ['key' => 'ulduar', 'title' => 'Ulduar', 'raidSizes' => [
+                    ['raidSize' => 10, 'achievements' => []],
+                    ['raidSize' => 25, 'achievements' => []],
+                ]],
+                ['key' => 'naxx_eoe_os', 'title' => 'Naxx + EoE + OS', 'raidSizes' => [
+                    ['raidSize' => 10, 'achievements' => []],
+                    ['raidSize' => 25, 'achievements' => []],
                 ]],
             ]);
 
@@ -216,12 +220,14 @@ class CharacterViewControllerTest extends KernelTestCase
         $content = $response->getContent();
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
-        self::assertStringContainsString('ICC 10', $content);
-        self::assertStringContainsString('ICC 25', $content);
-        self::assertStringContainsString('Storming the Citadel (10 player)', $content);
+        self::assertStringContainsString('ICC + RS', $content);
+        self::assertStringContainsString('ToC + Onyxia', $content);
+        self::assertStringContainsString('Ulduar', $content);
+        self::assertStringContainsString('Naxx + EoE + OS', $content);
+        self::assertStringContainsString('10-player', $content);
+        self::assertStringContainsString('25-player', $content);
+        self::assertStringContainsString('Bane of the Fallen King', $content);
         self::assertStringContainsString('✓ Earned', $content);
-        self::assertStringContainsString('The Light of Dawn', $content);
-        self::assertStringContainsString('Not earned', $content);
         self::assertStringContainsString('https://armory.warmane.com/character/Puredecay/Icecrown/achievements', $content);
     }
 
