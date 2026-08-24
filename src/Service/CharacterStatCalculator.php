@@ -141,6 +141,34 @@ final class CharacterStatCalculator
         'armor_penetration_rating' => 'Armor Penetration',
     ];
 
+    /**
+     * Level-80 class-sheet critical strike values from the WotLK simulator data.
+     * https://github.com/Poli93/wotlk/blob/563e4a08cb15729f1fdcbcf68e6d68224553bfef/sim/core/base_stats_auto_gen.go#L16
+     *
+     * Agility coefficients are percentage points per point of agility.
+     */
+    private const CRIT_PER_AGILITY_AT_LEVEL_80 = [
+        'warrior' => 0.0160, 'paladin' => 0.0192, 'hunter' => 0.0120,
+        'rogue' => 0.0120, 'priest' => 0.0192, 'death knight' => 0.0160,
+        'shaman' => 0.0120, 'mage' => 0.0196, 'warlock' => 0.0198,
+        'druid' => 0.0120,
+    ];
+
+    private const BASE_CRIT_AT_LEVEL_80 = [
+        'warrior' => ['melee' => 3.1891, 'spell' => 0.0000],
+        'paladin' => ['melee' => 3.2685, 'spell' => 3.3355],
+        'hunter' => ['melee' => -1.5320, 'spell' => 3.6020],
+        'rogue' => ['melee' => -0.2950, 'spell' => 0.0000],
+        'priest' => ['melee' => 3.1765, 'spell' => 1.2375],
+        'death knight' => ['melee' => 3.1891, 'spell' => 0.0000],
+        'shaman' => ['melee' => 2.9220, 'spell' => 2.2010],
+        'mage' => ['melee' => 3.4540, 'spell' => 0.9075],
+        'warlock' => ['melee' => 2.6220, 'spell' => 1.7000],
+        'druid' => ['melee' => 7.4755, 'spell' => 1.8515],
+    ];
+
+    private const INTELLECT_PER_SPELL_CRIT_AT_LEVEL_80 = 166.66667;
+
     public function __construct(
         private readonly WotlkBaseStatTable $baseStatTable = new WotlkBaseStatTable(),
         private readonly ?ItemDatabaseService $itemDatabaseService = null,
@@ -294,13 +322,19 @@ final class CharacterStatCalculator
         $ratings = [];
         foreach (self::RATING_ANCHORS as $stat => $anchors) {
             $rating = (int) ($gear[$stat] ?? 0);
-            if ($rating === 0) {
+            $isCriticalStrike = in_array($stat, [
+                'melee_crit_rating',
+                'ranged_crit_rating',
+                'spell_crit_rating',
+            ], true);
+            if ($rating === 0 && (!$isCriticalStrike || $level !== 80)) {
                 continue;
             }
             $ratingPerUnit = $this->ratingPerPercent($anchors, $level);
             $isExpertise = $stat === 'expertise_rating';
-            $value = round($rating / $ratingPerUnit, 2);
-            $ratings[$stat] = [
+            $ratingValue = $rating / $ratingPerUnit;
+            $value = round($ratingValue, 2);
+            $ratingEntry = [
                 'name' => self::RATING_NAMES[$stat],
                 'rating' => $rating,
                 'ratingPerPercent' => round($isExpertise ? $ratingPerUnit * 4 : $ratingPerUnit, 3),
@@ -310,6 +344,13 @@ final class CharacterStatCalculator
                 'unit' => $isExpertise ? '' : '%',
                 'unitLabel' => $isExpertise ? 'expertise' : '1%',
             ];
+            $criticalStrike = $this->criticalStrikeBreakdown($stat, $class, $level, $primary, $ratingValue);
+            if ($criticalStrike !== null) {
+                $ratingEntry = [...$ratingEntry, ...$criticalStrike];
+                $ratingEntry['value'] = $criticalStrike['totalPercent'];
+                $ratingEntry['percent'] = $criticalStrike['totalPercent'];
+            }
+            $ratings[$stat] = $ratingEntry;
         }
 
         $secondary = [];
@@ -470,6 +511,49 @@ final class CharacterStatCalculator
         }
 
         return $this->nonZero($totals);
+    }
+
+    /**
+     * @param array<string, array<string, int|float|string>> $primary
+     * @return array<string, int|float|string|bool>|null
+     */
+    private function criticalStrikeBreakdown(
+        string $ratingStat,
+        string $class,
+        int $level,
+        array $primary,
+        float $ratingPercent,
+    ): ?array {
+        if ($level !== 80) {
+            return null;
+        }
+
+        $classKey = strtolower(trim($class));
+        if (!isset(self::BASE_CRIT_AT_LEVEL_80[$classKey])) {
+            return null;
+        }
+
+        $isSpell = $ratingStat === 'spell_crit_rating';
+        if (!$isSpell && !in_array($ratingStat, ['melee_crit_rating', 'ranged_crit_rating'], true)) {
+            return null;
+        }
+
+        $attribute = $isSpell ? 'intellect' : 'agility';
+        $attributeValue = (int) ($primary[$attribute]['total'] ?? 0);
+        $attributePercent = $isSpell
+            ? $attributeValue / self::INTELLECT_PER_SPELL_CRIT_AT_LEVEL_80
+            : $attributeValue * self::CRIT_PER_AGILITY_AT_LEVEL_80[$classKey];
+        $basePercent = self::BASE_CRIT_AT_LEVEL_80[$classKey][$isSpell ? 'spell' : 'melee'];
+
+        return [
+            'isCriticalStrike' => true,
+            'basePercent' => round($basePercent, 4),
+            'attribute' => ucfirst($attribute),
+            'attributeValue' => $attributeValue,
+            'attributePercent' => round($attributePercent, 4),
+            'ratingPercent' => round($ratingPercent, 4),
+            'totalPercent' => round($basePercent + $attributePercent + $ratingPercent, 2),
+        ];
     }
 
     /** @param mixed $rawSpec @return array{percent: array<string, float>, hit: array<string, float>, effects: array<int, array<string, mixed>>, breakdown: array<int, array<string, mixed>>} */

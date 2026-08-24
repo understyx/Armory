@@ -145,4 +145,38 @@ class CharacterStatCalculatorTest extends TestCase
         self::assertSame(20, $result['gearTotals']['armor_penetration_rating']);
         self::assertSame(10, $result['gearTotals']['strength']);
     }
+
+    public function testSpellCriticalStrikeIncludesIntellectClassBaseAndRating(): void
+    {
+        $result = (new CharacterStatCalculator())->calculate('Human', 'Mage', 80, [[
+            'tooltip' => ['stats' => [
+                ['type' => 5, 'value' => 100],
+                ['type' => 21, 'value' => 46],
+            ]],
+        ]]);
+
+        $spellCrit = $result['ratings']['spell_crit_rating'];
+        self::assertSame(281, $spellCrit['attributeValue']);
+        self::assertSame(1.686, $spellCrit['attributePercent']);
+        self::assertSame(1.002, $spellCrit['ratingPercent']);
+        self::assertSame(3.6, $spellCrit['totalPercent']);
+        self::assertSame(3.6, $spellCrit['value']);
+    }
+
+    public function testPhysicalCriticalStrikeIncludesAgilityClassBaseAndRating(): void
+    {
+        $result = (new CharacterStatCalculator())->calculate('Human', 'Rogue', 80, [[
+            'tooltip' => ['stats' => [
+                ['type' => 3, 'value' => 100],
+                ['type' => 19, 'value' => 46],
+            ]],
+        ]]);
+
+        $meleeCrit = $result['ratings']['melee_crit_rating'];
+        self::assertSame(289, $meleeCrit['attributeValue']);
+        self::assertSame(3.468, $meleeCrit['attributePercent']);
+        self::assertSame(1.002, $meleeCrit['ratingPercent']);
+        self::assertSame(4.18, $meleeCrit['totalPercent']);
+        self::assertSame(4.18, $meleeCrit['value']);
+    }
 }

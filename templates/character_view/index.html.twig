@@ -457,13 +457,17 @@
                             {% endif %}
 
                             {% if calculatedStats.ratings is not empty %}
-                                <h4 class="stat-subheading">Rating conversions at level {{ calculatedStats.level }}</h4>
+                                <h4 class="stat-subheading">Combat stats at level {{ calculatedStats.level }}</h4>
                                 <div class="rating-conversion-grid">
                                     {% for rating in calculatedStats.ratings %}
                                         <div class="rating-conversion-card">
                                             <span class="rating-conversion-name">{{ rating.name }}</span>
                                             <strong>{{ rating.value|number_format(2) }}{{ rating.unit }}</strong>
-                                            <small>{{ rating.rating }} rating · {{ rating.ratingPerUnit }} per {{ rating.unitLabel }}</small>
+                                            {% if rating.isCriticalStrike|default(false) %}
+                                                <small>{{ rating.basePercent|number_format(2) }}% base · {{ rating.attributeValue }} {{ rating.attribute }} = {{ rating.attributePercent|number_format(2) }}% · {{ rating.rating }} rating = {{ rating.ratingPercent|number_format(2) }}%</small>
+                                            {% else %}
+                                                <small>{{ rating.rating }} rating · {{ rating.ratingPerUnit }} per {{ rating.unitLabel }}</small>
+                                            {% endif %}
                                         </div>
                                     {% endfor %}
                                 </div>
