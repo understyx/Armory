@@ -120,6 +120,7 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringContainsString('6000', $response->getContent());
         $this->assertStringContainsString('id="stats-tab"', $response->getContent());
         $this->assertStringContainsString('Stats at level 80', $response->getContent());
+        $this->assertStringContainsString('href="/characters/Understyx/Icecrown/stats"', $response->getContent());
         $this->assertStringContainsString('Class at 80', $response->getContent());
         $this->assertStringContainsString('class="calculated-stat-total">175', $response->getContent());
         $this->assertStringNotContainsString('Level growth', $response->getContent());
@@ -149,6 +150,79 @@ class CharacterViewControllerTest extends KernelTestCase
             strpos($response->getContent(), 'Specialization & Talent Trees'),
             strpos($response->getContent(), 'Professions')
         );
+    }
+
+    public function testStatsDebugPageShowsEveryCalculationSource(): void
+    {
+        $snapshot = (new CharacterSnapshot())
+            ->setName('Understyx')
+            ->setRealm('Icecrown')
+            ->setLevel(80)
+            ->setRace('Human')
+            ->setClass('Death Knight')
+            ->setGearScore(0)
+            ->setAvgIlvl(0.0)
+            ->setProfessions([])
+            ->setSpecializations(['Unholy (0 / 0 / 2)'])
+            ->setEquippedItems([['id' => 50001]])
+            ->setTalentStrings(['0'])
+            ->setTalentTreesData(['0' => [[
+                'name' => 'Unholy',
+                'points' => 2,
+                'tiers' => [[['spellId' => 48979, 'pointsText' => '2/3']]],
+            ]]])
+            ->setGlyphs([])
+            ->setEnchantsStatus('')
+            ->setGemsStatus('')
+            ->setKillStats([])
+            ->setScrapedAt(new \DateTimeImmutable('2026-08-24 10:00:00+00:00'));
+
+        $snapshotRepo = $this->createMock(CharacterSnapshotRepository::class);
+        $snapshotRepo->expects(self::once())
+            ->method('findByNameAndRealm')
+            ->with('Understyx', 'Icecrown')
+            ->willReturn($snapshot);
+        $scraperService = $this->createMock(ArmoryScraperService::class);
+        $scraperService->expects(self::never())->method('fetchArmoryHtml');
+        $itemDbService = $this->createMock(\App\Service\ItemDatabaseService::class);
+        $itemDbService->method('getItemsBulk')->willReturn([50001 => [
+            'name' => 'Expertise Test Helm',
+            'quality' => 4,
+            'type' => \App\Enum\ItemTypes::HEAD->value,
+            'tooltip' => [
+                'stats' => [
+                    ['type' => 4, 'value' => 50],
+                    ['type' => 37, 'value' => 82],
+                ],
+                'armor' => 1000,
+            ],
+        ]]);
+
+        $controller = new CharacterViewController(
+            $scraperService,
+            $snapshotRepo,
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($itemDbService),
+            $this->createMock(LoggerInterface::class),
+            $this->createMock(CharacterUpdateThrottle::class),
+            null,
+            new \App\Service\CharacterStatCalculator(),
+        );
+        $controller->setContainer(self::getContainer());
+
+        $response = $controller->viewCharacterStats('Understyx', 'Icecrown');
+        $content = $response->getContent();
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertStringContainsString('Stat calculation breakdown', $content);
+        self::assertStringContainsString('Equipped item contributions', $content);
+        self::assertStringContainsString('Expertise Test Helm', $content);
+        self::assertStringContainsString('Raw item stat mapping', $content);
+        self::assertStringContainsString('Expertise', $content);
+        self::assertStringContainsString('10.00', $content);
+        self::assertStringContainsString('Ravenous Dead', $content);
+        self::assertStringContainsString('+2% Strength', $content);
+        self::assertStringContainsString('href="/characters/Understyx/Icecrown"', $content);
     }
 
     public function testViewCharacterRendersSimpleNotFoundPage(): void

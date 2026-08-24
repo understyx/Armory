@@ -49,6 +49,10 @@ class CharacterStatCalculatorTest extends TestCase
         self::assertSame(1.22, $result['ratings']['melee_haste_rating']['percent']);
         self::assertSame(10, $result['ratings']['spell_crit_rating']['rating']);
         self::assertSame('Divine Strength', $result['talentModifiers'][0]['name']);
+        self::assertSame(80, $result['itemBreakdown'][0]['total']['strength']);
+        self::assertSame(76, $result['itemBreakdown'][0]['total']['stamina']);
+        self::assertTrue($result['itemBreakdown'][0]['socketBonus']['active']);
+        self::assertSame(['stamina' => 6], $result['itemBreakdown'][0]['socketBonus']['appliedStats']);
     }
 
     public function testRatingConversionsScaleWithCharacterLevel(): void
@@ -69,8 +73,10 @@ class CharacterStatCalculatorTest extends TestCase
     public function testItAppliesFlatTalentHitBonusesForTheSelectedSpecialization(): void
     {
         $talents = ['1' => [[
+            'name' => 'Marksmanship',
             'tiers' => [[
                 ['spellId' => 53622, 'pointsText' => '3/3'],
+                ['spellId' => 99999, 'pointsText' => '2/5'],
             ]],
         ]]];
 
@@ -86,9 +92,28 @@ class CharacterStatCalculatorTest extends TestCase
         self::assertSame(3.0, $result['hitBonuses']['Melee and ranged attacks']);
         self::assertSame('Focused Aim', $result['talentModifiers'][0]['name']);
         self::assertSame(['Melee and ranged attacks' => 3.0], $result['talentModifiers'][0]['hit']);
+        self::assertCount(2, $result['talentBreakdown']);
+        self::assertSame('Marksmanship', $result['talentBreakdown'][0]['tree']);
+        self::assertFalse($result['talentBreakdown'][1]['recognized']);
+        self::assertSame('Talent spell #99999', $result['talentBreakdown'][1]['name']);
         self::assertSame(
             $result['primary']['agility']['race'] + $result['primary']['agility']['classAtLevel'],
             $result['primary']['agility']['base'],
         );
+    }
+
+    public function testExpertiseUsesCharacterSheetExpertisePoints(): void
+    {
+        $result = (new CharacterStatCalculator())->calculate('Human', 'Warrior', 80, [[
+            'name' => 'Expertise Test Item',
+            'tooltip' => ['stats' => [['type' => 37, 'value' => 82]]],
+        ]]);
+
+        self::assertSame('Expertise', $result['ratings']['expertise_rating']['name']);
+        self::assertSame(10.0, $result['ratings']['expertise_rating']['value']);
+        self::assertSame(2.5, $result['ratings']['expertise_rating']['percent']);
+        self::assertSame('', $result['ratings']['expertise_rating']['unit']);
+        self::assertSame('expertise', $result['ratings']['expertise_rating']['unitLabel']);
+        self::assertSame(8.197, $result['ratings']['expertise_rating']['ratingPerUnit']);
     }
 }

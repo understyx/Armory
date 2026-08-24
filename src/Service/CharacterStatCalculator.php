@@ -125,7 +125,7 @@ final class CharacterStatCalculator
         'parry_rating' => [60 => 13.8, 70 => 21.759, 80 => 45.25019],
         'block_rating' => [60 => 5.0, 70 => 7.885, 80 => 16.394995],
         'resilience_rating' => [60 => 25.0, 70 => 39.423, 80 => 82.0],
-        'expertise_rating' => [60 => 10.0, 70 => 15.769, 80 => 32.789989],
+        'expertise_rating' => [60 => 2.5, 70 => 3.94225, 80 => 8.197497],
         'armor_penetration_rating' => [60 => 4.269, 70 => 6.731, 80 => 13.995727],
     ];
 
@@ -137,7 +137,7 @@ final class CharacterStatCalculator
         'spell_haste_rating' => 'Spell Haste', 'defense_rating' => 'Defense avoidance (each)',
         'dodge_rating' => 'Dodge', 'parry_rating' => 'Parry', 'block_rating' => 'Block',
         'resilience_rating' => 'Critical damage reduction',
-        'expertise_rating' => 'Dodge/parry reduction',
+        'expertise_rating' => 'Expertise',
         'armor_penetration_rating' => 'Armor Penetration',
     ];
 
@@ -173,28 +173,56 @@ final class CharacterStatCalculator
         $items = $this->enrichItems($items);
         $gear = $this->emptyStatTotals();
         $gearSources = ['items' => [], 'enchants' => [], 'gems' => [], 'socketBonuses' => []];
+        $itemBreakdown = [];
 
         foreach ($items as $item) {
+            $itemTotal = [];
             $itemStats = $this->statsFromItem($item);
             $this->addTotals($gear, $itemStats);
-            if (array_sum(array_map('abs', $itemStats)) > 0) {
-                $gearSources['items'][] = ['name' => (string) ($item['name'] ?? 'Unknown item'), 'stats' => $this->nonZero($itemStats)];
-            }
+            $this->addTotals($itemTotal, $itemStats);
+            $itemSource = [
+                'id' => (int) ($item['id'] ?? 0),
+                'name' => (string) ($item['name'] ?? 'Unknown item'),
+                'stats' => $this->nonZero($itemStats),
+                'rawStats' => $this->rawStatsFromItem($item),
+                'enchant' => null,
+                'gems' => [],
+                'socketBonus' => null,
+            ];
+            $gearSources['items'][] = [
+                'id' => $itemSource['id'],
+                'name' => $itemSource['name'],
+                'stats' => $itemSource['stats'],
+            ];
 
+            $enchantId = (int) ($item['enchant'] ?? 0);
             $enchantText = (string) ($item['enchant_name'] ?? '');
-            if ($enchantText === '' && (int) ($item['enchant'] ?? 0) > 0) {
-                $enchantText = EnchantDatabase::ENCHANTS[(int) $item['enchant']] ?? '';
+            if ($enchantText === '' && $enchantId > 0) {
+                $enchantText = EnchantDatabase::ENCHANTS[$enchantId] ?? '';
             }
             $enchantStats = $this->statsFromText($enchantText);
             $this->addTotals($gear, $enchantStats);
-            if ($enchantStats !== []) {
-                $gearSources['enchants'][] = ['name' => $enchantText, 'stats' => $enchantStats];
+            $this->addTotals($itemTotal, $enchantStats);
+            if ($enchantId > 0 || $enchantText !== '') {
+                $itemSource['enchant'] = [
+                    'id' => $enchantId,
+                    'name' => $enchantText !== '' ? $enchantText : sprintf('Enchant #%d', $enchantId),
+                    'stats' => $enchantStats,
+                ];
+                $gearSources['enchants'][] = [
+                    'itemId' => $itemSource['id'],
+                    'itemName' => $itemSource['name'],
+                    ...$itemSource['enchant'],
+                ];
             }
 
             $gemDetails = $item['gem_details'] ?? [];
             if ($gemDetails === []) {
                 foreach ($item['gems'] ?? [] as $gemEnchantId) {
-                    $gemDetails[] = ['effect' => EnchantDatabase::ENCHANTS[(int) $gemEnchantId] ?? ''];
+                    $gemDetails[] = [
+                        'id' => (int) $gemEnchantId,
+                        'effect' => EnchantDatabase::ENCHANTS[(int) $gemEnchantId] ?? '',
+                    ];
                 }
             }
             foreach ($gemDetails as $gem) {
@@ -204,20 +232,44 @@ final class CharacterStatCalculator
                 $gemText = (string) ($gem['effect'] ?? $gem['name'] ?? '');
                 $gemStats = $this->statsFromText($gemText);
                 $this->addTotals($gear, $gemStats);
-                if ($gemStats !== []) {
-                    $gearSources['gems'][] = ['name' => (string) ($gem['name'] ?? $gemText), 'stats' => $gemStats];
-                }
+                $this->addTotals($itemTotal, $gemStats);
+                $gemSource = [
+                    'id' => (int) ($gem['id'] ?? 0),
+                    'name' => (string) ($gem['name'] ?? ($gemText !== '' ? $gemText : 'Unknown gem')),
+                    'effect' => $gemText,
+                    'stats' => $gemStats,
+                ];
+                $itemSource['gems'][] = $gemSource;
+                $gearSources['gems'][] = [
+                    'itemId' => $itemSource['id'],
+                    'itemName' => $itemSource['name'],
+                    ...$gemSource,
+                ];
             }
 
             $socketBonus = $item['display_tooltip']['socket_bonus'] ?? $item['socket_bonus'] ?? null;
-            if (is_array($socketBonus) && ($socketBonus['active'] ?? false)) {
+            if (is_array($socketBonus)) {
+                $socketBonusActive = (bool) ($socketBonus['active'] ?? false);
                 $bonusText = (string) ($socketBonus['text'] ?? '');
                 $bonusStats = $this->statsFromText($bonusText);
-                $this->addTotals($gear, $bonusStats);
-                if ($bonusStats !== []) {
-                    $gearSources['socketBonuses'][] = ['name' => $bonusText, 'stats' => $bonusStats];
-                }
+                $appliedBonusStats = $socketBonusActive ? $bonusStats : [];
+                $this->addTotals($gear, $appliedBonusStats);
+                $this->addTotals($itemTotal, $appliedBonusStats);
+                $itemSource['socketBonus'] = [
+                    'name' => $bonusText,
+                    'active' => $socketBonusActive,
+                    'stats' => $bonusStats,
+                    'appliedStats' => $appliedBonusStats,
+                ];
+                $gearSources['socketBonuses'][] = [
+                    'itemId' => $itemSource['id'],
+                    'itemName' => $itemSource['name'],
+                    ...$itemSource['socketBonus'],
+                ];
             }
+
+            $itemSource['total'] = $this->nonZero($itemTotal);
+            $itemBreakdown[] = $itemSource;
         }
 
         $talents = $this->talentModifiers($talentTreesData[(string) $specId] ?? $talentTreesData[$specId] ?? []);
@@ -245,12 +297,18 @@ final class CharacterStatCalculator
             if ($rating === 0) {
                 continue;
             }
-            $perPercent = $this->ratingPerPercent($anchors, $level);
+            $ratingPerUnit = $this->ratingPerPercent($anchors, $level);
+            $isExpertise = $stat === 'expertise_rating';
+            $value = round($rating / $ratingPerUnit, 2);
             $ratings[$stat] = [
                 'name' => self::RATING_NAMES[$stat],
                 'rating' => $rating,
-                'ratingPerPercent' => round($perPercent, 3),
-                'percent' => round($rating / $perPercent, 2),
+                'ratingPerPercent' => round($isExpertise ? $ratingPerUnit * 4 : $ratingPerUnit, 3),
+                'ratingPerUnit' => round($ratingPerUnit, 3),
+                'percent' => $isExpertise ? round($value * 0.25, 2) : $value,
+                'value' => $value,
+                'unit' => $isExpertise ? '' : '%',
+                'unitLabel' => $isExpertise ? 'expertise' : '1%',
             ];
         }
 
@@ -270,12 +328,43 @@ final class CharacterStatCalculator
             'ratings' => $ratings,
             'hitBonuses' => $talents['hit'],
             'talentModifiers' => $talents['effects'],
+            'talentBreakdown' => $talents['breakdown'],
             'gearBreakdown' => $gearSources,
+            'itemBreakdown' => $itemBreakdown,
+            'gearTotals' => $this->nonZero($gear),
             'notes' => [
                 'Permanent passive talent modifiers are included for the selected specialization.',
                 'Temporary buffs, stances/forms, procs, consumables and conditional set effects are excluded.',
             ],
         ];
+    }
+
+    /** @param array<string, mixed> $item @return array<int, array{type: int, value: int, mappedTo: string[]}> */
+    private function rawStatsFromItem(array $item): array
+    {
+        $rawStats = [];
+        $tooltip = $item['tooltip'] ?? [];
+        if (!is_array($tooltip)) {
+            return [];
+        }
+
+        foreach ($tooltip['stats'] ?? [] as $stat) {
+            $type = (int) ($stat['type'] ?? 0);
+            $mappedTo = [];
+            if (isset(self::PRIMARY_STAT_TYPES[$type])) {
+                $mappedTo[] = self::PRIMARY_STAT_TYPES[$type];
+            }
+            foreach (self::ITEM_STAT_TYPES[$type] ?? [] as $key) {
+                $mappedTo[] = $key;
+            }
+            $rawStats[] = [
+                'type' => $type,
+                'value' => (int) ($stat['value'] ?? 0),
+                'mappedTo' => $mappedTo,
+            ];
+        }
+
+        return $rawStats;
     }
 
     /** @param array<int, array<string, mixed>> $items */
@@ -377,52 +466,67 @@ final class CharacterStatCalculator
         return $this->nonZero($totals);
     }
 
-    /** @param mixed $rawSpec @return array{percent: array<string, float>, hit: array<string, float>, effects: array<int, array<string, mixed>>} */
+    /** @param mixed $rawSpec @return array{percent: array<string, float>, hit: array<string, float>, effects: array<int, array<string, mixed>>, breakdown: array<int, array<string, mixed>>} */
     private function talentModifiers(mixed $rawSpec): array
     {
         $percent = [];
         $hit = [];
         $effects = [];
+        $breakdown = [];
         if (!is_array($rawSpec)) {
-            return ['percent' => [], 'hit' => [], 'effects' => []];
+            return ['percent' => [], 'hit' => [], 'effects' => [], 'breakdown' => []];
         }
 
         foreach ($rawSpec as $tree) {
+            $treeName = (string) ($tree['name'] ?? 'Unknown tree');
             foreach (($tree['tiers'] ?? []) as $tier) {
                 foreach ($tier as $talent) {
                     if (!is_array($talent)) {
                         continue;
                     }
-                    $spellId = (int) ($talent['spellId'] ?? 0);
-                    $spellId = self::TALENT_RANK_ALIASES[$spellId] ?? $spellId;
+                    $linkedSpellId = (int) ($talent['spellId'] ?? 0);
+                    $spellId = self::TALENT_RANK_ALIASES[$linkedSpellId] ?? $linkedSpellId;
                     $definition = self::TALENT_EFFECTS[$spellId] ?? null;
-                    $points = preg_match('/^(\d+)\s*\//', (string) ($talent['pointsText'] ?? ''), $match) ? (int) $match[1] : 0;
-                    if ($definition === null || $points === 0) {
+                    $points = preg_match('/^(\d+)\s*\//', (string) ($talent['pointsText'] ?? ''), $match)
+                        ? (int) $match[1]
+                        : (int) ($talent['allocated'] ?? 0);
+                    if ($points === 0) {
                         continue;
                     }
                     $applied = [];
-                    foreach ($definition['percent'] ?? [] as $stat => $perPoint) {
-                        $amount = $perPoint * $points;
-                        $percent[$stat] = ($percent[$stat] ?? 0.0) + $amount;
-                        $applied[$stat] = round($amount * 100, 2);
-                    }
                     $appliedHit = [];
-                    foreach ($definition['hit'] ?? [] as $scope => $perPoint) {
-                        $amount = $perPoint * $points;
-                        $hit[$scope] = ($hit[$scope] ?? 0.0) + $amount;
-                        $appliedHit[$scope] = round($amount, 2);
+                    if ($definition !== null) {
+                        foreach ($definition['percent'] ?? [] as $stat => $perPoint) {
+                            $amount = $perPoint * $points;
+                            $percent[$stat] = ($percent[$stat] ?? 0.0) + $amount;
+                            $applied[$stat] = round($amount * 100, 2);
+                        }
+                        foreach ($definition['hit'] ?? [] as $scope => $perPoint) {
+                            $amount = $perPoint * $points;
+                            $hit[$scope] = ($hit[$scope] ?? 0.0) + $amount;
+                            $appliedHit[$scope] = round($amount, 2);
+                        }
                     }
-                    $effects[] = [
-                        'name' => $definition['name'],
+
+                    $entry = [
+                        'name' => $definition['name'] ?? sprintf('Talent spell #%d', $linkedSpellId),
+                        'tree' => $treeName,
                         'points' => $points,
+                        'spellId' => $linkedSpellId,
+                        'normalizedSpellId' => $spellId,
+                        'recognized' => $definition !== null,
                         'percent' => $applied,
                         'hit' => $appliedHit,
                     ];
+                    $breakdown[] = $entry;
+                    if ($definition !== null) {
+                        $effects[] = $entry;
+                    }
                 }
             }
         }
 
-        return ['percent' => $percent, 'hit' => $hit, 'effects' => $effects];
+        return ['percent' => $percent, 'hit' => $hit, 'effects' => $effects, 'breakdown' => $breakdown];
     }
 
     /** @param array<int, float> $anchors */

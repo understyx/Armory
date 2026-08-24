@@ -781,6 +781,218 @@ body {
     padding-left: 1.2rem;
 }
 
+.stats-debug-link,
+.stats-debug-back {
+    display: inline-flex;
+    margin-top: 10px;
+    color: var(--accent-blue);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.stats-debug-link:hover,
+.stats-debug-back:hover {
+    text-decoration: underline;
+}
+
+.stats-debug-page {
+    max-width: 1320px;
+}
+
+.stats-debug-back {
+    margin: 0 0 14px;
+}
+
+.stats-debug-header {
+    align-items: center;
+}
+
+.stats-debug-character-line {
+    margin: 6px 0 0;
+    color: var(--text-secondary);
+}
+
+.stats-debug-intro {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.stats-debug-intro h2,
+.stats-debug-intro p {
+    margin: 0;
+}
+
+.stats-debug-intro p {
+    max-width: 760px;
+    margin-top: 7px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.stats-debug-intro code {
+    color: var(--accent-gold);
+}
+
+.stats-debug-spec[hidden] {
+    display: none;
+}
+
+.debug-item-list {
+    display: grid;
+    gap: 14px;
+}
+
+.debug-item-card {
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    background: rgba(10, 12, 18, 0.32);
+}
+
+.debug-item-heading,
+.debug-source-row,
+.debug-total-row {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.35fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.debug-item-heading {
+    grid-template-columns: minmax(220px, 0.6fr) minmax(0, 1fr);
+    align-items: center;
+    background: var(--bg-slot);
+}
+
+.debug-item-heading h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.debug-item-heading > div > span {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+}
+
+.debug-source-row > strong,
+.debug-total-row > strong {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.debug-source-row:last-child,
+.debug-total-row {
+    border-bottom: 0;
+}
+
+.debug-total-row {
+    margin-top: 16px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    background: var(--bg-slot);
+}
+
+.debug-stat-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.debug-stat-chips span,
+.debug-effect {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px 7px;
+    border: 1px solid rgba(74, 158, 255, 0.22);
+    border-radius: 999px;
+    background: rgba(74, 158, 255, 0.08);
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+}
+
+.debug-stat-chips strong,
+.debug-effect {
+    color: var(--accent-blue);
+}
+
+.debug-empty {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-style: italic;
+}
+
+.debug-source-name {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+    font-size: 0.82rem;
+}
+
+.debug-nested-sources {
+    display: grid;
+    gap: 10px;
+}
+
+.debug-raw-stats {
+    margin: 0 14px 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: rgba(15, 17, 26, 0.55);
+}
+
+.debug-raw-stats summary {
+    padding: 9px 11px;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.debug-source-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.debug-source-table th,
+.debug-source-table td {
+    padding: 9px 11px;
+    border-top: 1px solid var(--border-subtle);
+    text-align: left;
+    vertical-align: top;
+}
+
+.debug-source-table thead th {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.debug-source-table a {
+    color: var(--accent-blue);
+}
+
+.debug-talent-table .is-recognized th:first-child {
+    color: var(--accent-green);
+}
+
+.debug-talent-table .is-ignored {
+    opacity: 0.72;
+}
+
+.debug-effect {
+    margin: 1px 4px 1px 0;
+    color: var(--accent-green);
+}
+
 /* Actions & Timestamp */
 .header-actions {
     display: flex;
@@ -2830,7 +3042,8 @@ body {
     }
 
     .gear-header-actions,
-    .stats-panel-heading {
+    .stats-panel-heading,
+    .stats-debug-intro {
         align-items: stretch;
         flex-direction: column;
         width: 100%;
@@ -2847,6 +3060,17 @@ body {
     .stats-spec-tab {
         min-height: 42px;
         padding: 7px 8px;
+    }
+
+    .stats-debug-header {
+        align-items: flex-start;
+    }
+
+    .debug-item-heading,
+    .debug-source-row,
+    .debug-total-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
     }
 
     .spec-toggle-group {

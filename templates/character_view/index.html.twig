@@ -385,6 +385,7 @@
                     <div>
                         <h3>Stats at level {{ characterDetails.level }}</h3>
                         <p>Current character only: (race + class at this level + equipped gear) × permanent talent multipliers.</p>
+                        <a class="stats-debug-link" href="{{ path('app_character_stats', {'characterName': characterName, 'realmName': realmName}) }}">Open full calculation breakdown</a>
                     </div>
                     {% if calculatedStatsBySpec|length > 1 %}
                         <div class="stats-spec-tabs" role="tablist" aria-label="Stats specialization">
@@ -461,8 +462,8 @@
                                     {% for rating in calculatedStats.ratings %}
                                         <div class="rating-conversion-card">
                                             <span class="rating-conversion-name">{{ rating.name }}</span>
-                                            <strong>{{ rating.percent|number_format(2) }}%</strong>
-                                            <small>{{ rating.rating }} rating</small>
+                                            <strong>{{ rating.value|number_format(2) }}{{ rating.unit }}</strong>
+                                            <small>{{ rating.rating }} rating · {{ rating.ratingPerUnit }} per {{ rating.unitLabel }}</small>
                                         </div>
                                     {% endfor %}
                                 </div>

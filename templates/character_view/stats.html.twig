@@ -1,0 +1,269 @@
+{% macro statChips(stats, emptyText) %}
+    {% if stats is not empty %}
+        <div class="debug-stat-chips">
+            {% for key, value in stats %}
+                <span><strong>{{ value >= 0 ? '+' : '' }}{{ value }}</strong> {{ key|replace({'_': ' '})|title }}</span>
+            {% endfor %}
+        </div>
+    {% else %}
+        <span class="debug-empty">{{ emptyText|default('No tracked stats') }}</span>
+    {% endif %}
+{% endmacro %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ characterName }} Stats Breakdown — Warmane Armory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+</head>
+<body>
+    <main class="armory-wrapper stats-debug-page">
+        <a class="stats-debug-back" href="{{ path('app_character_view', {'characterName': characterName, 'realmName': realmName}) }}">← Back to character</a>
+
+        <header class="header-card stats-debug-header">
+            <div>
+                <div class="char-name-row">
+                    <h1 class="char-name">{{ characterName }}</h1>
+                    <span class="realm-badge">{{ realmName }}</span>
+                </div>
+                <p class="stats-debug-character-line">Level {{ characterDetails.level }} {{ characterDetails.race }} {{ characterDetails.class }}</p>
+            </div>
+            {% if scrapedAt %}<span class="scraped-time">Snapshot: {{ scrapedAt|date('Y-m-d H:i') }} UTC</span>{% endif %}
+        </header>
+
+        <section class="content-card section-card stats-debug-intro">
+            <div>
+                <h2>Stat calculation breakdown</h2>
+                <p>Everything below uses this character’s current level and equipped items. Primary attributes use <code>floor((race + class at level + gear) × talent multiplier)</code>.</p>
+            </div>
+            {% if calculatedStatsBySpec|length > 1 %}
+                <div class="stats-spec-tabs" role="tablist" aria-label="Stats specialization">
+                    {% for entry in calculatedStatsBySpec %}
+                        <button
+                            class="stats-spec-tab{% if loop.first %} active{% endif %}"
+                            type="button"
+                            role="tab"
+                            aria-selected="{{ loop.first ? 'true' : 'false' }}"
+                            aria-controls="debug-spec-{{ entry.specId }}"
+                            onclick="setDebugSpec('{{ entry.specId }}', this)"
+                        >{{ entry.specName }} ({{ entry.pointsSummary }})</button>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+
+        {% for entry in calculatedStatsBySpec %}
+            {% set stats = entry.stats %}
+            <div id="debug-spec-{{ entry.specId }}" class="stats-debug-spec" {% if not loop.first %}hidden{% endif %}>
+                {% if stats.available|default(false) %}
+                    <section class="content-card section-card">
+                        <div class="section-header">
+                            <div>
+                                <h2>{{ entry.specName }} final stats</h2>
+                                <p class="section-subtitle">Current level {{ stats.level }} · {{ entry.pointsSummary }}</p>
+                            </div>
+                        </div>
+                        <div class="calculated-stat-table-wrap">
+                            <table class="calculated-stat-table">
+                                <thead>
+                                    <tr>
+                                        <th>Attribute</th>
+                                        <th>Race</th>
+                                        <th>Class at {{ stats.level }}</th>
+                                        <th>Base total</th>
+                                        <th>Gear</th>
+                                        <th>Talent</th>
+                                        <th>Final</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for stat in stats.primary %}
+                                        <tr>
+                                            <th scope="row">{{ stat.name }}</th>
+                                            <td>{{ stat.race >= 0 ? '+' : '' }}{{ stat.race }}</td>
+                                            <td>{{ stat.classAtLevel }}</td>
+                                            <td>{{ stat.base }}</td>
+                                            <td>{{ stat.gear >= 0 ? '+' : '' }}{{ stat.gear }}</td>
+                                            <td>{{ stat.talents >= 0 ? '+' : '' }}{{ stat.talents }}{% if stat.talentPercent != 0 %}<small>({{ stat.talentPercent }}%)</small>{% endif %}</td>
+                                            <td class="calculated-stat-total">{{ stat.total }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% if stats.ratings is not empty %}
+                            <h3 class="stat-subheading">Rating conversions</h3>
+                            <div class="rating-conversion-grid">
+                                {% for rating in stats.ratings %}
+                                    <div class="rating-conversion-card">
+                                        <span class="rating-conversion-name">{{ rating.name }}</span>
+                                        <strong>{{ rating.value|number_format(2) }}{{ rating.unit }}</strong>
+                                        <small>{{ rating.rating }} rating · {{ rating.ratingPerUnit }} per {{ rating.unitLabel }}</small>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {% if stats.hitBonuses is not empty %}
+                            <h3 class="stat-subheading">Talent hit additions</h3>
+                            <div class="hit-bonus-grid">
+                                {% for scope, percent in stats.hitBonuses %}
+                                    <div class="hit-bonus-card"><span>{{ scope }}</span><strong>+{{ percent|number_format(2) }}%</strong></div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </section>
+
+                    <section class="content-card section-card">
+                        <div class="section-header">
+                            <div>
+                                <h2>Equipped item contributions</h2>
+                                <p class="section-subtitle">Every item is shown, including sources that could not be mapped to a tracked stat.</p>
+                            </div>
+                        </div>
+
+                        <div class="debug-item-list">
+                            {% for item in stats.itemBreakdown %}
+                                <article class="debug-item-card">
+                                    <div class="debug-item-heading">
+                                        <div>
+                                            <h3>{{ item.name }}</h3>
+                                            <span>Item #{{ item.id ?: 'unknown' }}</span>
+                                        </div>
+                                        {{ _self.statChips(item.total, 'No applied stats') }}
+                                    </div>
+
+                                    <div class="debug-source-row">
+                                        <strong>Base item</strong>
+                                        {{ _self.statChips(item.stats, 'No tracked base stats') }}
+                                    </div>
+
+                                    {% if item.rawStats is not empty %}
+                                        <details class="debug-raw-stats">
+                                            <summary>Raw item stat mapping</summary>
+                                            <div class="table-scroll">
+                                                <table class="debug-source-table">
+                                                    <thead><tr><th>Raw type</th><th>Value</th><th>Mapped to</th></tr></thead>
+                                                    <tbody>
+                                                        {% for raw in item.rawStats %}
+                                                            <tr>
+                                                                <td>{{ raw.type }}</td>
+                                                                <td>{{ raw.value }}</td>
+                                                                <td>{{ raw.mappedTo is not empty ? raw.mappedTo|join(', ')|replace({'_': ' '}) : 'Ignored / unsupported' }}</td>
+                                                            </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </details>
+                                    {% endif %}
+
+                                    <div class="debug-source-row">
+                                        <strong>Enchant</strong>
+                                        {% if item.enchant %}
+                                            <div><span class="debug-source-name">{{ item.enchant.name }}{% if item.enchant.id %} (#{{ item.enchant.id }}){% endif %}</span>{{ _self.statChips(item.enchant.stats, 'Not mapped') }}</div>
+                                        {% else %}
+                                            <span class="debug-empty">None</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="debug-source-row">
+                                        <strong>Gems</strong>
+                                        {% if item.gems is not empty %}
+                                            <div class="debug-nested-sources">
+                                                {% for gem in item.gems %}
+                                                    <div><span class="debug-source-name">{{ gem.name }}{% if gem.id %} (#{{ gem.id }}){% endif %}</span>{{ _self.statChips(gem.stats, 'Not mapped') }}</div>
+                                                {% endfor %}
+                                            </div>
+                                        {% else %}
+                                            <span class="debug-empty">None</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="debug-source-row">
+                                        <strong>Socket bonus</strong>
+                                        {% if item.socketBonus %}
+                                            <div>
+                                                <span class="debug-source-name">{{ item.socketBonus.name ?: 'Unnamed socket bonus' }} · {{ item.socketBonus.active ? 'active' : 'inactive' }}</span>
+                                                {{ _self.statChips(item.socketBonus.appliedStats, item.socketBonus.active ? 'Not mapped' : 'Not applied') }}
+                                            </div>
+                                        {% else %}
+                                            <span class="debug-empty">None</span>
+                                        {% endif %}
+                                    </div>
+                                </article>
+                            {% else %}
+                                <p class="debug-empty">No equipped items were found in the snapshot.</p>
+                            {% endfor %}
+                        </div>
+
+                        <div class="debug-total-row">
+                            <strong>All gear totals</strong>
+                            {{ _self.statChips(stats.gearTotals, 'No mapped gear stats') }}
+                        </div>
+                    </section>
+
+                    <section class="content-card section-card">
+                        <div class="section-header">
+                            <div>
+                                <h2>Talent contributions</h2>
+                                <p class="section-subtitle">Every allocated talent found in the detailed armory scrape is listed. Only stat multipliers and hit additions alter this calculation.</p>
+                            </div>
+                        </div>
+
+                        {% if stats.talentBreakdown is not empty %}
+                            <div class="table-scroll">
+                                <table class="debug-source-table debug-talent-table">
+                                    <thead><tr><th>Talent</th><th>Tree</th><th>Points</th><th>Linked spell</th><th>Contribution</th></tr></thead>
+                                    <tbody>
+                                        {% for talent in stats.talentBreakdown %}
+                                            <tr class="{{ talent.recognized ? 'is-recognized' : 'is-ignored' }}">
+                                                <th scope="row">{{ talent.name }}</th>
+                                                <td>{{ talent.tree }}</td>
+                                                <td>{{ talent.points }}</td>
+                                                <td><a href="https://wotlk.cavernoftime.com/spell={{ talent.spellId }}" target="_blank" rel="noopener">#{{ talent.spellId }}</a></td>
+                                                <td>
+                                                    {% if talent.percent is not empty %}
+                                                        {% for stat, percent in talent.percent %}<span class="debug-effect">+{{ percent }}% {{ stat|title }}</span>{% endfor %}
+                                                    {% endif %}
+                                                    {% if talent.hit is not empty %}
+                                                        {% for scope, percent in talent.hit %}<span class="debug-effect">+{{ percent }}% hit · {{ scope }}</span>{% endfor %}
+                                                    {% endif %}
+                                                    {% if not talent.recognized %}<span class="debug-empty">No tracked effect</span>{% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="debug-empty">No detailed allocated talent data is available in this snapshot. Refresh the character to scrape talent spell IDs.</p>
+                        {% endif %}
+                    </section>
+                {% else %}
+                    <section class="content-card section-card"><p class="stat-unavailable">{{ stats.reason|default('Stats could not be calculated.') }}</p></section>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </main>
+
+    <script>
+        function setDebugSpec(specId, button) {
+            document.querySelectorAll('.stats-debug-spec').forEach(panel => {
+                panel.hidden = panel.id !== 'debug-spec-' + specId;
+            });
+            document.querySelectorAll('.stats-spec-tab').forEach(tab => {
+                const active = tab === button;
+                tab.classList.toggle('active', active);
+                tab.setAttribute('aria-selected', String(active));
+            });
+        }
+    </script>
+</body>
+</html>

@@ -74,6 +74,51 @@ class CharacterViewController extends AbstractController
         return $this->renderCharacterView($snapshot, $staleAgeDays, $warningMessage);
     }
 
+    #[Route('/characters/{characterName}/{realmName}/stats', name: 'app_character_stats', methods: ['GET'])]
+    #[Route('/character/{characterName}/{realmName}/stats', name: 'app_character_stats_legacy', methods: ['GET'])]
+    public function viewCharacterStats(string $characterName, string $realmName): Response
+    {
+        $snapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
+        if ($snapshot === null) {
+            $scrapeResult = $this->scrapeAndSave($characterName, $realmName);
+            if ($scrapeResult['status'] === 'error') {
+                return $this->render('character_view/not_found.html.twig', [
+                    'characterName' => $characterName,
+                    'realmName' => $realmName,
+                ], new Response(status: Response::HTTP_NOT_FOUND));
+            }
+            $snapshot = $scrapeResult['snapshot'];
+        }
+
+        $parsedSpecs = $this->talentTreeService->parseTalentTrees(
+            $snapshot->getClass(),
+            $snapshot->getSpecializations() ?? [],
+            $snapshot->getTalentStrings() ?? [],
+            $snapshot->getTalentTreesData() ?? [],
+        );
+        $paperdollData = $this->paperdollService->buildPaperdollSlots(
+            $snapshot->getEquippedItems() ?? [],
+            $snapshot->getClass(),
+        );
+        $calculatedStatsBySpec = $this->buildCalculatedStatsBySpec(
+            $snapshot,
+            $parsedSpecs,
+            $paperdollData['enrichedItems'],
+        );
+
+        return $this->render('character_view/stats.html.twig', [
+            'characterName' => $snapshot->getName(),
+            'realmName' => $snapshot->getRealm(),
+            'characterDetails' => [
+                'level' => $snapshot->getLevel(),
+                'race' => $snapshot->getRace(),
+                'class' => $snapshot->getClass(),
+            ],
+            'calculatedStatsBySpec' => $calculatedStatsBySpec,
+            'scrapedAt' => $snapshot->getScrapedAt(),
+        ]);
+    }
+
     #[Route('/characters/{characterName}/{realmName}/refresh', name: 'app_character_refresh', methods: ['POST'])]
     #[Route('/character/{characterName}/{realmName}/refresh', name: 'app_character_refresh_legacy', methods: ['POST'])]
     public function refreshCharacter(string $characterName, string $realmName): Response
@@ -227,23 +272,11 @@ class CharacterViewController extends AbstractController
             $snapshot->getClass()
         );
 
-        $calculatedStatsBySpec = [];
-        foreach ($parsedSpecs as $spec) {
-            $specId = (string) ($spec['specId'] ?? '0');
-            $calculatedStatsBySpec[$specId] = [
-                'specId' => $specId,
-                'specName' => (string) ($spec['specName'] ?? 'Specialization'),
-                'pointsSummary' => (string) ($spec['pointsSummary'] ?? ''),
-                'stats' => $this->characterStatCalculator?->calculate(
-                    (string) $snapshot->getRace(),
-                    (string) $snapshot->getClass(),
-                    (int) $snapshot->getLevel(),
-                    $paperdollData['enrichedItems'],
-                    $snapshot->getTalentTreesData() ?? [],
-                    $specId,
-                ) ?? ['available' => false, 'reason' => 'Stat calculator is unavailable.'],
-            ];
-        }
+        $calculatedStatsBySpec = $this->buildCalculatedStatsBySpec(
+            $snapshot,
+            $parsedSpecs,
+            $paperdollData['enrichedItems'],
+        );
 
         return $this->render('character_view/index.html.twig', [
             'characterName' => $snapshot->getName(),
@@ -279,5 +312,33 @@ class CharacterViewController extends AbstractController
             'warningMessage' => $warningMessage,
             'uwuRank' => $this->uwuRankRepository?->findBest((string) $snapshot->getName(), (string) $snapshot->getRealm()),
         ]);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $parsedSpecs
+     * @param array<int, array<string, mixed>> $items
+     * @return array<string, array<string, mixed>>
+     */
+    private function buildCalculatedStatsBySpec(CharacterSnapshot $snapshot, array $parsedSpecs, array $items): array
+    {
+        $calculatedStatsBySpec = [];
+        foreach ($parsedSpecs as $spec) {
+            $specId = (string) ($spec['specId'] ?? '0');
+            $calculatedStatsBySpec[$specId] = [
+                'specId' => $specId,
+                'specName' => (string) ($spec['specName'] ?? 'Specialization'),
+                'pointsSummary' => (string) ($spec['pointsSummary'] ?? ''),
+                'stats' => $this->characterStatCalculator?->calculate(
+                    (string) $snapshot->getRace(),
+                    (string) $snapshot->getClass(),
+                    (int) $snapshot->getLevel(),
+                    $items,
+                    $snapshot->getTalentTreesData() ?? [],
+                    $specId,
+                ) ?? ['available' => false, 'reason' => 'Stat calculator is unavailable.'],
+            ];
+        }
+
+        return $calculatedStatsBySpec;
     }
 }
