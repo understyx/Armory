@@ -137,7 +137,10 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringContainsString('<option value="Onyxia">', $response->getContent());
         $this->assertStringNotContainsString('<option value="Frostmourne">', $response->getContent());
         $this->assertStringContainsString('Get transmog', $response->getContent());
-        $this->assertStringContainsString('https://wotlk.cavernoftime.com/item=60001', $response->getContent());
+        $this->assertStringContainsString('https://wotlk.evowow.com/?item=60001', $response->getContent());
+        $this->assertStringContainsString('<script type="module" src="/assets/item-tooltip-', $response->getContent());
+        $this->assertStringContainsString('<script type="text/javascript" src="http://cdn.cavernoftime.com/api/tooltip.js"></script>', $response->getContent());
+        $this->assertStringNotContainsString('rel="item=', $response->getContent());
         $this->assertStringContainsString('Crown of Purple Testing', $response->getContent());
         $this->assertStringContainsString('Fetch rankings from Uwu-logs', $response->getContent());
         $this->assertStringContainsString('/characters/Understyx/Icecrown/uwu-logs', $response->getContent());

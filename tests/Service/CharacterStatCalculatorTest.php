@@ -183,4 +183,75 @@ class CharacterStatCalculatorTest extends TestCase
         self::assertSame(4.18, $meleeCrit['totalPercent']);
         self::assertSame(4.18, $meleeCrit['value']);
     }
+
+    public function testNitroBoostsAddsTwentyFourCriticalStrikeRating(): void
+    {
+        $result = (new CharacterStatCalculator())->calculate('Human', 'Warrior', 80, [[
+            'name' => 'Test Boots',
+            'enchant' => 3606,
+            'tooltip' => ['stats' => []],
+        ]]);
+
+        self::assertSame(24, $result['ratings']['melee_crit_rating']['rating']);
+        self::assertSame(24, $result['ratings']['ranged_crit_rating']['rating']);
+        self::assertSame(24, $result['ratings']['spell_crit_rating']['rating']);
+        self::assertSame(
+            ['melee_crit_rating' => 24, 'ranged_crit_rating' => 24, 'spell_crit_rating' => 24],
+            $result['itemBreakdown'][0]['enchant']['stats'],
+        );
+    }
+
+    public function testFuryWarriorCritIncludesCrueltyRampageAndBerserkerStance(): void
+    {
+        $talents = ['0' => [
+            ['name' => 'Arms', 'points' => 0, 'tiers' => []],
+            ['name' => 'Fury', 'points' => 71, 'tiers' => [[
+                ['spellId' => 12856, 'pointsText' => '5/5'],
+                ['spellId' => 29801, 'pointsText' => '1/1'],
+            ]]],
+            ['name' => 'Protection', 'points' => 0, 'tiers' => []],
+        ]];
+
+        $result = (new CharacterStatCalculator())->calculate('Human', 'Warrior', 80, [], $talents);
+
+        self::assertSame(13.0, $result['ratings']['melee_crit_rating']['flatBonusPercent']);
+        self::assertSame(13.0, $result['ratings']['ranged_crit_rating']['flatBonusPercent']);
+        self::assertSame(0.0, $result['ratings']['spell_crit_rating']['flatBonusPercent']);
+        self::assertSame(['Cruelty', 'Rampage'], array_column($result['talentModifiers'], 'name'));
+        self::assertSame('Berserker Stance', $result['assumedEffects'][0]['name']);
+    }
+
+    public function testArmsWarriorUsesBattleStanceArmorPenetration(): void
+    {
+        $talents = ['0' => [
+            ['name' => 'Arms', 'points' => 71, 'tiers' => []],
+            ['name' => 'Fury', 'points' => 0, 'tiers' => []],
+            ['name' => 'Protection', 'points' => 0, 'tiers' => []],
+        ]];
+
+        $result = (new CharacterStatCalculator())->calculate('Human', 'Warrior', 80, [], $talents);
+
+        self::assertSame(0, $result['ratings']['armor_penetration_rating']['rating']);
+        self::assertSame(10.0, $result['ratings']['armor_penetration_rating']['flatBonusPercent']);
+        self::assertSame(10.0, $result['ratings']['armor_penetration_rating']['value']);
+        self::assertSame('Battle Stance', $result['assumedEffects'][0]['name']);
+    }
+
+    public function testGlobalCritTalentsUseTheirAllocatedRankValues(): void
+    {
+        $talents = ['0' => [[
+            'name' => 'Protection',
+            'tiers' => [[
+                ['spellId' => 20119, 'pointsText' => '3/5'],
+                ['spellId' => 31860, 'pointsText' => '3/3'],
+            ]],
+        ]]];
+
+        $result = (new CharacterStatCalculator())->calculate('Human', 'Paladin', 80, [], $talents);
+
+        self::assertSame(9.0, $result['ratings']['melee_crit_rating']['flatBonusPercent']);
+        self::assertSame(9.0, $result['ratings']['spell_crit_rating']['flatBonusPercent']);
+        self::assertSame(6.0, $result['primary']['stamina']['talentPercent']);
+        self::assertSame(['Conviction', 'Combat Expertise'], array_column($result['talentModifiers'], 'name'));
+    }
 }

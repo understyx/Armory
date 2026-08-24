@@ -33,10 +33,11 @@ final class CharacterStatCalculator
     ];
 
     /**
-     * Permanent passive talent effects that change attributes or add hit chance.
-     * Values are per allocated point; buffs and procs are intentionally omitted.
+     * Permanent passive talent effects. Attribute percentages are fractional;
+     * hit and rating bonuses are percentage points per allocated talent point.
+     * Buffs, procs and ability-specific critical strike bonuses are omitted.
      *
-     * @var array<int, array{name: string, percent?: array<string, float>, hit?: array<string, float>}>
+     * @var array<int, array{name: string, percent?: array<string, float>, hit?: array<string, float>, ratings?: array<string, float>}>
      */
     private const TALENT_EFFECTS = [
         20262 => ['name' => 'Divine Strength', 'percent' => ['strength' => 0.03]],
@@ -71,6 +72,20 @@ final class CharacterStatCalculator
         29438 => ['name' => 'Precision', 'hit' => ['Spells' => 1.0]],
         18174 => ['name' => 'Suppression', 'hit' => ['Spells' => 1.0]],
         33592 => ['name' => 'Balance of Power', 'hit' => ['Spells' => 2.0]],
+        12320 => ['name' => 'Cruelty', 'ratings' => ['melee_crit_rating' => 1.0, 'ranged_crit_rating' => 1.0]],
+        29801 => ['name' => 'Rampage', 'ratings' => ['melee_crit_rating' => 5.0, 'ranged_crit_rating' => 5.0]],
+        14138 => ['name' => 'Malice', 'ratings' => ['melee_crit_rating' => 1.0, 'ranged_crit_rating' => 1.0]],
+        19426 => ['name' => 'Lethal Shots', 'ratings' => ['ranged_crit_rating' => 1.0]],
+        20117 => ['name' => 'Conviction', 'ratings' => ['melee_crit_rating' => 1.0, 'ranged_crit_rating' => 1.0, 'spell_crit_rating' => 1.0]],
+        31858 => ['name' => 'Combat Expertise', 'percent' => ['stamina' => 0.02], 'ratings' => ['melee_crit_rating' => 2.0, 'ranged_crit_rating' => 2.0, 'spell_crit_rating' => 2.0]],
+        31866 => ['name' => 'Sanctity of Battle', 'ratings' => ['melee_crit_rating' => 1.0, 'ranged_crit_rating' => 1.0, 'spell_crit_rating' => 1.0]],
+        5923 => ['name' => 'Holy Power', 'ratings' => ['spell_crit_rating' => 1.0]],
+        16255 => ['name' => 'Thundering Strikes', 'ratings' => ['melee_crit_rating' => 1.0, 'ranged_crit_rating' => 1.0, 'spell_crit_rating' => 1.0]],
+        15058 => ['name' => 'Arcane Instability', 'ratings' => ['spell_crit_rating' => 1.0]],
+        30242 => ['name' => 'Demonic Tactics', 'ratings' => ['melee_crit_rating' => 2.0, 'ranged_crit_rating' => 2.0, 'spell_crit_rating' => 2.0]],
+        48987 => ['name' => 'Dark Conviction', 'ratings' => ['melee_crit_rating' => 1.0, 'ranged_crit_rating' => 1.0, 'spell_crit_rating' => 1.0]],
+        51099 => ['name' => 'Ebon Plaguebringer', 'ratings' => ['melee_crit_rating' => 1.0, 'ranged_crit_rating' => 1.0, 'spell_crit_rating' => 1.0]],
+        33881 => ['name' => 'Natural Perfection', 'ratings' => ['spell_crit_rating' => 1.0]],
     ];
 
     /** The armory links the currently learned rank rather than always linking rank one. */
@@ -107,6 +122,28 @@ final class CharacterStatCalculator
         29439 => 29438, 29440 => 29438,
         18175 => 18174, 18176 => 18174,
         33596 => 33592,
+        12852 => 12320, 12853 => 12320, 12855 => 12320, 12856 => 12320,
+        14139 => 14138, 14140 => 14138, 14141 => 14138, 14142 => 14138,
+        19427 => 19426, 19429 => 19426, 19430 => 19426, 19431 => 19426,
+        20118 => 20117, 20119 => 20117, 20120 => 20117, 20121 => 20117,
+        31859 => 31858, 31860 => 31858,
+        31867 => 31866, 31868 => 31866,
+        5924 => 5923, 5925 => 5923, 5926 => 5923, 25829 => 5923,
+        16302 => 16255, 16303 => 16255, 16304 => 16255, 16305 => 16255,
+        15059 => 15058, 15060 => 15058,
+        30245 => 30242, 30246 => 30242, 30247 => 30242, 30248 => 30242,
+        49477 => 48987, 49478 => 48987, 49479 => 48987, 49480 => 48987,
+        51160 => 51099, 51161 => 51099,
+        33882 => 33881, 33883 => 33881,
+    ];
+
+    /** @var array<int, array<string, int>> */
+    private const ENCHANT_STAT_OVERRIDES = [
+        3606 => [
+            'melee_crit_rating' => 24,
+            'ranged_crit_rating' => 24,
+            'spell_crit_rating' => 24,
+        ],
     ];
 
     /** Rating required for one percentage point at anchor levels. */
@@ -230,6 +267,9 @@ final class CharacterStatCalculator
                 $enchantText = EnchantDatabase::ENCHANTS[$enchantId] ?? '';
             }
             $enchantStats = $this->statsFromText($enchantText);
+            foreach (self::ENCHANT_STAT_OVERRIDES[$enchantId] ?? [] as $stat => $minimumValue) {
+                $enchantStats[$stat] = max($enchantStats[$stat] ?? 0, $minimumValue);
+            }
             $this->addTotals($gear, $enchantStats);
             $this->addTotals($itemTotal, $enchantStats);
             if ($enchantId > 0 || $enchantText !== '') {
@@ -301,7 +341,11 @@ final class CharacterStatCalculator
             $itemBreakdown[] = $itemSource;
         }
 
-        $talents = $this->talentModifiers($talentTreesData[(string) $specId] ?? $talentTreesData[$specId] ?? []);
+        $talents = $this->talentModifiers(
+            $talentTreesData[(string) $specId] ?? $talentTreesData[$specId] ?? [],
+            $class,
+            $level,
+        );
         $primary = [];
         foreach (WotlkBaseStatTable::STAT_KEYS as $stat) {
             $beforeTalents = $base['total'][$stat] + ($gear[$stat] ?? 0);
@@ -323,18 +367,19 @@ final class CharacterStatCalculator
         $ratings = [];
         foreach (self::RATING_ANCHORS as $stat => $anchors) {
             $rating = (int) ($gear[$stat] ?? 0);
+            $flatBonusPercent = (float) ($talents['ratings'][$stat] ?? 0.0);
             $isCriticalStrike = in_array($stat, [
                 'melee_crit_rating',
                 'ranged_crit_rating',
                 'spell_crit_rating',
             ], true);
-            if ($rating === 0 && (!$isCriticalStrike || $level !== 80)) {
+            if ($rating === 0 && $flatBonusPercent === 0.0 && (!$isCriticalStrike || $level !== 80)) {
                 continue;
             }
             $ratingPerUnit = $this->ratingPerPercent($anchors, $level);
             $isExpertise = $stat === 'expertise_rating';
             $ratingValue = $rating / $ratingPerUnit;
-            $value = round($ratingValue, 2);
+            $value = round($ratingValue + $flatBonusPercent, 2);
             $ratingEntry = [
                 'name' => self::RATING_NAMES[$stat],
                 'rating' => $rating,
@@ -342,10 +387,19 @@ final class CharacterStatCalculator
                 'ratingPerUnit' => round($ratingPerUnit, 3),
                 'percent' => $isExpertise ? round($value * 0.25, 2) : $value,
                 'value' => $value,
+                'ratingPercent' => round($ratingValue, 4),
+                'flatBonusPercent' => round($flatBonusPercent, 4),
                 'unit' => $isExpertise ? '' : '%',
                 'unitLabel' => $isExpertise ? 'expertise' : '1%',
             ];
-            $criticalStrike = $this->criticalStrikeBreakdown($stat, $class, $level, $primary, $ratingValue);
+            $criticalStrike = $this->criticalStrikeBreakdown(
+                $stat,
+                $class,
+                $level,
+                $primary,
+                $ratingValue,
+                $flatBonusPercent,
+            );
             if ($criticalStrike !== null) {
                 $ratingEntry = [...$ratingEntry, ...$criticalStrike];
                 $ratingEntry['value'] = $criticalStrike['totalPercent'];
@@ -362,6 +416,14 @@ final class CharacterStatCalculator
             $secondary[$stat] = ['name' => $name, 'value' => (int) $gear[$stat]];
         }
 
+        $notes = [
+            'Permanent passive talent modifiers are included for the selected specialization.',
+            'Temporary buffs, forms, procs, consumables, target debuffs and conditional set effects are excluded.',
+        ];
+        if (strtolower(trim($class)) === 'warrior') {
+            array_splice($notes, 1, 0, 'Warrior stance is inferred from the selected build: Arms uses Battle Stance, Fury uses Berserker Stance, and Protection receives no offensive stance bonus.');
+        }
+
         return [
             'available' => true,
             'level' => $level,
@@ -369,15 +431,14 @@ final class CharacterStatCalculator
             'secondary' => $secondary,
             'ratings' => $ratings,
             'hitBonuses' => $talents['hit'],
+            'ratingBonuses' => $talents['ratings'],
+            'assumedEffects' => $talents['assumptions'],
             'talentModifiers' => $talents['effects'],
             'talentBreakdown' => $talents['breakdown'],
             'gearBreakdown' => $gearSources,
             'itemBreakdown' => $itemBreakdown,
             'gearTotals' => $this->nonZero($gear),
-            'notes' => [
-                'Permanent passive talent modifiers are included for the selected specialization.',
-                'Temporary buffs, stances/forms, procs, consumables and conditional set effects are excluded.',
-            ],
+            'notes' => $notes,
         ];
     }
 
@@ -524,6 +585,7 @@ final class CharacterStatCalculator
         int $level,
         array $primary,
         float $ratingPercent,
+        float $flatBonusPercent,
     ): ?array {
         if ($level !== 80) {
             return null;
@@ -553,23 +615,28 @@ final class CharacterStatCalculator
             'attributeValue' => $attributeValue,
             'attributePercent' => round($attributePercent, 4),
             'ratingPercent' => round($ratingPercent, 4),
-            'totalPercent' => round($basePercent + $attributePercent + $ratingPercent, 2),
+            'flatBonusPercent' => round($flatBonusPercent, 4),
+            'totalPercent' => round($basePercent + $attributePercent + $ratingPercent + $flatBonusPercent, 2),
         ];
     }
 
-    /** @param mixed $rawSpec @return array{percent: array<string, float>, hit: array<string, float>, effects: array<int, array<string, mixed>>, breakdown: array<int, array<string, mixed>>} */
-    private function talentModifiers(mixed $rawSpec): array
+    /** @param mixed $rawSpec @return array{percent: array<string, float>, hit: array<string, float>, ratings: array<string, float>, effects: array<int, array<string, mixed>>, breakdown: array<int, array<string, mixed>>, assumptions: array<int, array<string, mixed>>} */
+    private function talentModifiers(mixed $rawSpec, string $class, int $level): array
     {
         $percent = [];
         $hit = [];
+        $ratings = [];
         $effects = [];
         $breakdown = [];
+        $assumptions = [];
         if (!is_array($rawSpec)) {
-            return ['percent' => [], 'hit' => [], 'effects' => [], 'breakdown' => []];
+            return ['percent' => [], 'hit' => [], 'ratings' => [], 'effects' => [], 'breakdown' => [], 'assumptions' => []];
         }
 
+        $treePoints = [];
         foreach ($rawSpec as $tree) {
             $treeName = (string) ($tree['name'] ?? 'Unknown tree');
+            $allocatedTreePoints = 0;
             foreach (($tree['tiers'] ?? []) as $tier) {
                 foreach ($tier as $talent) {
                     if (!is_array($talent)) {
@@ -584,8 +651,10 @@ final class CharacterStatCalculator
                     if ($points === 0) {
                         continue;
                     }
+                    $allocatedTreePoints += $points;
                     $applied = [];
                     $appliedHit = [];
+                    $appliedRatings = [];
                     if ($definition !== null) {
                         foreach ($definition['percent'] ?? [] as $stat => $perPoint) {
                             $amount = $perPoint * $points;
@@ -596,6 +665,11 @@ final class CharacterStatCalculator
                             $amount = $perPoint * $points;
                             $hit[$scope] = ($hit[$scope] ?? 0.0) + $amount;
                             $appliedHit[$scope] = round($amount, 2);
+                        }
+                        foreach ($definition['ratings'] ?? [] as $stat => $perPoint) {
+                            $amount = $perPoint * $points;
+                            $ratings[$stat] = ($ratings[$stat] ?? 0.0) + $amount;
+                            $appliedRatings[$stat] = round($amount, 2);
                         }
                     }
 
@@ -608,6 +682,7 @@ final class CharacterStatCalculator
                         'recognized' => $definition !== null,
                         'percent' => $applied,
                         'hit' => $appliedHit,
+                        'ratings' => $appliedRatings,
                     ];
                     $breakdown[] = $entry;
                     if ($definition !== null) {
@@ -615,9 +690,39 @@ final class CharacterStatCalculator
                     }
                 }
             }
+            $treePoints[$treeName] = max((int) ($tree['points'] ?? 0), $allocatedTreePoints);
         }
 
-        return ['percent' => $percent, 'hit' => $hit, 'effects' => $effects, 'breakdown' => $breakdown];
+        if (strtolower(trim($class)) === 'warrior' && $treePoints !== []) {
+            arsort($treePoints);
+            $dominantTree = strtolower((string) array_key_first($treePoints));
+            $dominantTreePoints = (int) reset($treePoints);
+            if ($dominantTreePoints > 0 && $dominantTree === 'arms') {
+                $ratings['armor_penetration_rating'] = ($ratings['armor_penetration_rating'] ?? 0.0) + 10.0;
+                $assumptions[] = [
+                    'name' => 'Battle Stance',
+                    'reason' => 'Inferred from the selected Arms build.',
+                    'ratings' => ['armor_penetration_rating' => 10.0],
+                ];
+            } elseif ($dominantTreePoints > 0 && $dominantTree === 'fury' && $level >= 30) {
+                $ratings['melee_crit_rating'] = ($ratings['melee_crit_rating'] ?? 0.0) + 3.0;
+                $ratings['ranged_crit_rating'] = ($ratings['ranged_crit_rating'] ?? 0.0) + 3.0;
+                $assumptions[] = [
+                    'name' => 'Berserker Stance',
+                    'reason' => 'Inferred from the selected Fury build.',
+                    'ratings' => ['melee_crit_rating' => 3.0, 'ranged_crit_rating' => 3.0],
+                ];
+            }
+        }
+
+        return [
+            'percent' => $percent,
+            'hit' => $hit,
+            'ratings' => $ratings,
+            'effects' => $effects,
+            'breakdown' => $breakdown,
+            'assumptions' => $assumptions,
+        ];
     }
 
     /** @param array<int, float> $anchors */

@@ -105,9 +105,9 @@
                                         <span class="rating-conversion-name">{{ rating.name }}</span>
                                         <strong>{{ rating.value|number_format(2) }}{{ rating.unit }}</strong>
                                         {% if rating.isCriticalStrike|default(false) %}
-                                            <small>{{ rating.basePercent|number_format(2) }}% base · {{ rating.attributeValue }} {{ rating.attribute }} = {{ rating.attributePercent|number_format(2) }}% · {{ rating.rating }} rating = {{ rating.ratingPercent|number_format(2) }}%</small>
+                                            <small>{{ rating.basePercent|number_format(2) }}% base · {{ rating.attributeValue }} {{ rating.attribute }} = {{ rating.attributePercent|number_format(2) }}% · {{ rating.rating }} rating = {{ rating.ratingPercent|number_format(2) }}%{% if rating.flatBonusPercent != 0 %} · talents/stance = +{{ rating.flatBonusPercent|number_format(2) }}%{% endif %}</small>
                                         {% else %}
-                                            <small>{{ rating.rating }} rating · {{ rating.ratingPerUnit }} per {{ rating.unitLabel }}</small>
+                                            <small>{{ rating.rating }} rating · {{ rating.ratingPerUnit }} per {{ rating.unitLabel }}{% if rating.flatBonusPercent != 0 %} · talents/stance = +{{ rating.flatBonusPercent|number_format(2) }}%{% endif %}</small>
                                         {% endif %}
                                     </div>
                                 {% endfor %}
@@ -217,7 +217,7 @@
                         <div class="section-header">
                             <div>
                                 <h2>Talent contributions</h2>
-                                <p class="section-subtitle">Every allocated talent found in the detailed armory scrape is listed. Only stat multipliers and hit additions alter this calculation.</p>
+                                <p class="section-subtitle">Every allocated talent found in the detailed armory scrape is listed. Tracked attribute, hit and global critical-strike effects alter this calculation.</p>
                             </div>
                         </div>
 
@@ -238,6 +238,9 @@
                                                     {% endif %}
                                                     {% if talent.hit is not empty %}
                                                         {% for scope, percent in talent.hit %}<span class="debug-effect">+{{ percent }}% hit · {{ scope }}</span>{% endfor %}
+                                                    {% endif %}
+                                                    {% if talent.ratings is not empty %}
+                                                        {% for stat, percent in talent.ratings %}<span class="debug-effect">+{{ percent }}% {{ stat|replace({'_rating': '', '_': ' '})|title }}</span>{% endfor %}
                                                     {% endif %}
                                                     {% if not talent.recognized %}<span class="debug-empty">No tracked effect</span>{% endif %}
                                                 </td>

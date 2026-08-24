@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
     <script type="module" src="{{ asset('item-tooltip.js') }}"></script>
+    <script type="text/javascript" src="http://cdn.cavernoftime.com/api/tooltip.js"></script>
     {% if characterModel %}
         <script src="https://code.jquery.com/jquery-3.7.1.min.js"
                 integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
@@ -134,7 +135,7 @@
                             <div class="transmog-list">
                                 {% for transmog in transmogItems %}
                                     <a
-                                        href="https://wotlk.cavernoftime.com/item={{ transmog.id }}"
+                                        href="https://wotlk.evowow.com/?item={{ transmog.id }}"
                                         class="transmog-list-item q-{{ transmog.quality|default(4) }}"
                                         target="_blank"
                                         rel="noopener"
@@ -179,11 +180,11 @@
                             <div class="paperdoll-row left-row">
                                 <div class="paperdoll-slot" aria-label="{{ slot.name }}{% if slot.item %}: {{ slot.item.name }}{% else %} (Empty){% endif %}">
                                     {% if slot.item %}
-                                        <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
+                                        <a href="https://wotlk.evowow.com/?item={{ slot.item.id }}"
                                            class="slot-icon-box q-{{ slot.item.quality|default(1) }}"
                                            data-item-tooltip="{{ slot.item.tooltip_key }}"
-                                           rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}{% if slot.item.transmog %}&amp;transmog={{ slot.item.transmog }}{% endif %}"
-                                           target="_blank">
+                                           target="_blank"
+                                           rel="noopener">
                                             {% if slot.item.icon_url %}
                                                 <img src="{{ slot.item.icon_url }}" data-fallback-src="{{ slot.item.icon_fallback_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';this.nextElementSibling.style.display='flex';}" />
                                             {% endif %}
@@ -202,11 +203,11 @@
 
                                 <div class="slot-info-block align-left">
                                     {% if slot.item %}
-                                        <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
+                                        <a href="https://wotlk.evowow.com/?item={{ slot.item.id }}"
                                            class="slot-item-name q-{{ slot.item.quality|default(1) }}"
                                            data-item-tooltip="{{ slot.item.tooltip_key }}"
                                            target="_blank"
-                                           rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}">
+                                           rel="noopener">
                                             {{ slot.item.name }}
                                         </a>
                                         <div class="slot-sub-line">
@@ -220,7 +221,7 @@
                                                 <div class="slot-gems-inline">
                                                     {% for gem in slot.item.gem_details %}
                                                         {% if gem %}
-                                                            <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
+                                                            <a href="{% if gem.id > 0 %}https://wotlk.evowow.com/?item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" rel="noopener" class="gem-icon-link" title="{{ gem.name }}">
                                                                 <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
                                                             </a>
                                                         {% endif %}
@@ -245,11 +246,11 @@
                             <div class="paperdoll-row right-row">
                                 <div class="slot-info-block align-right">
                                     {% if slot.item %}
-                                        <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
+                                        <a href="https://wotlk.evowow.com/?item={{ slot.item.id }}"
                                            class="slot-item-name q-{{ slot.item.quality|default(1) }}"
                                            data-item-tooltip="{{ slot.item.tooltip_key }}"
                                            target="_blank"
-                                           rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}">
+                                           rel="noopener">
                                             {{ slot.item.name }}
                                         </a>
                                         <div class="slot-sub-line">
@@ -263,7 +264,7 @@
                                                 <div class="slot-gems-inline">
                                                     {% for gem in slot.item.gem_details %}
                                                         {% if gem %}
-                                                            <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
+                                                            <a href="{% if gem.id > 0 %}https://wotlk.evowow.com/?item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" rel="noopener" class="gem-icon-link" title="{{ gem.name }}">
                                                                 <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
                                                             </a>
                                                         {% endif %}
@@ -278,11 +279,11 @@
 
                                 <div class="paperdoll-slot" aria-label="{{ slot.name }}{% if slot.item %}: {{ slot.item.name }}{% else %} (Empty){% endif %}">
                                     {% if slot.item %}
-                                        <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
+                                        <a href="https://wotlk.evowow.com/?item={{ slot.item.id }}"
                                            class="slot-icon-box q-{{ slot.item.quality|default(1) }}"
                                            data-item-tooltip="{{ slot.item.tooltip_key }}"
-                                           rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}{% if slot.item.transmog %}&amp;transmog={{ slot.item.transmog }}{% endif %}"
-                                           target="_blank">
+                                           target="_blank"
+                                           rel="noopener">
                                             {% if slot.item.icon_url %}
                                                 <img src="{{ slot.item.icon_url }}" data-fallback-src="{{ slot.item.icon_fallback_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';this.nextElementSibling.style.display='flex';}" />
                                             {% endif %}
@@ -311,11 +312,11 @@
                         <div class="paperdoll-bottom-card">
                             <div class="paperdoll-slot" aria-label="{{ slot.name }}{% if slot.item %}: {{ slot.item.name }}{% else %} (Empty){% endif %}">
                                 {% if slot.item %}
-                                    <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
+                                    <a href="https://wotlk.evowow.com/?item={{ slot.item.id }}"
                                        class="slot-icon-box q-{{ slot.item.quality|default(1) }}"
                                        data-item-tooltip="{{ slot.item.tooltip_key }}"
-                                       rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}{% if slot.item.transmog %}&amp;transmog={{ slot.item.transmog }}{% endif %}"
-                                       target="_blank">
+                                       target="_blank"
+                                       rel="noopener">
                                         {% if slot.item.icon_url %}
                                             <img src="{{ slot.item.icon_url }}" data-fallback-src="{{ slot.item.icon_fallback_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';this.nextElementSibling.style.display='flex';}" />
                                         {% endif %}
@@ -334,11 +335,11 @@
 
                             <div class="slot-info-block align-center">
                                 {% if slot.item %}
-                                    <a href="https://wotlk.cavernoftime.com/item={{ slot.item.id }}"
+                                    <a href="https://wotlk.evowow.com/?item={{ slot.item.id }}"
                                        class="slot-item-name q-{{ slot.item.quality|default(1) }}"
                                        data-item-tooltip="{{ slot.item.tooltip_key }}"
                                        target="_blank"
-                                       rel="item={{ slot.item.id }}{% if slot.item.enchant %}&amp;ench={{ slot.item.enchant }}{% endif %}{% if slot.item.gems|default([]) is not empty %}&amp;gems={{ slot.item.gems|join(':') }}{% endif %}">
+                                       rel="noopener">
                                         {{ slot.item.name }}
                                     </a>
                                     <div class="slot-sub-line center-sub">
@@ -352,7 +353,7 @@
                                             <div class="slot-gems-inline">
                                                 {% for gem in slot.item.gem_details %}
                                                     {% if gem %}
-                                                        <a href="{% if gem.id > 0 %}https://wotlk.cavernoftime.com/item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" class="gem-icon-link" title="{{ gem.name }}" {% if gem.id > 0 %}rel="item={{ gem.id }}"{% endif %}>
+                                                        <a href="{% if gem.id > 0 %}https://wotlk.evowow.com/?item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" rel="noopener" class="gem-icon-link" title="{{ gem.name }}">
                                                             <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
                                                         </a>
                                                     {% endif %}
@@ -464,9 +465,9 @@
                                             <span class="rating-conversion-name">{{ rating.name }}</span>
                                             <strong>{{ rating.value|number_format(2) }}{{ rating.unit }}</strong>
                                             {% if rating.isCriticalStrike|default(false) %}
-                                                <small>{{ rating.basePercent|number_format(2) }}% base · {{ rating.attributeValue }} {{ rating.attribute }} = {{ rating.attributePercent|number_format(2) }}% · {{ rating.rating }} rating = {{ rating.ratingPercent|number_format(2) }}%</small>
+                                                <small>{{ rating.basePercent|number_format(2) }}% base · {{ rating.attributeValue }} {{ rating.attribute }} = {{ rating.attributePercent|number_format(2) }}% · {{ rating.rating }} rating = {{ rating.ratingPercent|number_format(2) }}%{% if rating.flatBonusPercent != 0 %} · talents/stance = +{{ rating.flatBonusPercent|number_format(2) }}%{% endif %}</small>
                                             {% else %}
-                                                <small>{{ rating.rating }} rating · {{ rating.ratingPerUnit }} per {{ rating.unitLabel }}</small>
+                                                <small>{{ rating.rating }} rating · {{ rating.ratingPerUnit }} per {{ rating.unitLabel }}{% if rating.flatBonusPercent != 0 %} · talents/stance = +{{ rating.flatBonusPercent|number_format(2) }}%{% endif %}</small>
                                             {% endif %}
                                         </div>
                                     {% endfor %}
@@ -491,6 +492,13 @@
                                     {% for talent in calculatedStats.talentModifiers %}
                                         <span>{{ talent.name }} ({{ talent.points }} {{ talent.points == 1 ? 'point' : 'points' }})</span>{% if not loop.last %}, {% endif %}
                                     {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            {% if calculatedStats.assumedEffects is not empty %}
+                                <div class="talent-modifier-summary">
+                                    <strong>Assumed combat state:</strong>
+                                    {% for effect in calculatedStats.assumedEffects %}<span>{{ effect.name }} — {{ effect.reason }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
                                 </div>
                             {% endif %}
 
