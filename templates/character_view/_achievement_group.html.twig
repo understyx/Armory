@@ -1,0 +1,44 @@
+<section class="icc-achievement-group" aria-label="{{ group.title }} achievement progress">
+    <div class="raid-size-columns">
+        {% for raidSizeGroup in group.raidSizes %}
+            <section class="raid-size-column" aria-labelledby="raid-group-{{ group.key }}-{{ raidSizeGroup.raidSize }}-heading">
+                <div class="raid-size-heading">
+                    <h5 id="raid-group-{{ group.key }}-{{ raidSizeGroup.raidSize }}-heading">{{ raidSizeGroup.raidSize }}-player</h5>
+                    <span>{{ raidSizeGroup.achievements|filter(achievement => achievement.earned)|length }}/{{ raidSizeGroup.achievements|length }} earned</span>
+                </div>
+
+                <div class="icc-achievement-list">
+                    {% for achievement in raidSizeGroup.achievements %}
+                        <article class="icc-achievement{% if achievement.earned %} is-earned{% else %} is-locked{% endif %}">
+                            <div class="icc-achievement-icon" aria-hidden="true">
+                                {% if achievement.iconUrl %}
+                                    <img src="{{ achievement.iconUrl }}" alt="" loading="lazy">
+                                {% endif %}
+                            </div>
+                            <div class="icc-achievement-copy">
+                                <div class="icc-achievement-meta">
+                                    <span class="icc-achievement-section">{{ achievement.raid }} · {{ achievement.section }}</span>
+                                    {% if achievement.difficulty != 'normal' %}
+                                        <span class="icc-difficulty icc-difficulty-{{ achievement.difficulty }}">{{ achievement.difficulty|replace({'-': ' '})|title }}</span>
+                                    {% endif %}
+                                </div>
+                                <h5>{{ achievement.title }}</h5>
+                                <p>{{ achievement.description }}</p>
+                            </div>
+                            <div class="icc-achievement-status">
+                                {% if achievement.earned %}
+                                    <strong>✓ Earned</strong>
+                                    {% if achievement.earnedDate %}<span>{{ achievement.earnedDate }}</span>{% endif %}
+                                {% else %}
+                                    <strong>Not earned</strong>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% else %}
+                        <div class="achievements-error">No {{ raidSizeGroup.raidSize }}-player achievements were returned.</div>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endfor %}
+    </div>
+</section>

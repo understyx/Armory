@@ -697,6 +697,44 @@ body {
     white-space: nowrap;
 }
 
+.raid-group-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 14px;
+    padding: 4px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 9px;
+    background: var(--bg-slot);
+}
+
+.raid-group-tab {
+    min-width: 0;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.raid-group-tab:hover {
+    color: var(--text-primary);
+}
+
+.raid-group-tab.active {
+    background: var(--accent-blue);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.raid-group-panel[hidden] {
+    display: none;
+}
+
 .icc-achievement-groups {
     display: grid;
     grid-template-columns: 1fr;
@@ -818,6 +856,11 @@ body {
 .icc-difficulty-heroic {
     color: #ff8c69;
     background: rgba(255, 90, 54, 0.12);
+}
+
+.icc-difficulty-hard-mode {
+    color: #c9a7ff;
+    background: rgba(166, 112, 255, 0.14);
 }
 
 .icc-achievement h5 {
@@ -3245,6 +3288,10 @@ body {
 
     .raid-size-columns {
         grid-template-columns: 1fr;
+    }
+
+    .raid-group-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .raid-size-column + .raid-size-column {

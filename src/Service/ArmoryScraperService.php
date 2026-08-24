@@ -21,7 +21,7 @@ class ArmoryScraperService
 {
     private const RAID_ACHIEVEMENT_GROUPS = [
         'icc_rs' => 'ICC + RS',
-        'toc_onyxia' => 'ToC + Onyxia',
+        'togc' => 'ToGC',
         'ulduar' => 'Ulduar',
         'naxx_eoe_os' => 'Naxx + EoE + OS',
     ];
@@ -32,7 +32,6 @@ class ArmoryScraperService
             'achievements' => [
                 4817 => ['group' => 'icc_rs', 'raid' => 'Ruby Sanctum', 'section' => 'Halion', 'difficulty' => 'normal', 'sort' => 60],
                 4818 => ['group' => 'icc_rs', 'raid' => 'Ruby Sanctum', 'section' => 'Halion', 'difficulty' => 'heroic', 'sort' => 60],
-                4396 => ['group' => 'toc_onyxia', 'raid' => "Onyxia's Lair", 'section' => 'Onyxia', 'difficulty' => 'normal', 'sort' => 20],
                 562 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Arachnid Quarter', 'difficulty' => 'normal', 'sort' => 10],
                 564 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Construct Quarter', 'difficulty' => 'normal', 'sort' => 20],
                 566 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Plague Quarter', 'difficulty' => 'normal', 'sort' => 30],
@@ -48,7 +47,6 @@ class ArmoryScraperService
             'achievements' => [
                 4815 => ['group' => 'icc_rs', 'raid' => 'Ruby Sanctum', 'section' => 'Halion', 'difficulty' => 'normal', 'sort' => 60],
                 4816 => ['group' => 'icc_rs', 'raid' => 'Ruby Sanctum', 'section' => 'Halion', 'difficulty' => 'heroic', 'sort' => 60],
-                4397 => ['group' => 'toc_onyxia', 'raid' => "Onyxia's Lair", 'section' => 'Onyxia', 'difficulty' => 'normal', 'sort' => 20],
                 563 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Arachnid Quarter', 'difficulty' => 'normal', 'sort' => 10],
                 565 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Construct Quarter', 'difficulty' => 'normal', 'sort' => 20],
                 567 => ['group' => 'naxx_eoe_os', 'raid' => 'Naxxramas', 'section' => 'Plague Quarter', 'difficulty' => 'normal', 'sort' => 30],
@@ -67,6 +65,7 @@ class ArmoryScraperService
                 2890 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'The Keepers', 'difficulty' => 'normal', 'sort' => 30],
                 2892 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'Descent into Madness', 'difficulty' => 'normal', 'sort' => 40],
                 3036 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'Algalon', 'difficulty' => 'normal', 'sort' => 50],
+                3159 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'Yogg-Saron', 'difficulty' => 'hard-mode', 'sort' => 60],
             ],
         ],
         14962 => [
@@ -77,20 +76,27 @@ class ArmoryScraperService
                 2891 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'The Keepers', 'difficulty' => 'normal', 'sort' => 30],
                 2893 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'Descent into Madness', 'difficulty' => 'normal', 'sort' => 40],
                 3037 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'Algalon', 'difficulty' => 'normal', 'sort' => 50],
+                3164 => ['group' => 'ulduar', 'raid' => 'Ulduar', 'section' => 'Yogg-Saron', 'difficulty' => 'hard-mode', 'sort' => 60],
             ],
         ],
         15001 => [
             'raidSize' => 10,
             'achievements' => [
-                3917 => ['group' => 'toc_onyxia', 'raid' => 'Trial of the Crusader', 'section' => 'Full clear', 'difficulty' => 'normal', 'sort' => 10],
-                3918 => ['group' => 'toc_onyxia', 'raid' => 'Trial of the Crusader', 'section' => 'Full clear', 'difficulty' => 'heroic', 'sort' => 10],
+                3917 => ['group' => 'togc', 'raid' => 'Trial of the Crusader', 'section' => 'Full clear', 'difficulty' => 'normal', 'sort' => 10],
+                3918 => ['group' => 'togc', 'raid' => 'Trial of the Grand Crusader', 'section' => 'Full clear', 'difficulty' => 'heroic', 'sort' => 10],
+                3808 => ['group' => 'togc', 'raid' => 'Trial of the Grand Crusader', 'section' => 'Tribute to Skill', 'difficulty' => 'heroic', 'sort' => 20],
+                3809 => ['group' => 'togc', 'raid' => 'Trial of the Grand Crusader', 'section' => 'Tribute to Mad Skill', 'difficulty' => 'heroic', 'sort' => 30],
+                3810 => ['group' => 'togc', 'raid' => 'Trial of the Grand Crusader', 'section' => 'Tribute to Insanity', 'difficulty' => 'heroic', 'sort' => 40],
             ],
         ],
         15002 => [
             'raidSize' => 25,
             'achievements' => [
-                3916 => ['group' => 'toc_onyxia', 'raid' => 'Trial of the Crusader', 'section' => 'Full clear', 'difficulty' => 'normal', 'sort' => 10],
-                3812 => ['group' => 'toc_onyxia', 'raid' => 'Trial of the Crusader', 'section' => 'Full clear', 'difficulty' => 'heroic', 'sort' => 10],
+                3916 => ['group' => 'togc', 'raid' => 'Trial of the Crusader', 'section' => 'Full clear', 'difficulty' => 'normal', 'sort' => 10],
+                3812 => ['group' => 'togc', 'raid' => 'Trial of the Grand Crusader', 'section' => 'Full clear', 'difficulty' => 'heroic', 'sort' => 10],
+                3817 => ['group' => 'togc', 'raid' => 'Trial of the Grand Crusader', 'section' => 'Tribute to Skill', 'difficulty' => 'heroic', 'sort' => 20],
+                3818 => ['group' => 'togc', 'raid' => 'Trial of the Grand Crusader', 'section' => 'Tribute to Mad Skill', 'difficulty' => 'heroic', 'sort' => 30],
+                3819 => ['group' => 'togc', 'raid' => 'Trial of the Grand Crusader', 'section' => 'Tribute to Insanity', 'difficulty' => 'heroic', 'sort' => 40],
             ],
         ],
         15041 => [
@@ -448,7 +454,6 @@ class ArmoryScraperService
     {
         return implode('|', [
             (string) ($achievement['group'] ?? ''),
-            (string) ($achievement['raid'] ?? ''),
             (string) ($achievement['section'] ?? ''),
             (string) ($achievement['raidSize'] ?? ''),
         ]);

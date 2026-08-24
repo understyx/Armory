@@ -154,9 +154,44 @@ class ArmoryScraperServiceTest extends TestCase
         $groups = (new ArmoryScraperService())->groupRaidAchievements($results);
         $iccTen = $groups[0]['raidSizes'][0]['achievements'];
 
-        self::assertSame(['ICC + RS', 'ToC + Onyxia', 'Ulduar', 'Naxx + EoE + OS'], array_column($groups, 'title'));
+        self::assertSame(['ICC + RS', 'ToGC', 'Ulduar', 'Naxx + EoE + OS'], array_column($groups, 'title'));
         self::assertSame([4628, 4528, 4629], array_column($iccTen, 'id'));
         self::assertNotContains(4531, array_column($iccTen, 'id'));
+    }
+
+    public function testExtractRaidAchievementsIncludesTogcTributesAndExcludesOnyxia(): void
+    {
+        $togcHtml = <<<'HTML'
+            <div class="achievement" id="ach3918"><div class="title">Call of the Grand Crusade (10 player)</div><div class="description">Heroic clear.</div></div>
+            <div class="achievement" id="ach3808"><div class="title">A Tribute to Skill (10 player)</div><div class="description">25 attempts.</div></div>
+            <div class="achievement" id="ach3809"><div class="title">A Tribute to Mad Skill (10 player)</div><div class="description">45 attempts.</div></div>
+            <div class="achievement locked" id="ach3810"><div class="title">A Tribute to Insanity (10 player)</div><div class="description">50 attempts.</div></div>
+            HTML;
+        $raidHtml = <<<'HTML'
+            <div class="achievement" id="ach4396"><div class="title">Onyxia's Lair (10 player)</div><div class="description">Defeat Onyxia.</div></div>
+            <div class="achievement" id="ach4817"><div class="title">The Twilight Destroyer (10 player)</div><div class="description">Defeat Halion.</div></div>
+            HTML;
+
+        $service = new ArmoryScraperService();
+        $togc = $service->extractRaidAchievements($togcHtml, 15001);
+        $raid = $service->extractRaidAchievements($raidHtml, 14922);
+
+        self::assertSame([3918, 3808, 3809, 3810], array_column($togc['achievements'], 'id'));
+        self::assertSame([4817], array_column($raid['achievements'], 'id'));
+    }
+
+    public function testExtractRaidAchievementsIncludesAloneInTheDarkness(): void
+    {
+        $html = <<<'HTML'
+            <div class="achievement" id="ach3158"><div class="title">One Light in the Darkness (10 player)</div><div class="description">Use one keeper.</div></div>
+            <div class="achievement locked" id="ach3159"><div class="title">Alone in the Darkness (10 player)</div><div class="description">Use no keepers.</div></div>
+            HTML;
+
+        $result = (new ArmoryScraperService())->extractRaidAchievements($html, 14961);
+
+        self::assertSame([3159], array_column($result['achievements'], 'id'));
+        self::assertSame('hard-mode', $result['achievements'][0]['difficulty']);
+        self::assertSame('Alone in the Darkness (10 player)', $result['achievements'][0]['title']);
     }
 
     public function testExtractGuildSummaryParsesRosterAndMetadata(): void

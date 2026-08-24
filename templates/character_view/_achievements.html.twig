@@ -6,55 +6,34 @@
     <a href="{{ sourceUrl }}" target="_blank" rel="noopener">View on Warmane</a>
 </div>
 
-<div class="icc-achievement-groups">
-    {% for group in achievementGroups %}
-        <section class="icc-achievement-group" aria-labelledby="raid-group-{{ group.key }}-heading">
-            <div class="icc-achievement-group-heading">
-                <h4 id="raid-group-{{ group.key }}-heading">{{ group.title }}</h4>
-            </div>
+<div class="raid-group-tabs" role="tablist" aria-label="Wrath raid group">
+    {% for routeKey, tab in achievementTabs %}
+        <button
+            id="raid-group-tab-{{ routeKey }}"
+            class="raid-group-tab{% if loop.first %} active{% endif %}"
+            type="button"
+            role="tab"
+            aria-selected="{{ loop.first ? 'true' : 'false' }}"
+            aria-controls="raid-group-panel-{{ routeKey }}"
+            data-group-url="{{ path('app_character_achievement_group', {'characterName': characterName, 'realmName': realmName, 'groupName': routeKey}) }}"
+            onclick="setAchievementGroupTab('{{ routeKey }}', this)"
+        >{{ tab.title }}</button>
+    {% endfor %}
+</div>
 
-            <div class="raid-size-columns">
-                {% for raidSizeGroup in group.raidSizes %}
-                    <section class="raid-size-column" aria-labelledby="raid-group-{{ group.key }}-{{ raidSizeGroup.raidSize }}-heading">
-                        <div class="raid-size-heading">
-                            <h5 id="raid-group-{{ group.key }}-{{ raidSizeGroup.raidSize }}-heading">{{ raidSizeGroup.raidSize }}-player</h5>
-                            <span>{{ raidSizeGroup.achievements|filter(achievement => achievement.earned)|length }}/{{ raidSizeGroup.achievements|length }} earned</span>
-                        </div>
-
-                        <div class="icc-achievement-list">
-                            {% for achievement in raidSizeGroup.achievements %}
-                                <article class="icc-achievement{% if achievement.earned %} is-earned{% else %} is-locked{% endif %}">
-                                    <div class="icc-achievement-icon" aria-hidden="true">
-                                        {% if achievement.iconUrl %}
-                                            <img src="{{ achievement.iconUrl }}" alt="" loading="lazy">
-                                        {% endif %}
-                                    </div>
-                                    <div class="icc-achievement-copy">
-                                        <div class="icc-achievement-meta">
-                                            <span class="icc-achievement-section">{{ achievement.raid }} · {{ achievement.section }}</span>
-                                            {% if achievement.difficulty == 'heroic' %}
-                                                <span class="icc-difficulty icc-difficulty-heroic">Heroic</span>
-                                            {% endif %}
-                                        </div>
-                                        <h5>{{ achievement.title }}</h5>
-                                        <p>{{ achievement.description }}</p>
-                                    </div>
-                                    <div class="icc-achievement-status">
-                                        {% if achievement.earned %}
-                                            <strong>✓ Earned</strong>
-                                            {% if achievement.earnedDate %}<span>{{ achievement.earnedDate }}</span>{% endif %}
-                                        {% else %}
-                                            <strong>Not earned</strong>
-                                        {% endif %}
-                                    </div>
-                                </article>
-                            {% else %}
-                                <div class="achievements-error">No {{ raidSizeGroup.raidSize }}-player achievements were returned.</div>
-                            {% endfor %}
-                        </div>
-                    </section>
-                {% endfor %}
+<div class="raid-group-panels">
+    {% for routeKey, tab in achievementTabs %}
+        <div
+            id="raid-group-panel-{{ routeKey }}"
+            class="raid-group-panel"
+            role="tabpanel"
+            aria-labelledby="raid-group-tab-{{ routeKey }}"
+            {% if not loop.first %}hidden{% endif %}
+        >
+            <div class="achievements-loading">
+                <span class="model-loading-spinner" aria-hidden="true"></span>
+                Loading {{ tab.title }} achievements…
             </div>
-        </section>
+        </div>
     {% endfor %}
 </div>

@@ -19,6 +19,13 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class CharacterViewController extends AbstractController
 {
+    private const ACHIEVEMENT_GROUPS = [
+        'icc-rs' => ['key' => 'icc_rs', 'title' => 'ICC + RS', 'categories' => [15041, 15042, 14922, 14923]],
+        'togc' => ['key' => 'togc', 'title' => 'ToGC', 'categories' => [15001, 15002]],
+        'ulduar' => ['key' => 'ulduar', 'title' => 'Ulduar', 'categories' => [14961, 14962]],
+        'naxx-eoe-os' => ['key' => 'naxx_eoe_os', 'title' => 'Naxx + EoE + OS', 'categories' => [14922, 14923]],
+    ];
+
     public function __construct(
         private readonly ArmoryScraperService $armoryScraperService,
         private readonly CharacterSnapshotRepository $snapshotRepository,
@@ -183,8 +190,39 @@ class CharacterViewController extends AbstractController
     #[Route('/character/{characterName}/{realmName}/achievements', name: 'app_character_achievements_legacy', methods: ['GET'])]
     public function viewCharacterAchievements(string $characterName, string $realmName): Response
     {
+        return $this->render('character_view/_achievements.html.twig', [
+            'achievementTabs' => self::ACHIEVEMENT_GROUPS,
+            'characterName' => $characterName,
+            'realmName' => $realmName,
+            'sourceUrl' => sprintf(
+                'https://armory.warmane.com/character/%s/%s/achievements',
+                rawurlencode($characterName),
+                rawurlencode($realmName),
+            ),
+        ]);
+    }
+
+    #[Route(
+        '/characters/{characterName}/{realmName}/achievements/{groupName}',
+        name: 'app_character_achievement_group',
+        requirements: ['groupName' => 'icc-rs|togc|ulduar|naxx-eoe-os'],
+        methods: ['GET'],
+    )]
+    #[Route(
+        '/character/{characterName}/{realmName}/achievements/{groupName}',
+        name: 'app_character_achievement_group_legacy',
+        requirements: ['groupName' => 'icc-rs|togc|ulduar|naxx-eoe-os'],
+        methods: ['GET'],
+    )]
+    public function viewCharacterAchievementGroup(string $characterName, string $realmName, string $groupName): Response
+    {
+        $groupConfig = self::ACHIEVEMENT_GROUPS[$groupName] ?? null;
+        if ($groupConfig === null) {
+            throw $this->createNotFoundException('Unknown achievement group.');
+        }
+
         $categoryResults = [];
-        foreach ([14922, 14923, 14961, 14962, 15001, 15002, 15041, 15042] as $category) {
+        foreach ($groupConfig['categories'] as $category) {
             $html = $this->armoryScraperService->fetchAchievementCategoryHtml($characterName, $realmName, $category);
             if ($html !== null) {
                 $categoryResults[] = $this->armoryScraperService->extractRaidAchievements($html, $category);
@@ -198,13 +236,23 @@ class CharacterViewController extends AbstractController
             );
         }
 
-        return $this->render('character_view/_achievements.html.twig', [
-            'achievementGroups' => $this->armoryScraperService->groupRaidAchievements($categoryResults),
-            'sourceUrl' => sprintf(
-                'https://armory.warmane.com/character/%s/%s/achievements',
-                rawurlencode($characterName),
-                rawurlencode($realmName),
-            ),
+        $selectedGroup = null;
+        foreach ($this->armoryScraperService->groupRaidAchievements($categoryResults) as $group) {
+            if (($group['key'] ?? null) === $groupConfig['key']) {
+                $selectedGroup = $group;
+                break;
+            }
+        }
+
+        if ($selectedGroup === null) {
+            return new JsonResponse(
+                ['error' => 'Warmane achievements are temporarily unavailable.'],
+                Response::HTTP_BAD_GATEWAY,
+            );
+        }
+
+        return $this->render('character_view/_achievement_group.html.twig', [
+            'group' => $selectedGroup,
         ]);
     }
 

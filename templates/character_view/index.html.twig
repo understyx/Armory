@@ -970,10 +970,10 @@
             const transmogAction = document.querySelector('[data-equipment-action]');
             if (transmogAction) transmogAction.hidden = tabName !== 'equipment';
 
-            if (tabName === 'achievements') loadIccAchievements(button);
+            if (tabName === 'achievements') loadAchievementsShell(button);
         }
 
-        async function loadIccAchievements(button) {
+        async function loadAchievementsShell(button) {
             const panel = document.getElementById('achievements-panel');
             if (!panel || panel.dataset.loaded === 'true' || panel.dataset.loading === 'true') return;
 
@@ -986,8 +986,50 @@
 
                 panel.innerHTML = await response.text();
                 panel.dataset.loaded = 'true';
+
+                const firstGroupTab = panel.querySelector('.raid-group-tab');
+                if (firstGroupTab) {
+                    const groupName = firstGroupTab.getAttribute('aria-controls').replace('raid-group-panel-', '');
+                    setAchievementGroupTab(groupName, firstGroupTab);
+                }
             } catch (error) {
                 panel.innerHTML = '<div class="achievements-error">Warmane achievements are temporarily unavailable. Please try again later.</div>';
+            } finally {
+                delete panel.dataset.loading;
+            }
+        }
+
+        function setAchievementGroupTab(groupName, button) {
+            const achievementsPanel = document.getElementById('achievements-panel');
+            if (!achievementsPanel) return;
+
+            achievementsPanel.querySelectorAll('.raid-group-panel').forEach(panel => {
+                panel.hidden = panel.id !== 'raid-group-panel-' + groupName;
+            });
+            achievementsPanel.querySelectorAll('.raid-group-tab').forEach(tab => {
+                const isActive = tab === button;
+                tab.classList.toggle('active', isActive);
+                tab.setAttribute('aria-selected', String(isActive));
+            });
+
+            loadAchievementGroup(button);
+        }
+
+        async function loadAchievementGroup(button) {
+            const panel = document.getElementById(button.getAttribute('aria-controls'));
+            if (!panel || panel.dataset.loaded === 'true' || panel.dataset.loading === 'true') return;
+
+            panel.dataset.loading = 'true';
+            try {
+                const response = await fetch(button.dataset.groupUrl, {
+                    headers: { 'Accept': 'text/html' }
+                });
+                if (!response.ok) throw new Error('Achievement group request failed');
+
+                panel.innerHTML = await response.text();
+                panel.dataset.loaded = 'true';
+            } catch (error) {
+                panel.innerHTML = '<div class="achievements-error">This achievement group is temporarily unavailable. Please try again later.</div>';
             } finally {
                 delete panel.dataset.loading;
             }

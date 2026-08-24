@@ -158,16 +158,51 @@ class CharacterViewControllerTest extends KernelTestCase
         );
     }
 
-    public function testAchievementsEndpointRendersGroupedWrathRaidProgress(): void
+    public function testAchievementsEndpointRendersLazyRaidGroupTabsWithoutFetchingWarmane(): void
     {
         $scraperService = $this->createMock(ArmoryScraperService::class);
-        $scraperService->expects(self::exactly(8))
+        $scraperService->expects(self::never())->method('fetchAchievementCategoryHtml');
+
+        $controller = new CharacterViewController(
+            $scraperService,
+            $this->createMock(CharacterSnapshotRepository::class),
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $this->createMock(CharacterUpdateThrottle::class),
+        );
+        $controller->setContainer(self::getContainer());
+
+        $response = $controller->viewCharacterAchievements('Puredecay', 'Icecrown');
+        $content = $response->getContent();
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertStringContainsString('ICC + RS', $content);
+        self::assertStringContainsString('ToGC', $content);
+        self::assertStringContainsString('Ulduar', $content);
+        self::assertStringContainsString('Naxx + EoE + OS', $content);
+        self::assertStringContainsString('/characters/Puredecay/Icecrown/achievements/icc-rs', $content);
+        self::assertStringContainsString('/characters/Puredecay/Icecrown/achievements/togc', $content);
+        self::assertStringNotContainsString('Bane of the Fallen King', $content);
+        self::assertStringContainsString('https://armory.warmane.com/character/Puredecay/Icecrown/achievements', $content);
+    }
+
+    public function testIccAchievementGroupFetchesOnlyItsCategoriesAndRendersResult(): void
+    {
+        $scraperService = $this->createMock(ArmoryScraperService::class);
+        $scraperService->expects(self::exactly(4))
             ->method('fetchAchievementCategoryHtml')
-            ->willReturnCallback(static fn(string $character, string $realm, int $category): string => sprintf('<div>%d</div>', $category));
-        $scraperService->expects(self::exactly(8))
+            ->willReturnCallback(static function (string $character, string $realm, int $category): string {
+                self::assertSame('Puredecay', $character);
+                self::assertSame('Icecrown', $realm);
+                self::assertContains($category, [15041, 15042, 14922, 14923]);
+
+                return sprintf('<div>%d</div>', $category);
+            });
+        $scraperService->expects(self::exactly(4))
             ->method('extractRaidAchievements')
             ->willReturnCallback(static fn(string $html, int $category): array => [
-                'raidSize' => $category % 2 === 0 ? 25 : 10,
+                'raidSize' => in_array($category, [15042, 14923], true) ? 25 : 10,
                 'category' => $category,
                 'achievements' => [],
             ]);
@@ -192,18 +227,6 @@ class CharacterViewControllerTest extends KernelTestCase
                         ['raidSize' => 25, 'achievements' => []],
                     ],
                 ],
-                ['key' => 'toc_onyxia', 'title' => 'ToC + Onyxia', 'raidSizes' => [
-                    ['raidSize' => 10, 'achievements' => []],
-                    ['raidSize' => 25, 'achievements' => []],
-                ]],
-                ['key' => 'ulduar', 'title' => 'Ulduar', 'raidSizes' => [
-                    ['raidSize' => 10, 'achievements' => []],
-                    ['raidSize' => 25, 'achievements' => []],
-                ]],
-                ['key' => 'naxx_eoe_os', 'title' => 'Naxx + EoE + OS', 'raidSizes' => [
-                    ['raidSize' => 10, 'achievements' => []],
-                    ['raidSize' => 25, 'achievements' => []],
-                ]],
             ]);
 
         $controller = new CharacterViewController(
@@ -216,19 +239,14 @@ class CharacterViewControllerTest extends KernelTestCase
         );
         $controller->setContainer(self::getContainer());
 
-        $response = $controller->viewCharacterAchievements('Puredecay', 'Icecrown');
+        $response = $controller->viewCharacterAchievementGroup('Puredecay', 'Icecrown', 'icc-rs');
         $content = $response->getContent();
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
-        self::assertStringContainsString('ICC + RS', $content);
-        self::assertStringContainsString('ToC + Onyxia', $content);
-        self::assertStringContainsString('Ulduar', $content);
-        self::assertStringContainsString('Naxx + EoE + OS', $content);
         self::assertStringContainsString('10-player', $content);
         self::assertStringContainsString('25-player', $content);
         self::assertStringContainsString('Bane of the Fallen King', $content);
         self::assertStringContainsString('✓ Earned', $content);
-        self::assertStringContainsString('https://armory.warmane.com/character/Puredecay/Icecrown/achievements', $content);
     }
 
     public function testStatsDebugPageShowsEveryCalculationSource(): void
