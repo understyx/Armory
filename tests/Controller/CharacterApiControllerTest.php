@@ -4,9 +4,13 @@ namespace App\Tests\Controller;
 
 use App\Controller\CharacterApiController;
 use App\Entity\CharacterSnapshot;
+use App\Entity\UwuLogRank;
 use App\Message\RefreshCharacterSnapshotMessage;
 use App\Repository\CharacterSnapshotRepository;
+use App\Repository\UwuLogRankRepository;
+use App\Service\ArmoryScraperService;
 use App\Service\CharacterApiFormatter;
+use App\Service\CharacterStatCalculator;
 use App\Service\CharacterUpdateThrottle;
 use App\Service\CharacterUpdateThrottleDecision;
 use PHPUnit\Framework\TestCase;
@@ -53,6 +57,80 @@ class CharacterApiControllerTest extends TestCase
 
         self::assertSame(Response::HTTP_NOT_FOUND, $response->getStatusCode());
         self::assertSame('not_found', $payload['status']);
+    }
+
+    public function testCharacterIncludesBestCachedUwuRankAndItsSpecialization(): void
+    {
+        $snapshot = $this->createSnapshot();
+        $repository = $this->createMock(CharacterSnapshotRepository::class);
+        $repository->method('findByNameAndRealm')->willReturn($snapshot);
+        $rank = (new UwuLogRank())
+            ->setName('Understyx')
+            ->setRealm('Icecrown')
+            ->setSpec('3')
+            ->setOverallRank(42)
+            ->setPayload(['overallPoints' => 96.5]);
+        $rankRepository = $this->createMock(UwuLogRankRepository::class);
+        $rankRepository->expects(self::once())
+            ->method('findBest')
+            ->with('Understyx', 'Icecrown')
+            ->willReturn($rank);
+
+        $response = (new CharacterApiController(
+            $repository,
+            new CharacterApiFormatter(),
+            $this->createMock(CharacterUpdateThrottle::class),
+            $this->createMock(MessageBusInterface::class),
+            $rankRepository,
+        ))->character('Understyx', 'Icecrown');
+        $payload = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertSame(42, $payload['uwuLogs']['overallRank']);
+        self::assertSame(96.5, $payload['uwuLogs']['overallPoints']);
+        self::assertSame('3', $payload['uwuLogs']['specId']);
+        self::assertSame('Unholy', $payload['uwuLogs']['specName']);
+    }
+
+    public function testDedicatedStatsEndpointReturnsFullPerSpecBreakdown(): void
+    {
+        $repository = $this->createMock(CharacterSnapshotRepository::class);
+        $repository->method('findByNameAndRealm')->willReturn($this->createSnapshot());
+        $controller = new CharacterApiController(
+            $repository,
+            new CharacterApiFormatter(new CharacterStatCalculator()),
+            $this->createMock(CharacterUpdateThrottle::class),
+            $this->createMock(MessageBusInterface::class),
+        );
+
+        $response = $controller->stats('Understyx', 'Icecrown');
+        $payload = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertTrue($payload['stats']['spec1']['available']);
+        self::assertArrayHasKey('gearBreakdown', $payload['stats']['spec1']);
+    }
+
+    public function testDedicatedAchievementsEndpointReturnsCachedProgression(): void
+    {
+        $snapshot = $this->createSnapshot()->setRaidAchievements([
+            '15041' => ['4583' => '11/02/2020'],
+        ]);
+        $repository = $this->createMock(CharacterSnapshotRepository::class);
+        $repository->method('findByNameAndRealm')->willReturn($snapshot);
+        $controller = new CharacterApiController(
+            $repository,
+            new CharacterApiFormatter(null, new ArmoryScraperService()),
+            $this->createMock(CharacterUpdateThrottle::class),
+            $this->createMock(MessageBusInterface::class),
+        );
+
+        $response = $controller->achievements('Understyx', 'Icecrown');
+        $payload = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertTrue($payload['available']);
+        self::assertSame(1, $payload['earnedCount']);
+        self::assertSame('ICC + RS', $payload['groups'][0]['title']);
     }
 
     public function testRequestUpdateQueuesARefresh(): void

@@ -28,9 +28,31 @@
                     <code>/api/character/{name}/{realm}</code>
                 </div>
                 <h2 id="read-character">Get character data</h2>
-                <p>Returns the most recently cached snapshot. This request does not contact Warmane. If no cached snapshot exists, it returns <code>404 Not Found</code>.</p>
+                <p>Returns the most recently cached snapshot, compact gear/talent stat contributions for each specialization, an achievement summary, and the character's best cached Uwu-logs overall rank with its specialization. This request does not contact Warmane. If no cached snapshot exists, it returns <code>404 Not Found</code>.</p>
                 <h3>Example</h3>
                 <pre><code>curl {{ absolute_url('/api/character/Puredecay/Icecrown') }}</code></pre>
+            </section>
+
+            <section class="api-endpoint" aria-labelledby="character-stats">
+                <div class="api-endpoint-heading">
+                    <span class="api-method api-method-get">GET</span>
+                    <code>/api/character/{name}/{realm}/stats</code>
+                </div>
+                <h2 id="character-stats">Get detailed character stats</h2>
+                <p>Returns the full stat calculation for every specialization, including primary stats, ratings, gear sources, talent modifiers, and assumptions.</p>
+                <h3>Example</h3>
+                <pre><code>curl {{ absolute_url('/api/character/Puredecay/Icecrown/stats') }}</code></pre>
+            </section>
+
+            <section class="api-endpoint" aria-labelledby="character-achievements">
+                <div class="api-endpoint-heading">
+                    <span class="api-method api-method-get">GET</span>
+                    <code>/api/character/{name}/{realm}/achievements</code>
+                </div>
+                <h2 id="character-achievements">Get raid achievements</h2>
+                <p>Returns cached Wrath raid progression grouped by raid and size. It does not contact Warmane; <code>available</code> is <code>false</code> until achievement data has been cached, and <code>complete</code> shows whether all supported categories are present.</p>
+                <h3>Example</h3>
+                <pre><code>curl {{ absolute_url('/api/character/Puredecay/Icecrown/achievements') }}</code></pre>
             </section>
 
             <section class="api-endpoint" aria-labelledby="request-update">
@@ -48,6 +70,8 @@
                 <h2 id="response-notes">Response notes</h2>
                 <ul>
                     <li><code>updatedAt</code> contains the snapshot time in ISO 8601 format.</li>
+                    <li>Stat percentages are JSON numbers measured in percentage points; they do not include a <code>%</code> suffix.</li>
+                    <li>Talent hit bonuses retain their scope, such as <code>Spells</code> or <code>Melee and ranged attacks</code>, so conditional bonuses are not presented as universal hit.</li>
                 </ul>
             </section>
         </div>

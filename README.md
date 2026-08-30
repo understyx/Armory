@@ -150,12 +150,26 @@ GET /api/character/{name}/{realm}
 
 The response contains `updatedAt`, basic character identity and progression data,
 equipped item/enchant/transmog/gem IDs, structured professions, and talent strings.
-It also includes a `stats` object with race, class, level-growth, gear, and permanent
-talent contributions, plus raw combat ratings and their level-specific percentage
-conversions. Temporary buffs, forms, procs, consumables, and conditional effects are
-not included.
+Its compact `stats` object separates gear and permanent talent percentage-point
+contributions for each specialization's hit, expertise, critical strike, haste, and
+armor penetration. Scoped hit talents remain keyed by their actual scope. Temporary
+buffs, forms, procs, consumables, and conditional effects are not included. The
+response also contains a cached raid-achievement summary and the best cached
+Uwu-logs `overallRank`, `overallPoints`, `specId`, and `specName`.
 This endpoint never contacts Warmane. It returns `404 Not Found` when no snapshot
 has been cached yet.
+
+Larger data sets have their own cached endpoints:
+
+```http
+GET /api/character/{name}/{realm}/stats
+GET /api/character/{name}/{realm}/achievements
+```
+
+The stats endpoint returns the calculator's complete per-specialization breakdown.
+The achievements endpoint returns cached Wrath raid progression grouped by raid and
+size; its `available` field is `false` until achievement categories have been cached,
+and `complete` identifies whether all eight supported categories are present.
 
 Queue a fresh scrape with:
 

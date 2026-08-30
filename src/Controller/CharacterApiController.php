@@ -2,8 +2,10 @@
 
 namespace App\Controller;
 
+use App\Entity\CharacterSnapshot;
 use App\Message\RefreshCharacterSnapshotMessage;
 use App\Repository\CharacterSnapshotRepository;
+use App\Repository\UwuLogRankRepository;
 use App\Service\CharacterApiFormatter;
 use App\Service\CharacterUpdateThrottle;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,6 +21,7 @@ class CharacterApiController extends AbstractController
         private readonly CharacterApiFormatter $formatter,
         private readonly CharacterUpdateThrottle $updateThrottle,
         private readonly MessageBusInterface $messageBus,
+        private readonly ?UwuLogRankRepository $uwuLogRankRepository = null,
     ) {
     }
 
@@ -37,12 +40,42 @@ class CharacterApiController extends AbstractController
             ], Response::HTTP_NOT_FOUND);
         }
 
-        $response = new JsonResponse($this->formatter->format($snapshot));
-        $response->setPublic();
-        $response->setMaxAge(60);
-        if ($snapshot->getScrapedAt() !== null) {
-            $response->setLastModified($snapshot->getScrapedAt());
+        $uwuRank = $this->uwuLogRankRepository?->findBest($name, $realm);
+        $response = new JsonResponse($this->formatter->format($snapshot, $uwuRank));
+        $lastModified = $snapshot->getScrapedAt();
+        if ($uwuRank?->getScrapedAt() !== null
+            && ($lastModified === null || $uwuRank->getScrapedAt() > $lastModified)) {
+            $lastModified = $uwuRank->getScrapedAt();
         }
+        $this->applyCacheHeaders($response, $lastModified);
+
+        return $response;
+    }
+
+    #[Route('/api/character/{name}/{realm}/stats', name: 'api_character_stats', methods: ['GET'])]
+    public function stats(string $name, string $realm): JsonResponse
+    {
+        $snapshot = $this->findSnapshot($name, $realm);
+        if ($snapshot instanceof JsonResponse) {
+            return $snapshot;
+        }
+
+        $response = new JsonResponse($this->formatter->formatDetailedStats($snapshot));
+        $this->applyCacheHeaders($response, $snapshot->getScrapedAt());
+
+        return $response;
+    }
+
+    #[Route('/api/character/{name}/{realm}/achievements', name: 'api_character_achievements', methods: ['GET'])]
+    public function achievements(string $name, string $realm): JsonResponse
+    {
+        $snapshot = $this->findSnapshot($name, $realm);
+        if ($snapshot instanceof JsonResponse) {
+            return $snapshot;
+        }
+
+        $response = new JsonResponse($this->formatter->formatAchievements($snapshot));
+        $this->applyCacheHeaders($response, $snapshot->getScrapedAt());
 
         return $response;
     }
@@ -93,5 +126,27 @@ class CharacterApiController extends AbstractController
             'status' => 'invalid_request',
             'message' => 'Character and realm must contain only letters, numbers, apostrophes, or hyphens.',
         ], Response::HTTP_BAD_REQUEST);
+    }
+
+    private function findSnapshot(string $name, string $realm): CharacterSnapshot|JsonResponse
+    {
+        if (!$this->hasValidIdentifiers($name, $realm)) {
+            return $this->invalidIdentifierResponse();
+        }
+
+        return $this->snapshotRepository->findByNameAndRealm($name, $realm)
+            ?? new JsonResponse([
+                'status' => 'not_found',
+                'message' => 'No cached data exists for this character. Request an update first.',
+            ], Response::HTTP_NOT_FOUND);
+    }
+
+    private function applyCacheHeaders(JsonResponse $response, ?\DateTimeImmutable $lastModified): void
+    {
+        $response->setPublic();
+        $response->setMaxAge(60);
+        if ($lastModified !== null) {
+            $response->setLastModified($lastModified);
+        }
     }
 }

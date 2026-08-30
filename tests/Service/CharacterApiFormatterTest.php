@@ -3,6 +3,8 @@
 namespace App\Tests\Service;
 
 use App\Entity\CharacterSnapshot;
+use App\Entity\UwuLogRank;
+use App\Service\ArmoryScraperService;
 use App\Service\CharacterApiFormatter;
 use App\Service\CharacterStatCalculator;
 use PHPUnit\Framework\TestCase;
@@ -26,13 +28,35 @@ class CharacterApiFormatterTest extends TestCase
                 'transmog' => 1234,
                 'enchant' => 3795,
                 'gems' => [40111, 40112],
+                'tooltip' => ['stats' => [
+                    ['type' => 31, 'value' => 328],
+                    ['type' => 37, 'value' => 82],
+                ]],
             ]])
             ->setProfessions(['Jewelcrafting (450 / 450)', 'Cooking (410)'])
             ->setSpecializations(['Unholy (0 / 17 / 54)', 'Frost (0 / 53 / 18)'])
             ->setTalentStrings(['012345', '543210'])
+            ->setTalentTreesData([
+                '0' => [[
+                    'name' => 'Unholy',
+                    'tiers' => [[['spellId' => 49568, 'pointsText' => '3/3']]],
+                ]],
+                '1' => [],
+            ])
+            ->setRaidAchievements([
+                '15041' => ['4583' => '11/02/2020'],
+            ])
             ->setScrapedAt(new \DateTimeImmutable('2026-08-23T10:15:00+00:00'));
+        $uwuRank = (new UwuLogRank())
+            ->setName('Understyx')
+            ->setRealm('Icecrown')
+            ->setSpec('3')
+            ->setOverallRank(1525)
+            ->setPayload(['overallPoints' => 87.25])
+            ->setScrapedAt(new \DateTimeImmutable('2026-08-23T10:16:00+00:00'));
 
-        $payload = (new CharacterApiFormatter(new CharacterStatCalculator()))->format($snapshot);
+        $formatter = new CharacterApiFormatter(new CharacterStatCalculator(), new ArmoryScraperService());
+        $payload = $formatter->format($snapshot, $uwuRank);
 
         self::assertSame('2026-08-23T10:15:00+00:00', $payload['updatedAt']);
         self::assertSame([
@@ -62,7 +86,29 @@ class CharacterApiFormatterTest extends TestCase
             'spec1' => ['name' => 'Unholy', 'talentString' => '012345'],
             'spec2' => ['name' => 'Frost', 'talentString' => '543210'],
         ], $payload['talents']);
-        self::assertTrue($payload['stats']['available']);
-        self::assertSame(175, $payload['stats']['primary']['strength']['total']);
+        self::assertSame(10.0, $payload['stats']['spec1']['hit']['gearPercent']['melee']);
+        self::assertSame(12.5, $payload['stats']['spec1']['hit']['gearPercent']['spell']);
+        self::assertSame(3.0, $payload['stats']['spec1']['hit']['talentPercent']['Spells']);
+        self::assertSame(10.0, $payload['stats']['spec1']['expertise']['gearPoints']);
+        self::assertSame(2.5, $payload['stats']['spec1']['expertise']['gearReductionPercent']);
+        self::assertSame(1, $payload['achievements']['earnedCount']);
+        self::assertSame('/api/character/Understyx/Icecrown/achievements', $payload['achievements']['endpoint']);
+        self::assertSame([
+            'overallRank' => 1525,
+            'overallPoints' => 87.25,
+            'specId' => '3',
+            'specName' => 'Unholy',
+            'updatedAt' => '2026-08-23T10:16:00+00:00',
+        ], $payload['uwuLogs']);
+
+        $details = $formatter->formatDetailedStats($snapshot);
+        self::assertSame(1, $details['stats']['spec1']['loadout']);
+        self::assertSame(175, $details['stats']['spec1']['primary']['strength']['total']);
+
+        $achievements = $formatter->formatAchievements($snapshot);
+        self::assertTrue($achievements['available']);
+        self::assertFalse($achievements['complete']);
+        self::assertSame(1, $achievements['earnedCount']);
+        self::assertSame('ICC + RS', $achievements['groups'][0]['title']);
     }
 }
