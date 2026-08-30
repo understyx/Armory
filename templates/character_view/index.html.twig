@@ -11,12 +11,6 @@
     <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
     <script type="module" src="{{ asset('item-tooltip.js') }}"></script>
     <script type="text/javascript" src="https://cdn.cavernoftime.com/api/tooltip.js"></script>
-    {% if characterModel %}
-        <script src="https://code.jquery.com/jquery-3.7.1.min.js"
-                integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
-                crossorigin="anonymous"></script>
-        <script src="https://wow.zamimg.com/modelviewer/live/viewer/viewer.min.js"></script>
-    {% endif %}
 </head>
 <body>
     <div class="armory-wrapper">
@@ -130,6 +124,13 @@
                         <button id="stats-tab" class="character-tab" type="button" role="tab" aria-selected="false" aria-controls="stats-panel" onclick="setCharacterTab('stats', this)">Stats</button>
                         <button id="achievements-tab" class="character-tab" type="button" role="tab" aria-selected="false" aria-controls="achievements-panel" data-achievements-url="{{ path('app_character_achievements', {'characterName': characterName, 'realmName': realmName}) }}" onclick="setCharacterTab('achievements', this)">Achievements</button>
                     </div>
+                    {% if characterModel %}
+                        <label class="model-viewer-setting" for="model-viewer-enabled">
+                            <span>3D model</span>
+                            <input id="model-viewer-enabled" type="checkbox" role="switch" checked>
+                            <span class="model-viewer-setting-track" aria-hidden="true"></span>
+                        </label>
+                    {% endif %}
                     {% if transmogItems is not empty %}
                         <details class="transmog-menu" data-equipment-action>
                             <summary class="btn-transmog">Get transmog</summary>
@@ -159,6 +160,10 @@
                                 <div
                                     id="character-model-viewer"
                                     class="character-model-viewer"
+                                    data-asset-url="{{ path('app_modelviewer_asset', {
+                                        environment: 'live',
+                                        path: '__asset__'
+                                    }) }}"
                                     role="img"
                                     aria-label="Interactive 3D model of {{ characterName }}{% if characterDetails.gender %}, {{ characterDetails.gender|lower }}{% endif %}"
                                 ></div>
@@ -1370,39 +1375,7 @@
 
     {% if characterModel %}
         <script id="character-model-data" type="application/json">{{ characterModel|json_encode|raw }}</script>
-        <script type="module">
-            const status = document.getElementById('character-model-status');
-            const viewer = document.getElementById('character-model-viewer');
-            const hideLoadingStatus = () => status?.remove();
-            const canvasObserver = new MutationObserver(() => {
-                if (viewer.querySelector('canvas')) {
-                    hideLoadingStatus();
-                    canvasObserver.disconnect();
-                }
-            });
-            canvasObserver.observe(viewer, { childList: true, subtree: true });
-
-            try {
-                const assetUrl = {{ path('app_modelviewer_asset', {
-                    environment: 'live',
-                    path: '__asset__'
-                })|json_encode|raw }};
-                window.CONTENT_PATH = new URL(assetUrl.replace('__asset__', ''), window.location.origin).href;
-
-                const character = JSON.parse(document.getElementById('character-model-data').textContent);
-                const { generateModels } = await import('https://cdn.jsdelivr.net/npm/wow-model-viewer@1.5.3/+esm');
-                await generateModels(1.88, '#character-model-viewer', character);
-                hideLoadingStatus();
-                canvasObserver.disconnect();
-            } catch (error) {
-                console.error('Unable to load the character model.', error);
-                canvasObserver.disconnect();
-                if (status?.isConnected) {
-                    status.classList.add('is-error');
-                    status.textContent = '3D model unavailable';
-                }
-            }
-        </script>
+        <script type="module" src="{{ asset('model-viewer.js') }}"></script>
     {% endif %}
 </body>
 </html>

@@ -134,6 +134,9 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringContainsString('href="/guilds/Cadence/Icecrown"', $response->getContent());
         $this->assertStringContainsString('Level 80 Male Human', $response->getContent());
         $this->assertStringContainsString('Interactive 3D model of Understyx, male', $response->getContent());
+        $this->assertStringContainsString('id="model-viewer-enabled" type="checkbox" role="switch"', $response->getContent());
+        $this->assertStringContainsString('<script type="module" src="/assets/model-viewer-', $response->getContent());
+        $this->assertStringNotContainsString('<script src="https://wow.zamimg.com/modelviewer/', $response->getContent());
         $this->assertStringContainsString('class="character-search character-page-search"', $response->getContent());
         $this->assertStringContainsString('action="/characters"', $response->getContent());
         $this->assertStringContainsString('<option value="Icecrown" selected>', $response->getContent());
