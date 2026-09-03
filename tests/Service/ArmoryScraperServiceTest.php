@@ -453,6 +453,43 @@ class ArmoryScraperServiceTest extends TestCase
         );
     }
 
+    public function testCheckGemsReportsAnInactiveMetaGem(): void
+    {
+        $itemDatabase = $this->createMock(\App\Service\ItemDatabaseService::class);
+        $itemDatabase->method('getItem')->with(50001)->willReturn([
+            'type' => ItemTypes::HEAD->value,
+            'name' => 'Meta Helm',
+            'gem_slots' => 1,
+        ]);
+
+        $service = new ArmoryScraperService($itemDatabase);
+
+        $this->assertSame(
+            'Chaotic Skyflare Diamond inactive (requires 3 red; equipped: 0 red, 0 yellow, 0 blue) ❌',
+            $service->checkGems([['id' => 50001, 'gems' => [3621]]])
+        );
+    }
+
+    public function testCheckGemsAcceptsAnActiveMetaGem(): void
+    {
+        $itemDatabase = $this->createMock(\App\Service\ItemDatabaseService::class);
+        $itemDatabase->method('getItem')->willReturnCallback(static fn (int $itemId): array => [
+            'type' => $itemId === 50001 ? ItemTypes::HEAD->value : ItemTypes::RING->value,
+            'name' => 'Gemmed Item',
+            'gem_slots' => $itemId === 50001 ? 1 : 3,
+        ]);
+
+        $service = new ArmoryScraperService($itemDatabase);
+
+        $this->assertSame(
+            'All applicable items are gemmed! ✅',
+            $service->checkGems([
+                ['id' => 50001, 'gems' => [3621]],
+                ['id' => 50002, 'gems' => [3477, 3464, 3371]],
+            ])
+        );
+    }
+
     public function testExtractCharacterModelData(): void
     {
         $service = new ArmoryScraperService();

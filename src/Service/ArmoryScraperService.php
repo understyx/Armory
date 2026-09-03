@@ -134,15 +134,18 @@ class ArmoryScraperService
     private HttpClientInterface $httpClient;
     private ?LoggerInterface $logger;
     private ?ItemDatabaseService $itemDatabaseService;
+    private MetaGemRequirementChecker $metaGemRequirementChecker;
 
     public function __construct(
         ?ItemDatabaseService $itemDatabaseService = null,
         ?LoggerInterface $logger = null,
-        ?HttpClientInterface $httpClient = null
+        ?HttpClientInterface $httpClient = null,
+        ?MetaGemRequirementChecker $metaGemRequirementChecker = null
     ) {
         $this->itemDatabaseService = $itemDatabaseService;
         $this->logger = $logger;
         $this->httpClient = $httpClient ?? HttpClient::create();
+        $this->metaGemRequirementChecker = $metaGemRequirementChecker ?? new MetaGemRequirementChecker();
     }
 
     /**
@@ -1285,10 +1288,19 @@ class ArmoryScraperService
     public function checkGems(array $equippedItemsData): string
     {
         $missingGemsItemNames = [];
+        $allGemIds = [];
+
+        foreach ($equippedItemsData as $itemInstance) {
+            foreach ($itemInstance['gems'] ?? [] as $gemId) {
+                if ((int) $gemId > 0) {
+                    $allGemIds[] = (int) $gemId;
+                }
+            }
+        }
 
         foreach ($equippedItemsData as $itemInstance) {
             $itemId = $itemInstance['id'];
-            $scrapedGemIds = $itemInstance['gems'];
+            $scrapedGemIds = $itemInstance['gems'] ?? [];
 
             $itemDetails = $this->getItemDetails($itemId);
             if ($itemDetails === null) {
@@ -1318,11 +1330,32 @@ class ArmoryScraperService
         }
         $missingGemsItemNames = array_unique($missingGemsItemNames);
 
-        if (empty($missingGemsItemNames)) {
-            return "All applicable items are gemmed! ✅";
-        } else {
-            return "Gems missing from: " . implode(", ", $missingGemsItemNames) . " ❌";
+        $inactiveMetaGems = array_values(array_filter(
+            $this->metaGemRequirementChecker->check($allGemIds),
+            static fn (array $metaGem): bool => !$metaGem['active']
+        ));
+
+        $problems = [];
+        if ($missingGemsItemNames !== []) {
+            $problems[] = 'Gems missing from: '.implode(', ', $missingGemsItemNames);
         }
+        foreach ($inactiveMetaGems as $metaGem) {
+            $colors = $metaGem['colors'];
+            $problems[] = sprintf(
+                '%s inactive (requires %s; equipped: %d red, %d yellow, %d blue)',
+                $metaGem['name'],
+                $metaGem['requirement'],
+                $colors['red'],
+                $colors['yellow'],
+                $colors['blue']
+            );
+        }
+
+        if ($problems === []) {
+            return "All applicable items are gemmed! ✅";
+        }
+
+        return implode('; ', $problems).' ❌';
     }
 
 

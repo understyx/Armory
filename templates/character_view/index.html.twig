@@ -381,7 +381,7 @@
                 <div class="status-card {% if 'missing' in enchantsStatus %}status-warn{% else %}status-ok{% endif %}">
                     <strong>Enchants:</strong> {{ enchantsStatus }}
                 </div>
-                <div class="status-card {% if 'missing' in gemsStatus %}status-warn{% else %}status-ok{% endif %}">
+                <div class="status-card {% if '❌' in gemsStatus %}status-warn{% else %}status-ok{% endif %}">
                     <strong>Gems:</strong> {{ gemsStatus }}
                 </div>
             </div>
