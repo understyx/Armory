@@ -38,8 +38,8 @@
                     <span class="api-method api-method-get">GET</span>
                     <code>/api/character/{name}/{realm}/stats</code>
                 </div>
-                <h2 id="character-stats">Get detailed character stats</h2>
-                <p>Returns the full stat calculation for every specialization, including primary stats, ratings, gear sources, talent modifiers, and assumptions.</p>
+                <h2 id="character-stats">Get character stats</h2>
+                <p>Returns primary stat totals, attack power, spell power, and combat ratings for every specialization. Each rating includes its raw value and converted percentage. Scoped talent hit bonuses are returned separately with lowercase keys.</p>
                 <h3>Example</h3>
                 <pre><code>curl {{ absolute_url('/api/character/Puredecay/Icecrown/stats') }}</code></pre>
             </section>
@@ -71,7 +71,8 @@
                 <ul>
                     <li><code>updatedAt</code> contains the snapshot time in ISO 8601 format.</li>
                     <li>Stat percentages are JSON numbers measured in percentage points; they do not include a <code>%</code> suffix.</li>
-                    <li>Talent hit bonuses retain their scope, such as <code>Spells</code> or <code>Melee and ranged attacks</code>, so conditional bonuses are not presented as universal hit.</li>
+                    <li>Talent hit bonuses retain their scope, such as <code>spells</code> or <code>melee and ranged attacks</code>, so conditional bonuses are not presented as universal hit.</li>
+                    <li>Final hit percentage is <code>ratings.{type}_hit_rating.percent</code> plus the applicable <code>talentHitPercent.{scope}</code> value.</li>
                 </ul>
             </section>
         </div>

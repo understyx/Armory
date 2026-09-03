@@ -91,7 +91,7 @@ class CharacterApiControllerTest extends TestCase
         self::assertSame('Unholy', $payload['uwuLogs']['specName']);
     }
 
-    public function testDedicatedStatsEndpointReturnsFullPerSpecBreakdown(): void
+    public function testDedicatedStatsEndpointReturnsOnlyConsumerFacingValues(): void
     {
         $repository = $this->createMock(CharacterSnapshotRepository::class);
         $repository->method('findByNameAndRealm')->willReturn($this->createSnapshot());
@@ -107,7 +107,16 @@ class CharacterApiControllerTest extends TestCase
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
         self::assertTrue($payload['stats']['spec1']['available']);
-        self::assertArrayHasKey('gearBreakdown', $payload['stats']['spec1']);
+        self::assertSame(175, $payload['stats']['spec1']['primary']['strength']);
+        self::assertSame(0, $payload['stats']['spec1']['attackPower']);
+        self::assertSame(0, $payload['stats']['spec1']['spellPower']);
+        self::assertArrayHasKey('melee_crit_rating', $payload['stats']['spec1']['ratings']);
+        self::assertSame(
+            ['rating', 'percent'],
+            array_keys($payload['stats']['spec1']['ratings']['melee_crit_rating']),
+        );
+        self::assertArrayNotHasKey('gearBreakdown', $payload['stats']['spec1']);
+        self::assertArrayNotHasKey('talentBreakdown', $payload['stats']['spec1']);
     }
 
     public function testDedicatedAchievementsEndpointReturnsCachedProgression(): void

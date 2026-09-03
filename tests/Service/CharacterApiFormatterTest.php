@@ -31,6 +31,8 @@ class CharacterApiFormatterTest extends TestCase
                 'tooltip' => ['stats' => [
                     ['type' => 31, 'value' => 328],
                     ['type' => 37, 'value' => 82],
+                    ['type' => 38, 'value' => 200],
+                    ['type' => 45, 'value' => 150],
                 ]],
             ]])
             ->setProfessions(['Jewelcrafting (450 / 450)', 'Cooking (410)'])
@@ -39,7 +41,10 @@ class CharacterApiFormatterTest extends TestCase
             ->setTalentTreesData([
                 '0' => [[
                     'name' => 'Unholy',
-                    'tiers' => [[['spellId' => 49568, 'pointsText' => '3/3']]],
+                    'tiers' => [[
+                        ['spellId' => 49568, 'pointsText' => '3/3'],
+                        ['spellId' => 49480, 'pointsText' => '5/5'],
+                    ]],
                 ]],
                 '1' => [],
             ])
@@ -103,7 +108,14 @@ class CharacterApiFormatterTest extends TestCase
 
         $details = $formatter->formatDetailedStats($snapshot);
         self::assertSame(1, $details['stats']['spec1']['loadout']);
-        self::assertSame(175, $details['stats']['spec1']['primary']['strength']['total']);
+        self::assertSame(175, $details['stats']['spec1']['primary']['strength']);
+        self::assertSame(328, $details['stats']['spec1']['ratings']['melee_hit_rating']['rating']);
+        self::assertSame(10.0, $details['stats']['spec1']['ratings']['melee_hit_rating']['percent']);
+        self::assertArrayNotHasKey('flatTalentPercent', $details['stats']['spec1']['ratings']['melee_hit_rating']);
+        self::assertSame(250, $details['stats']['spec1']['attackPower']);
+        self::assertSame(150, $details['stats']['spec1']['spellPower']);
+        self::assertSame(['spells' => 3.0], $details['stats']['spec1']['talentHitPercent']);
+        self::assertArrayNotHasKey('gearBreakdown', $details['stats']['spec1']);
 
         $achievements = $formatter->formatAchievements($snapshot);
         self::assertTrue($achievements['available']);

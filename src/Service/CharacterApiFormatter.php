@@ -58,7 +58,7 @@ class CharacterApiFormatter
             $stats[$key] = [
                 'loadout' => $spec['loadout'],
                 'name' => $spec['name'],
-                ...$spec['details'],
+                ...$this->formatStatsApiValues($spec['details']),
             ];
         }
 
@@ -66,6 +66,54 @@ class CharacterApiFormatter
             'updatedAt' => $snapshot->getScrapedAt()?->format(\DateTimeInterface::ATOM),
             'character' => $this->formatCharacterReference($snapshot),
             'stats' => $stats,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $calculated
+     * @return array<string, mixed>
+     */
+    private function formatStatsApiValues(array $calculated): array
+    {
+        if (!($calculated['available'] ?? false)) {
+            return [
+                'available' => false,
+                'reason' => $calculated['reason'] ?? 'Stats are unavailable.',
+            ];
+        }
+
+        $primary = [];
+        foreach ($calculated['primary'] ?? [] as $key => $stat) {
+            if (is_array($stat)) {
+                $primary[(string) $key] = (int) ($stat['total'] ?? 0);
+            }
+        }
+
+        $ratings = [];
+        foreach ($calculated['ratings'] ?? [] as $key => $rating) {
+            if (!is_array($rating)) {
+                continue;
+            }
+
+            $ratings[(string) $key] = [
+                'rating' => (int) ($rating['rating'] ?? 0),
+                'percent' => round((float) ($rating['percent'] ?? 0.0), 2),
+            ];
+        }
+
+        $talentHitPercent = [];
+        foreach ($calculated['hitBonuses'] ?? [] as $scope => $percent) {
+            $talentHitPercent[strtolower((string) $scope)] = round((float) $percent, 2);
+        }
+
+        return [
+            'available' => true,
+            'level' => (int) ($calculated['level'] ?? 0),
+            'primary' => $primary,
+            'attackPower' => (int) ($calculated['secondary']['attack_power']['value'] ?? 0),
+            'spellPower' => (int) ($calculated['secondary']['spell_power']['value'] ?? 0),
+            'ratings' => $ratings,
+            'talentHitPercent' => $talentHitPercent,
         ];
     }
 

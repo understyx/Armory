@@ -166,7 +166,12 @@ GET /api/character/{name}/{realm}/stats
 GET /api/character/{name}/{realm}/achievements
 ```
 
-The stats endpoint returns the calculator's complete per-specialization breakdown.
+The stats endpoint returns only the consumer-facing per-specialization values:
+primary stat totals, attack power, spell power, and combat ratings with their raw
+rating and converted percentage. Scoped talent hit bonuses are returned separately
+as `talentHitPercent` with lowercase keys. Final hit percentage is the relevant
+`ratings.{type}_hit_rating.percent` plus the applicable
+`talentHitPercent.{scope}` value.
 The achievements endpoint returns cached Wrath raid progression grouped by raid and
 size; its `available` field is `false` until achievement categories have been cached,
 and `complete` identifies whether all eight supported categories are present.
