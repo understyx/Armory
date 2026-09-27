@@ -2659,4 +2659,13 @@ class EnchantDatabase
         3882 => '+8 Armor Pen',
         3883 => 'Nerubian Carapace',
     ];
+
+    /**
+     * @return array<int, string>
+     */
+    public static function getAll(): array
+    {
+        return self::ENCHANTS;
+    }
 }
+

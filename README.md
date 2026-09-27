@@ -188,6 +188,22 @@ with a `Retry-After` header. Refreshes are processed by the existing Messenger
 worker, so production must keep `armorystuff-messenger` (or an equivalent
 `messenger:consume async` process) running.
 
+## Public reference API
+
+Bulk reference data endpoints provide canonical WotLK mappings for build tools,
+GitHub Actions, and external UI consumers. All responses are cached for 1 hour
+with public cache headers and include CORS headers:
+
+```http
+GET /api/enchants
+GET /api/gems
+GET /api/glyphs
+```
+
+- `/api/enchants`: Dictionary mapping all 2,663 enchant IDs to display names (e.g. `"3518": "+20 Strength"`).
+- `/api/gems`: Dictionary of cut gems and meta gems keyed by item ID, containing `enchant_id`, `name`, `icon`, `quality`, `spell_id` (active spell / equip aura), `craft_spell_id`, and `effect_spell_id`.
+- `/api/glyphs`: Dictionary of all 350 WotLK glyph items keyed by item ID, containing active glyph aura `spell_id` (matching `GetGlyphSocketInfo`), item `item_spell_id`, `glyph_id`, `name`, `type` (`major`/`minor`), `class_name`, `icon`, and `quality`.
+
 ## Verification
 
 ```bash

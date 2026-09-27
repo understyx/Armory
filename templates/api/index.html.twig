@@ -66,6 +66,39 @@
                 <pre><code>curl -X POST {{ absolute_url('/api/requestupdate/Puredecay/Icecrown') }}</code></pre>
             </section>
 
+            <section class="api-endpoint" aria-labelledby="reference-enchants">
+                <div class="api-endpoint-heading">
+                    <span class="api-method api-method-get">GET</span>
+                    <code>/api/enchants</code>
+                </div>
+                <h2 id="reference-enchants">Get enchant reference data</h2>
+                <p>Returns a dictionary mapping all 3.3.5 enchant IDs to their canonical enchant display names. Cached for 1 hour with public cache headers.</p>
+                <h3>Example</h3>
+                <pre><code>curl {{ absolute_url('/api/enchants') }}</code></pre>
+            </section>
+
+            <section class="api-endpoint" aria-labelledby="reference-gems">
+                <div class="api-endpoint-heading">
+                    <span class="api-method api-method-get">GET</span>
+                    <code>/api/gems</code>
+                </div>
+                <h2 id="reference-gems">Get gem reference data</h2>
+                <p>Returns a dictionary of cut socketable and meta gems keyed by item ID, including enchant ID, canonical name, quality, icon, and active/craft/effect spell IDs. Cached for 1 hour with public cache headers.</p>
+                <h3>Example</h3>
+                <pre><code>curl {{ absolute_url('/api/gems') }}</code></pre>
+            </section>
+
+            <section class="api-endpoint" aria-labelledby="reference-glyphs">
+                <div class="api-endpoint-heading">
+                    <span class="api-method api-method-get">GET</span>
+                    <code>/api/glyphs</code>
+                </div>
+                <h2 id="reference-glyphs">Get glyph reference data</h2>
+                <p>Returns a dictionary of all 350 WotLK glyph items keyed by item ID, mapping each to its active glyph aura spell ID (matching <code>GetGlyphSocketInfo</code> in-game), item learn spell ID, glyph property ID, name, type (major/minor), class, icon, and quality. Cached for 1 hour with public cache headers.</p>
+                <h3>Example</h3>
+                <pre><code>curl {{ absolute_url('/api/glyphs') }}</code></pre>
+            </section>
+
             <section class="api-notes" aria-labelledby="response-notes">
                 <h2 id="response-notes">Response notes</h2>
                 <ul>
