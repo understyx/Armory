@@ -9,6 +9,8 @@ use App\Message\RefreshCharacterSnapshotMessage;
 use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\ArmoryScraperService;
+use App\Service\CharacterRefreshResult;
+use App\Service\CharacterSnapshotUpdater;
 use App\Service\CharacterUpdateThrottle;
 use App\Service\CharacterUpdateThrottleDecision;
 use Psr\Log\LoggerInterface;
@@ -240,6 +242,178 @@ class CharacterViewControllerTest extends KernelTestCase
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
         self::assertStringContainsString('Preparing character', $response->getContent());
         self::assertStringContainsString('/characters/Understyx/Icecrown/load-status', $response->getContent());
+        self::assertStringContainsString('/characters/Understyx/Icecrown/load', $response->getContent());
+    }
+
+    public function testLoadCharacterReturnsReadyWhenSnapshotAlreadyExists(): void
+    {
+        $snapshot = (new CharacterSnapshot())
+            ->setName('Understyx')
+            ->setRealm('Icecrown');
+
+        $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
+        $snapshotRepository->expects(self::once())
+            ->method('findByNameAndRealm')
+            ->with('Understyx', 'Icecrown')
+            ->willReturn($snapshot);
+
+        $controller = new CharacterViewController(
+            $this->createMock(ArmoryScraperService::class),
+            $snapshotRepository,
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $this->createMock(CharacterUpdateThrottle::class),
+        );
+        $controller->setContainer(self::getContainer());
+
+        $response = $controller->loadCharacter('Understyx', 'Icecrown');
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        $data = json_decode($response->getContent(), true);
+        self::assertTrue($data['ready']);
+        self::assertSame('ready', $data['status']);
+        self::assertSame('/characters/Understyx/Icecrown', $data['characterUrl']);
+    }
+
+    public function testLoadCharacterScrapesAndReturnsReadyWhenSnapshotMissing(): void
+    {
+        $snapshot = (new CharacterSnapshot())
+            ->setName('Newchar')
+            ->setRealm('Icecrown');
+
+        $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
+        $snapshotRepository->expects(self::once())
+            ->method('findByNameAndRealm')
+            ->with('Newchar', 'Icecrown')
+            ->willReturn(null);
+
+        $updater = $this->createMock(CharacterSnapshotUpdater::class);
+        $updater->expects(self::once())
+            ->method('refresh')
+            ->with('Newchar', 'Icecrown')
+            ->willReturn(new CharacterRefreshResult(CharacterRefreshResult::UPDATED, $snapshot));
+
+        $controller = new CharacterViewController(
+            $this->createMock(ArmoryScraperService::class),
+            $snapshotRepository,
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $this->createMock(CharacterUpdateThrottle::class),
+            null,
+            null,
+            null,
+            $updater,
+        );
+        $controller->setContainer(self::getContainer());
+
+        $response = $controller->loadCharacter('Newchar', 'Icecrown');
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        $data = json_decode($response->getContent(), true);
+        self::assertTrue($data['ready']);
+        self::assertSame('ready', $data['status']);
+        self::assertSame('/characters/Newchar/Icecrown', $data['characterUrl']);
+    }
+
+    public function testLoadCharacterReturnsNotFoundWhenCharacterDoesNotExist(): void
+    {
+        $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
+        $snapshotRepository->expects(self::once())
+            ->method('findByNameAndRealm')
+            ->with('Missing', 'Icecrown')
+            ->willReturn(null);
+
+        $updater = $this->createMock(CharacterSnapshotUpdater::class);
+        $updater->expects(self::once())
+            ->method('refresh')
+            ->with('Missing', 'Icecrown')
+            ->willReturn(new CharacterRefreshResult(CharacterRefreshResult::NOT_FOUND));
+
+        $controller = new CharacterViewController(
+            $this->createMock(ArmoryScraperService::class),
+            $snapshotRepository,
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $this->createMock(CharacterUpdateThrottle::class),
+            null,
+            null,
+            null,
+            $updater,
+        );
+        $controller->setContainer(self::getContainer());
+
+        $response = $controller->loadCharacter('Missing', 'Icecrown');
+        self::assertSame(Response::HTTP_NOT_FOUND, $response->getStatusCode());
+        $data = json_decode($response->getContent(), true);
+        self::assertFalse($data['ready']);
+        self::assertSame('not_found', $data['status']);
+        self::assertStringContainsString("We couldn't find Missing on Icecrown", $data['message']);
+    }
+
+    public function testLoadCharacterReturnsUnavailableWhenWarmaneIsDown(): void
+    {
+        $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
+        $snapshotRepository->expects(self::once())
+            ->method('findByNameAndRealm')
+            ->with('Timeoutchar', 'Icecrown')
+            ->willReturn(null);
+
+        $updater = $this->createMock(CharacterSnapshotUpdater::class);
+        $updater->expects(self::once())
+            ->method('refresh')
+            ->with('Timeoutchar', 'Icecrown')
+            ->willReturn(new CharacterRefreshResult(CharacterRefreshResult::SOURCE_UNAVAILABLE));
+
+        $controller = new CharacterViewController(
+            $this->createMock(ArmoryScraperService::class),
+            $snapshotRepository,
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $this->createMock(CharacterUpdateThrottle::class),
+            null,
+            null,
+            null,
+            $updater,
+        );
+        $controller->setContainer(self::getContainer());
+
+        $response = $controller->loadCharacter('Timeoutchar', 'Icecrown');
+        self::assertSame(Response::HTTP_BAD_GATEWAY, $response->getStatusCode());
+        $data = json_decode($response->getContent(), true);
+        self::assertFalse($data['ready']);
+        self::assertSame('unavailable', $data['status']);
+        self::assertStringContainsString('Warmane armory is currently unreachable', $data['message']);
+    }
+
+    public function testLoadStatusIncludesCharacterUrlWhenReady(): void
+    {
+        $snapshot = (new CharacterSnapshot())
+            ->setName('Understyx')
+            ->setRealm('Icecrown');
+
+        $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
+        $snapshotRepository->expects(self::once())
+            ->method('findByNameAndRealm')
+            ->with('Understyx', 'Icecrown')
+            ->willReturn($snapshot);
+
+        $controller = new CharacterViewController(
+            $this->createMock(ArmoryScraperService::class),
+            $snapshotRepository,
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $this->createMock(CharacterUpdateThrottle::class),
+        );
+        $controller->setContainer(self::getContainer());
+
+        $response = $controller->loadStatus('Understyx', 'Icecrown');
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        $data = json_decode($response->getContent(), true);
+        self::assertTrue($data['ready']);
+        self::assertSame('/characters/Understyx/Icecrown', $data['characterUrl']);
     }
 
     public function testCachedCharacterWithoutModelNeverTriggersLiveBackfill(): void

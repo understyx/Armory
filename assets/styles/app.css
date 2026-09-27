@@ -3647,9 +3647,64 @@ body {
     to { transform: rotate(360deg); }
 }
 
+.character-loading-progress-bar {
+    width: 100%;
+    max-width: 280px;
+    height: 4px;
+    margin: 0 auto 18px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+}
+
+.character-loading-progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+    border-radius: 999px;
+    animation: loading-progress-indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes loading-progress-indeterminate {
+    0% {
+        left: -40%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+.character-loading-error {
+    margin: 16px 0;
+    padding: 14px 18px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: 10px;
+    color: #fca5a5;
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+.character-search-button.is-loading {
+    opacity: 0.7;
+    pointer-events: none;
+    cursor: wait;
+}
+
+.character-search-button.is-loading svg {
+    animation: loading-spin 0.85s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .character-loading-spinner {
         animation-duration: 1.8s;
+    }
+    .character-loading-progress-fill {
+        animation-duration: 3s;
     }
 }
 

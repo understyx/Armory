@@ -1261,6 +1261,15 @@
         function closeMatchDetails() {
             document.getElementById('match-details-modal').style.display = 'none';
         }
+
+        document.querySelectorAll('form.character-search').forEach(form => {
+            form.addEventListener('submit', () => {
+                const btn = form.querySelector('.character-search-button');
+                if (btn) {
+                    btn.classList.add('is-loading');
+                }
+            });
+        });
     </script>
     <script id="item-tooltip-data" type="application/json">{{ itemTooltips|default({})|json_encode(constant('JSON_HEX_TAG') + constant('JSON_HEX_AMP') + constant('JSON_HEX_APOS') + constant('JSON_HEX_QUOT'))|raw }}</script>
 

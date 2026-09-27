@@ -65,5 +65,16 @@
             <a class="landing-api-link" href="{{ path('api_documentation') }}">API documentation</a>
         </section>
     </main>
+
+    <script>
+        document.querySelectorAll('form.character-search').forEach(form => {
+            form.addEventListener('submit', () => {
+                const btn = form.querySelector('.character-search-button');
+                if (btn) {
+                    btn.classList.add('is-loading');
+                }
+            });
+        });
+    </script>
 </body>
 </html>

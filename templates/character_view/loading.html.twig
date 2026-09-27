@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex">
-    <title>Loading {{ characterName }} — Warmane Armory</title>
+    <title>{{ isRefresh|default(false) ? 'Refreshing' : 'Loading' }} {{ characterName }} — Warmane Armory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
 </head>
 <body>
@@ -12,17 +15,29 @@
         <section
             class="character-loading-card"
             data-status-url="{{ statusUrl }}"
+            data-load-url="{{ loadUrl|default('') }}"
             data-character-url="{{ characterUrl }}"
+            data-is-refresh="{{ isRefresh|default(false) ? '1' : '0' }}"
             aria-labelledby="loading-character-title"
         >
-            <div class="character-loading-spinner" aria-hidden="true"></div>
-            <p class="character-loading-eyebrow">Preparing character</p>
+            <div id="loading-spinner" class="character-loading-spinner" aria-hidden="true"></div>
+            <p class="character-loading-eyebrow">{{ isRefresh|default(false) ? 'Refreshing character' : 'Preparing character' }}</p>
             <h1 id="loading-character-title">{{ characterName }}</h1>
             <p class="character-loading-realm">{{ realmName }}</p>
+
+            <div class="character-loading-progress-bar" aria-hidden="true">
+                <div class="character-loading-progress-fill"></div>
+            </div>
+
             <p id="character-loading-status" class="character-loading-status" role="status" aria-live="polite">
-                Fetching a fresh snapshot. This page will continue automatically.
+                Connecting to Warmane Armory…
             </p>
-            <a class="character-loading-home" href="{{ path('app_homepage') }}">Back to search</a>
+
+            <div id="character-loading-error-box" class="character-loading-error" style="display: none;"></div>
+
+            <div class="character-loading-actions">
+                <a id="character-loading-home-btn" class="character-loading-home" href="{{ path('app_homepage') }}">Back to search</a>
+            </div>
         </section>
     </main>
 
@@ -30,38 +45,113 @@
         (() => {
             const card = document.querySelector('.character-loading-card');
             const status = document.getElementById('character-loading-status');
-            const delays = [1200, 1800, 2800, 4200, 6000, 8000, 10000];
-            let attempt = 0;
+            const spinner = document.getElementById('loading-spinner');
+            const progressBar = card.querySelector('.character-loading-progress-bar');
+            const errorBox = document.getElementById('character-loading-error-box');
+            const isRefresh = card.dataset.isRefresh === '1';
 
-            const check = async () => {
+            const stages = isRefresh ? [
+                'Checking Warmane Armory for updates…',
+                'Fetching latest gear, enchants, and talents…',
+                'Checking PvP statistics and match history…',
+                'Recalculating stats and gear score…',
+                'Finalizing snapshot…'
+            ] : [
+                'Connecting to Warmane Armory…',
+                'Fetching character profile and equipment…',
+                'Reading talents, glyphs, and PvP stats…',
+                'Calculating gear score and stats…',
+                'Finalizing character snapshot…'
+            ];
+
+            let stageIndex = 0;
+            status.textContent = stages[0];
+
+            const stageTimer = setInterval(() => {
+                stageIndex++;
+                if (stageIndex < stages.length) {
+                    status.textContent = stages[stageIndex];
+                } else if (stageIndex === stages.length) {
+                    status.textContent = 'Warmane Armory is taking longer than usual to respond, still working…';
+                }
+            }, 2600);
+
+            let completed = false;
+
+            const onComplete = (redirectUrl) => {
+                if (completed) return;
+                completed = true;
+                clearInterval(stageTimer);
+                status.textContent = isRefresh ? 'Data updated! Opening profile…' : 'Character ready! Opening profile…';
+                const target = redirectUrl || card.dataset.characterUrl;
+                setTimeout(() => {
+                    window.location.replace(target);
+                }, 250);
+            };
+
+            const onError = (message) => {
+                if (completed) return;
+                completed = true;
+                clearInterval(stageTimer);
+                spinner.style.display = 'none';
+                if (progressBar) progressBar.style.display = 'none';
+                status.style.display = 'none';
+                errorBox.textContent = message || 'An error occurred while loading this character.';
+                errorBox.style.display = 'block';
+            };
+
+            // Fast status polling to catch background worker or concurrent completion
+            const pollStatus = async () => {
+                if (completed || !card.dataset.statusUrl) return;
                 try {
                     const response = await fetch(card.dataset.statusUrl, {
                         headers: {'Accept': 'application/json'},
                         cache: 'no-store'
                     });
-                    const result = await response.json();
-                    if (result.ready) {
-                        status.textContent = 'Character ready. Opening profile…';
-                        window.location.replace(card.dataset.characterUrl);
-                        return;
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.ready) {
+                            onComplete(data.characterUrl);
+                            return;
+                        }
                     }
-                } catch (error) {
-                    // A transient status failure should not restart the upstream request.
+                } catch (e) {
+                    // Ignore transient network errors during status polling
                 }
-
-                if (attempt >= delays.length) {
-                    status.textContent = 'This is taking longer than expected. ';
-                    const retryLink = document.createElement('a');
-                    retryLink.href = card.dataset.characterUrl;
-                    retryLink.textContent = 'Try opening the profile';
-                    status.append(retryLink, ' or return to search.');
-                    return;
+                if (!completed) {
+                    setTimeout(pollStatus, 1500);
                 }
-
-                window.setTimeout(check, delays[attempt++]);
             };
 
-            window.setTimeout(check, delays[attempt++]);
+            // Trigger active load (ensures loading works even without background workers)
+            const triggerLoad = async () => {
+                if (!card.dataset.loadUrl) return;
+                try {
+                    const response = await fetch(card.dataset.loadUrl, {
+                        headers: {'Accept': 'application/json'},
+                        cache: 'no-store'
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (response.ok && data.ready) {
+                        onComplete(data.characterUrl);
+                    } else if (response.status === 404 || data.status === 'not_found') {
+                        onError(data.message || 'Character not found on Warmane armory (must be level 10+).');
+                    } else if (response.status === 503 || data.status === 'unavailable') {
+                        onError(data.message || 'Warmane armory is currently unreachable. Please try again in a few moments.');
+                    } else {
+                        onError(data.message || 'Could not retrieve character data.');
+                    }
+                } catch (e) {
+                    setTimeout(() => {
+                        if (!completed) {
+                            onError('Network connection error while communicating with server.');
+                        }
+                    }, 10000);
+                }
+            };
+
+            triggerLoad();
+            setTimeout(pollStatus, 1400);
         })();
     </script>
 </body>

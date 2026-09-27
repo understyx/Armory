@@ -7,8 +7,10 @@ use App\Message\RefreshCharacterSnapshotMessage;
 use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\ArmoryScraperService;
-use App\Service\CharacterUpdateThrottle;
+use App\Service\CharacterRefreshResult;
+use App\Service\CharacterSnapshotUpdater;
 use App\Service\CharacterStatCalculator;
+use App\Service\CharacterUpdateThrottle;
 use App\Service\PaperdollService;
 use App\Service\TalentTreeService;
 use Psr\Log\LoggerInterface;
@@ -38,6 +40,7 @@ class CharacterViewController extends AbstractController
         private readonly ?UwuLogRankRepository $uwuRankRepository = null,
         private readonly ?CharacterStatCalculator $characterStatCalculator = null,
         private readonly ?MessageBusInterface $messageBus = null,
+        private readonly ?CharacterSnapshotUpdater $snapshotUpdater = null,
     ) {
     }
 
@@ -235,13 +238,85 @@ class CharacterViewController extends AbstractController
         return new JsonResponse($details);
     }
 
+    #[Route('/characters/{characterName}/{realmName}/load', name: 'app_character_load', methods: ['GET', 'POST'])]
+    #[Route('/character/{characterName}/{realmName}/load', name: 'app_character_load_legacy', methods: ['GET', 'POST'])]
+    public function loadCharacter(string $characterName, string $realmName): JsonResponse
+    {
+        $characterName = trim($characterName);
+        $realmName = trim($realmName);
+
+        $existingSnapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
+        if ($existingSnapshot !== null) {
+            return new JsonResponse([
+                'ready' => true,
+                'status' => 'ready',
+                'characterUrl' => $this->generateUrl('app_character_view', [
+                    'characterName' => $characterName,
+                    'realmName' => $realmName,
+                ]),
+            ], Response::HTTP_OK, ['Cache-Control' => 'no-store']);
+        }
+
+        if ($this->snapshotUpdater !== null) {
+            $result = $this->snapshotUpdater->refresh($characterName, $realmName);
+            if ($result->status === CharacterRefreshResult::NOT_FOUND) {
+                return new JsonResponse([
+                    'ready' => false,
+                    'status' => 'not_found',
+                    'message' => sprintf("We couldn't find %s on %s, or the character does not meet the minimum required level.", $characterName, $realmName),
+                ], Response::HTTP_NOT_FOUND, ['Cache-Control' => 'no-store']);
+            }
+
+            if ($result->status === CharacterRefreshResult::SOURCE_UNAVAILABLE) {
+                return new JsonResponse([
+                    'ready' => false,
+                    'status' => 'unavailable',
+                    'message' => 'Warmane armory is currently unreachable. Please try again in a moment.',
+                ], Response::HTTP_BAD_GATEWAY, ['Cache-Control' => 'no-store']);
+            }
+
+            return new JsonResponse([
+                'ready' => true,
+                'status' => 'ready',
+                'characterUrl' => $this->generateUrl('app_character_view', [
+                    'characterName' => $characterName,
+                    'realmName' => $realmName,
+                ]),
+            ], Response::HTTP_OK, ['Cache-Control' => 'no-store']);
+        }
+
+        $scrapeResult = $this->scrapeAndSave($characterName, $realmName);
+        if ($scrapeResult['status'] === 'error') {
+            return new JsonResponse([
+                'ready' => false,
+                'status' => 'not_found',
+                'message' => sprintf("We couldn't find %s on %s, or the character does not meet the minimum required level.", $characterName, $realmName),
+            ], Response::HTTP_NOT_FOUND, ['Cache-Control' => 'no-store']);
+        }
+
+        return new JsonResponse([
+            'ready' => true,
+            'status' => 'ready',
+            'characterUrl' => $this->generateUrl('app_character_view', [
+                'characterName' => $characterName,
+                'realmName' => $realmName,
+            ]),
+        ], Response::HTTP_OK, ['Cache-Control' => 'no-store']);
+    }
+
     #[Route('/characters/{characterName}/{realmName}/load-status', name: 'app_character_load_status', methods: ['GET'])]
     #[Route('/character/{characterName}/{realmName}/load-status', name: 'app_character_load_status_legacy', methods: ['GET'])]
     public function loadStatus(string $characterName, string $realmName): JsonResponse
     {
         $snapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
         $response = new JsonResponse(
-            ['ready' => $snapshot !== null],
+            [
+                'ready' => $snapshot !== null,
+                'characterUrl' => $this->generateUrl('app_character_view', [
+                    'characterName' => $characterName,
+                    'realmName' => $realmName,
+                ]),
+            ],
             $snapshot !== null ? Response::HTTP_OK : Response::HTTP_ACCEPTED,
         );
         $response->headers->set('Cache-Control', 'no-store');
@@ -424,24 +499,31 @@ class CharacterViewController extends AbstractController
         string $characterName,
         string $realmName,
         string $targetRoute = 'app_character_view',
+        bool $isRefresh = false,
     ): Response {
         $decision = $this->updateThrottle->claim($characterName, $realmName);
         if ($decision->accepted) {
             $this->messageBus?->dispatch(new RefreshCharacterSnapshotMessage($characterName, $realmName));
         }
 
-        return $this->renderLoadingPage($characterName, $realmName, $targetRoute);
+        return $this->renderLoadingPage($characterName, $realmName, $targetRoute, $isRefresh);
     }
 
     private function renderLoadingPage(
         string $characterName,
         string $realmName,
         string $targetRoute = 'app_character_view',
+        bool $isRefresh = false,
     ): Response {
         $response = $this->render('character_view/loading.html.twig', [
             'characterName' => $characterName,
             'realmName' => $realmName,
+            'isRefresh' => $isRefresh,
             'statusUrl' => $this->generateUrl('app_character_load_status', [
+                'characterName' => $characterName,
+                'realmName' => $realmName,
+            ]),
+            'loadUrl' => $this->generateUrl('app_character_load', [
                 'characterName' => $characterName,
                 'realmName' => $realmName,
             ]),
