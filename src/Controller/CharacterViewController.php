@@ -502,11 +502,13 @@ class CharacterViewController extends AbstractController
         bool $isRefresh = false,
     ): Response {
         $decision = $this->updateThrottle->claim($characterName, $realmName);
+        $isQueued = false;
         if ($decision->accepted) {
             $this->messageBus?->dispatch(new RefreshCharacterSnapshotMessage($characterName, $realmName));
+            $isQueued = true;
         }
 
-        return $this->renderLoadingPage($characterName, $realmName, $targetRoute, $isRefresh);
+        return $this->renderLoadingPage($characterName, $realmName, $targetRoute, $isRefresh, $isQueued);
     }
 
     private function renderLoadingPage(
@@ -514,11 +516,13 @@ class CharacterViewController extends AbstractController
         string $realmName,
         string $targetRoute = 'app_character_view',
         bool $isRefresh = false,
+        bool $isQueued = false,
     ): Response {
         $response = $this->render('character_view/loading.html.twig', [
             'characterName' => $characterName,
             'realmName' => $realmName,
             'isRefresh' => $isRefresh,
+            'isQueued' => $isQueued,
             'statusUrl' => $this->generateUrl('app_character_load_status', [
                 'characterName' => $characterName,
                 'realmName' => $realmName,

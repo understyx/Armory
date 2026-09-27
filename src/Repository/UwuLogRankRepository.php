@@ -34,8 +34,8 @@ class UwuLogRankRepository extends ServiceEntityRepository
     public function findCached(string $name, string $realm, string $spec, \DateTimeImmutable $cutoff): ?UwuLogRank
     {
         return $this->createQueryBuilder('r')
-            ->where('LOWER(r.name) = LOWER(:name)')
-            ->andWhere('LOWER(r.realm) = LOWER(:realm)')
+            ->where('r.name = :name')
+            ->andWhere('r.realm = :realm')
             ->andWhere('r.spec = :spec')
             ->andWhere('r.scrapedAt >= :cutoff')
             ->setParameter('name', trim($name))
@@ -49,8 +49,8 @@ class UwuLogRankRepository extends ServiceEntityRepository
     public function findBest(string $name, string $realm): ?UwuLogRank
     {
         $rows = $this->createQueryBuilder('r')
-            ->where('LOWER(r.name) = LOWER(:name)')
-            ->andWhere('LOWER(r.realm) = LOWER(:realm)')
+            ->where('r.name = :name')
+            ->andWhere('r.realm = :realm')
             ->setParameter('name', trim($name))
             ->setParameter('realm', trim($realm))
             ->getQuery()
@@ -74,9 +74,9 @@ class UwuLogRankRepository extends ServiceEntityRepository
         }
 
         $rows = $this->createQueryBuilder('r')
-            ->where('LOWER(r.name) IN (:names)')
-            ->andWhere('LOWER(r.realm) = LOWER(:realm)')
-            ->setParameter('names', array_values(array_unique(array_map(static fn(string $name): string => strtolower($name), $names))))
+            ->where('r.name IN (:names)')
+            ->andWhere('r.realm = :realm')
+            ->setParameter('names', array_values(array_unique($names)))
             ->setParameter('realm', trim($realm))
             ->getQuery()
             ->getResult();

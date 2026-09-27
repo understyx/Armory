@@ -18,6 +18,7 @@
             data-load-url="{{ loadUrl|default('') }}"
             data-character-url="{{ characterUrl }}"
             data-is-refresh="{{ isRefresh|default(false) ? '1' : '0' }}"
+            data-is-queued="{{ isQueued|default(false) ? '1' : '0' }}"
             aria-labelledby="loading-character-title"
         >
             <div id="loading-spinner" class="character-loading-spinner" aria-hidden="true"></div>
@@ -100,6 +101,8 @@
                 errorBox.style.display = 'block';
             };
 
+            const isQueued = card.dataset.isQueued === '1';
+
             // Fast status polling to catch background worker or concurrent completion
             const pollStatus = async () => {
                 if (completed || !card.dataset.statusUrl) return;
@@ -119,13 +122,15 @@
                     // Ignore transient network errors during status polling
                 }
                 if (!completed) {
-                    setTimeout(pollStatus, 1500);
+                    setTimeout(pollStatus, 1000);
                 }
             };
 
             // Trigger active load (ensures loading works even without background workers)
+            let loadTriggered = false;
             const triggerLoad = async () => {
-                if (!card.dataset.loadUrl) return;
+                if (completed || loadTriggered || !card.dataset.loadUrl) return;
+                loadTriggered = true;
                 try {
                     const response = await fetch(card.dataset.loadUrl, {
                         headers: {'Accept': 'application/json'},
@@ -150,8 +155,16 @@
                 }
             };
 
-            triggerLoad();
-            setTimeout(pollStatus, 1400);
+            // Start status polling immediately
+            pollStatus();
+
+            // If task is queued to an active background worker, delay fallback load trigger
+            // to prevent concurrent duplicate requests to Warmane Armory (429s).
+            if (isQueued) {
+                setTimeout(triggerLoad, 4500);
+            } else {
+                triggerLoad();
+            }
         })();
     </script>
 </body>

@@ -241,6 +241,7 @@ class CharacterViewControllerTest extends KernelTestCase
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
         self::assertStringContainsString('Preparing character', $response->getContent());
+        self::assertStringContainsString('data-is-queued="1"', $response->getContent());
         self::assertStringContainsString('/characters/Understyx/Icecrown/load-status', $response->getContent());
         self::assertStringContainsString('/characters/Understyx/Icecrown/load', $response->getContent());
     }

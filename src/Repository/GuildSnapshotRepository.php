@@ -17,8 +17,8 @@ class GuildSnapshotRepository extends ServiceEntityRepository
     public function findByNameAndRealm(string $name, string $realm): ?GuildSnapshot
     {
         return $this->createQueryBuilder('g')
-            ->where('LOWER(g.name) = LOWER(:name)')
-            ->andWhere('LOWER(g.realm) = LOWER(:realm)')
+            ->where('g.name = :name')
+            ->andWhere('g.realm = :realm')
             ->setParameter('name', trim($name))
             ->setParameter('realm', trim($realm))
             ->getQuery()

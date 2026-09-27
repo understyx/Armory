@@ -19,8 +19,8 @@ class CharacterSnapshotRepository extends ServiceEntityRepository
     public function findByNameAndRealm(string $name, string $realm): ?CharacterSnapshot
     {
         return $this->createQueryBuilder('c')
-            ->where('LOWER(c.name) = LOWER(:name)')
-            ->andWhere('LOWER(c.realm) = LOWER(:realm)')
+            ->where('c.name = :name')
+            ->andWhere('c.realm = :realm')
             ->setParameter('name', trim($name))
             ->setParameter('realm', trim($realm))
             ->getQuery()
