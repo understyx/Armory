@@ -5,6 +5,7 @@ namespace App\Tests\Controller;
 use App\Controller\CharacterViewController;
 use App\Entity\CharacterSnapshot;
 use App\Entity\UwuLogRank;
+use App\Message\RefreshCharacterSnapshotMessage;
 use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\ArmoryScraperService;
@@ -16,6 +17,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 class CharacterViewControllerTest extends KernelTestCase
 {
@@ -145,7 +148,7 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringContainsString('Get transmog', $response->getContent());
         $this->assertStringContainsString('https://wotlk.evowow.com/?item=60001', $response->getContent());
         $this->assertStringContainsString('<script type="module" src="/assets/item-tooltip-', $response->getContent());
-        $this->assertStringContainsString('<script type="text/javascript" src="https://cdn.cavernoftime.com/api/tooltip.js"></script>', $response->getContent());
+        $this->assertStringNotContainsString('https://cdn.cavernoftime.com/api/tooltip.js', $response->getContent());
         $this->assertStringNotContainsString('rel="item=', $response->getContent());
         $this->assertStringContainsString('Crown of Purple Testing', $response->getContent());
         $this->assertStringContainsString('Fetch rankings from Uwu-logs', $response->getContent());
@@ -188,6 +191,92 @@ class CharacterViewControllerTest extends KernelTestCase
         self::assertStringContainsString('/characters/Puredecay/Icecrown/achievements/togc', $content);
         self::assertStringNotContainsString('Bane of the Fallen King', $content);
         self::assertStringContainsString('https://armory.warmane.com/character/Puredecay/Icecrown/achievements', $content);
+    }
+
+    public function testMissingCharacterQueuesOneBackgroundRefreshAndRendersLoadingPage(): void
+    {
+        $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
+        $snapshotRepository->expects(self::once())
+            ->method('findByNameAndRealm')
+            ->with('Understyx', 'Icecrown')
+            ->willReturn(null);
+
+        $scraper = $this->createMock(ArmoryScraperService::class);
+        $scraper->expects(self::never())->method('fetchArmoryHtml');
+        $throttle = $this->createMock(CharacterUpdateThrottle::class);
+        $throttle->expects(self::once())
+            ->method('claim')
+            ->with('Understyx', 'Icecrown')
+            ->willReturn(new CharacterUpdateThrottleDecision(true, new \DateTimeImmutable('+5 minutes')));
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->expects(self::once())
+            ->method('dispatch')
+            ->with(self::callback(static fn (object $message): bool => $message instanceof RefreshCharacterSnapshotMessage
+                && $message->characterName === 'Understyx'
+                && $message->realmName === 'Icecrown'))
+            ->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
+
+        $controller = new CharacterViewController(
+            $scraper,
+            $snapshotRepository,
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $throttle,
+            null,
+            null,
+            $bus,
+        );
+        $controller->setContainer(self::getContainer());
+
+        $response = $controller->viewCharacter('Understyx', 'Icecrown');
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertStringContainsString('Preparing character', $response->getContent());
+        self::assertStringContainsString('/characters/Understyx/Icecrown/load-status', $response->getContent());
+    }
+
+    public function testCachedCharacterWithoutModelNeverTriggersLiveBackfill(): void
+    {
+        $snapshot = (new CharacterSnapshot())
+            ->setName('Understyx')
+            ->setRealm('Icecrown')
+            ->setLevel(80)
+            ->setRace('Human')
+            ->setClass('Death Knight')
+            ->setGearScore(6000)
+            ->setAvgIlvl(264.5)
+            ->setProfessions([])
+            ->setSpecializations([])
+            ->setEquippedItems([])
+            ->setCharacterModel(null)
+            ->setTalentStrings([])
+            ->setGlyphs([])
+            ->setEnchantsStatus('')
+            ->setGemsStatus('')
+            ->setKillStats([])
+            ->setScrapedAt(new \DateTimeImmutable());
+
+        $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
+        $snapshotRepository->method('findByNameAndRealm')->willReturn($snapshot);
+        $snapshotRepository->expects(self::never())->method('save');
+        $scraper = $this->createMock(ArmoryScraperService::class);
+        $scraper->expects(self::never())->method('fetchArmoryHtml');
+
+        $controller = new CharacterViewController(
+            $scraper,
+            $snapshotRepository,
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $this->createMock(CharacterUpdateThrottle::class),
+        );
+        $controller->setContainer(self::getContainer());
+
+        $response = $controller->viewCharacter('Understyx', 'Icecrown');
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertStringContainsString('Refresh character data to load the 3D model.', $response->getContent());
     }
 
     public function testIccAchievementGroupFetchesOnlyItsCategoriesAndRendersResult(): void

@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\CharacterSnapshot;
+use App\Message\RefreshCharacterSnapshotMessage;
 use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\ArmoryScraperService;
@@ -15,6 +16,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 class CharacterViewController extends AbstractController
@@ -35,6 +37,7 @@ class CharacterViewController extends AbstractController
         private readonly CharacterUpdateThrottle $updateThrottle,
         private readonly ?UwuLogRankRepository $uwuRankRepository = null,
         private readonly ?CharacterStatCalculator $characterStatCalculator = null,
+        private readonly ?MessageBusInterface $messageBus = null,
     ) {
     }
 
@@ -46,6 +49,10 @@ class CharacterViewController extends AbstractController
         $warningMessage = null;
 
         if ($snapshot === null) {
+            if ($this->messageBus !== null) {
+                return $this->queueCharacterLoad($characterName, $realmName);
+            }
+
             // Scrape fresh
             $scrapeResult = $this->scrapeAndSave($characterName, $realmName);
             if ($scrapeResult['status'] === 'error') {
@@ -57,16 +64,6 @@ class CharacterViewController extends AbstractController
                 ], new Response(status: Response::HTTP_NOT_FOUND));
             }
             $snapshot = $scrapeResult['snapshot'];
-        } elseif ($snapshot->getCharacterModel() === null) {
-            // Backfill snapshots created before 3D model data was persisted.
-            $profileHtml = $this->armoryScraperService->fetchArmoryHtml($characterName, $realmName, 'summary');
-            if ($profileHtml !== null) {
-                $characterModel = $this->armoryScraperService->extractCharacterModelData($profileHtml);
-                if ($characterModel !== null) {
-                    $snapshot->setCharacterModel($characterModel);
-                    $this->snapshotRepository->save($snapshot);
-                }
-            }
         }
 
         $now = new \DateTimeImmutable();
@@ -87,6 +84,10 @@ class CharacterViewController extends AbstractController
     {
         $snapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
         if ($snapshot === null) {
+            if ($this->messageBus !== null) {
+                return $this->queueCharacterLoad($characterName, $realmName, 'app_character_stats');
+            }
+
             $scrapeResult = $this->scrapeAndSave($characterName, $realmName);
             if ($scrapeResult['status'] === 'error') {
                 return $this->render('character_view/not_found.html.twig', [
@@ -146,6 +147,22 @@ class CharacterViewController extends AbstractController
         }
 
         $existingSnapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
+
+        if ($this->messageBus !== null) {
+            $this->messageBus->dispatch(new RefreshCharacterSnapshotMessage($characterName, $realmName));
+
+            if ($existingSnapshot === null) {
+                return $this->renderLoadingPage($characterName, $realmName);
+            }
+
+            $this->addFlash('success', 'Character refresh queued. Showing saved data while it updates.');
+
+            return $this->redirectToRoute('app_character_view', [
+                'characterName' => $characterName,
+                'realmName' => $realmName,
+            ]);
+        }
+
         $scrapeResult = $this->scrapeAndSave($characterName, $realmName);
 
         if ($scrapeResult['status'] === 'error') {
@@ -184,6 +201,20 @@ class CharacterViewController extends AbstractController
     {
         $details = $this->armoryScraperService->fetchMatchDetails($characterName, $realmName, $gameId);
         return new JsonResponse($details);
+    }
+
+    #[Route('/characters/{characterName}/{realmName}/load-status', name: 'app_character_load_status', methods: ['GET'])]
+    #[Route('/character/{characterName}/{realmName}/load-status', name: 'app_character_load_status_legacy', methods: ['GET'])]
+    public function loadStatus(string $characterName, string $realmName): JsonResponse
+    {
+        $snapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
+        $response = new JsonResponse(
+            ['ready' => $snapshot !== null],
+            $snapshot !== null ? Response::HTTP_OK : Response::HTTP_ACCEPTED,
+        );
+        $response->headers->set('Cache-Control', 'no-store');
+
+        return $response;
     }
 
     #[Route('/characters/{characterName}/{realmName}/achievements', name: 'app_character_achievements', methods: ['GET'])]
@@ -355,6 +386,41 @@ class CharacterViewController extends AbstractController
             'status' => $updated ? 'success' : 'unchanged',
             'snapshot' => $snapshot,
         ];
+    }
+
+    private function queueCharacterLoad(
+        string $characterName,
+        string $realmName,
+        string $targetRoute = 'app_character_view',
+    ): Response {
+        $decision = $this->updateThrottle->claim($characterName, $realmName);
+        if ($decision->accepted) {
+            $this->messageBus?->dispatch(new RefreshCharacterSnapshotMessage($characterName, $realmName));
+        }
+
+        return $this->renderLoadingPage($characterName, $realmName, $targetRoute);
+    }
+
+    private function renderLoadingPage(
+        string $characterName,
+        string $realmName,
+        string $targetRoute = 'app_character_view',
+    ): Response {
+        $response = $this->render('character_view/loading.html.twig', [
+            'characterName' => $characterName,
+            'realmName' => $realmName,
+            'statusUrl' => $this->generateUrl('app_character_load_status', [
+                'characterName' => $characterName,
+                'realmName' => $realmName,
+            ]),
+            'characterUrl' => $this->generateUrl($targetRoute, [
+                'characterName' => $characterName,
+                'realmName' => $realmName,
+            ]),
+        ]);
+        $response->headers->set('Cache-Control', 'no-store');
+
+        return $response;
     }
 
     private function renderCharacterView(CharacterSnapshot $snapshot, ?int $staleAgeDays = null, ?string $warningMessage = null): Response

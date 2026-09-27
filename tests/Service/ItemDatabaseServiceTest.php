@@ -69,6 +69,21 @@ class ItemDatabaseServiceTest extends TestCase
         $this->assertNull($service->getItem(999999));
     }
 
+    public function testMissingIconDoesNotTriggerALiveLookup(): void
+    {
+        $item = (new WowItem())
+            ->setItemId(51133)
+            ->setName('Sanctified Scourgelord Helmet')
+            ->setIcon(null);
+
+        $repo = $this->createMock(WowItemRepository::class);
+        $repo->method('findByItemId')->with(51133)->willReturn($item);
+        $result = (new ItemDatabaseService($repo))->getItem(51133);
+
+        self::assertNotNull($result);
+        self::assertNull($result['icon']);
+    }
+
     public function testMissingSpecialEffectIsQueuedWithoutBlockingItemLoad(): void
     {
         $item = new WowItem();
@@ -97,7 +112,7 @@ class ItemDatabaseServiceTest extends TestCase
                 && $message->itemId === 50363))
             ->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
 
-        $result = (new ItemDatabaseService($items, null, $enrichment, $bus))->getItem(50363);
+        $result = (new ItemDatabaseService($items, $enrichment, $bus))->getItem(50363);
 
         self::assertNotNull($result);
         self::assertSame([], $result['external_effects']);

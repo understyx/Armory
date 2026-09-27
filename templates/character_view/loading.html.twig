@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>Loading {{ characterName }} — Warmane Armory</title>
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+</head>
+<body>
+    <main class="character-loading-page">
+        <section
+            class="character-loading-card"
+            data-status-url="{{ statusUrl }}"
+            data-character-url="{{ characterUrl }}"
+            aria-labelledby="loading-character-title"
+        >
+            <div class="character-loading-spinner" aria-hidden="true"></div>
+            <p class="character-loading-eyebrow">Preparing character</p>
+            <h1 id="loading-character-title">{{ characterName }}</h1>
+            <p class="character-loading-realm">{{ realmName }}</p>
+            <p id="character-loading-status" class="character-loading-status" role="status" aria-live="polite">
+                Fetching a fresh snapshot. This page will continue automatically.
+            </p>
+            <a class="character-loading-home" href="{{ path('app_homepage') }}">Back to search</a>
+        </section>
+    </main>
+
+    <script>
+        (() => {
+            const card = document.querySelector('.character-loading-card');
+            const status = document.getElementById('character-loading-status');
+            const delays = [1200, 1800, 2800, 4200, 6000, 8000, 10000];
+            let attempt = 0;
+
+            const check = async () => {
+                try {
+                    const response = await fetch(card.dataset.statusUrl, {
+                        headers: {'Accept': 'application/json'},
+                        cache: 'no-store'
+                    });
+                    const result = await response.json();
+                    if (result.ready) {
+                        status.textContent = 'Character ready. Opening profile…';
+                        window.location.replace(card.dataset.characterUrl);
+                        return;
+                    }
+                } catch (error) {
+                    // A transient status failure should not restart the upstream request.
+                }
+
+                if (attempt >= delays.length) {
+                    status.textContent = 'This is taking longer than expected. ';
+                    const retryLink = document.createElement('a');
+                    retryLink.href = card.dataset.characterUrl;
+                    retryLink.textContent = 'Try opening the profile';
+                    status.append(retryLink, ' or return to search.');
+                    return;
+                }
+
+                window.setTimeout(check, delays[attempt++]);
+            };
+
+            window.setTimeout(check, delays[attempt++]);
+        })();
+    </script>
+</body>
+</html>

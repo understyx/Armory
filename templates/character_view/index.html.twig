@@ -10,7 +10,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
     <script type="module" src="{{ asset('item-tooltip.js') }}"></script>
-    <script type="text/javascript" src="https://cdn.cavernoftime.com/api/tooltip.js"></script>
 </head>
 <body>
     <div class="armory-wrapper">
@@ -127,7 +126,7 @@
                     {% if characterModel %}
                         <label class="model-viewer-setting" for="model-viewer-enabled">
                             <span>3D model</span>
-                            <input id="model-viewer-enabled" type="checkbox" role="switch" checked>
+                            <input id="model-viewer-enabled" type="checkbox" role="switch">
                             <span class="model-viewer-setting-track" aria-hidden="true"></span>
                         </label>
                     {% endif %}
@@ -160,6 +159,7 @@
                                 <div
                                     id="character-model-viewer"
                                     class="character-model-viewer"
+                                    hidden
                                     data-asset-url="{{ path('app_modelviewer_asset', {
                                         environment: 'live',
                                         path: '__asset__'
@@ -168,8 +168,7 @@
                                     aria-label="Interactive 3D model of {{ characterName }}{% if characterDetails.gender %}, {{ characterDetails.gender|lower }}{% endif %}"
                                 ></div>
                                 <div id="character-model-status" class="character-model-status" role="status">
-                                    <span class="model-loading-spinner" aria-hidden="true"></span>
-                                    Loading 3D model…
+                                    Enable the 3D model to load it
                                 </div>
                             {% else %}
                                 <div class="character-model-status is-unavailable">

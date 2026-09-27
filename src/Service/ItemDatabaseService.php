@@ -12,7 +12,6 @@ class ItemDatabaseService
 {
     public function __construct(
         private readonly WowItemRepository $wowItemRepository,
-        private readonly ?ItemIconResolverService $iconResolverService = null,
         private readonly ?TooltipEnrichmentRepository $tooltipEnrichmentRepository = null,
         private readonly ?MessageBusInterface $messageBus = null,
     ) {
@@ -26,13 +25,6 @@ class ItemDatabaseService
         }
 
         $formatted = $this->formatItem($item);
-        if (empty($formatted['icon']) && $this->iconResolverService !== null) {
-            $resolvedIcon = $this->iconResolverService->resolveIcon($itemId);
-            if ($resolvedIcon !== null) {
-                $formatted['icon'] = $resolvedIcon;
-            }
-        }
-
         $items = [$itemId => $formatted];
         $this->applyTooltipEnrichment($items);
 
@@ -47,23 +39,10 @@ class ItemDatabaseService
     {
         $items = $this->wowItemRepository->findByItemIds($itemIds);
         $result = [];
-        $missingIconIds = [];
 
         foreach ($items as $id => $item) {
             $formatted = $this->formatItem($item);
             $result[$id] = $formatted;
-            if (empty($formatted['icon'])) {
-                $missingIconIds[] = $id;
-            }
-        }
-
-        if (!empty($missingIconIds) && $this->iconResolverService !== null) {
-            $resolvedIcons = $this->iconResolverService->resolveIconsBulk($missingIconIds);
-            foreach ($resolvedIcons as $id => $icon) {
-                if ($icon !== null && isset($result[$id])) {
-                    $result[$id]['icon'] = $icon;
-                }
-            }
         }
 
         $this->applyTooltipEnrichment($result);

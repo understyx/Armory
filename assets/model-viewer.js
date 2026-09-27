@@ -5,10 +5,10 @@ const status = document.getElementById('character-model-status');
 
 const readPreference = () => {
     try {
-        return window.localStorage.getItem(preferenceKey) !== 'false';
+        return window.localStorage.getItem(preferenceKey) === 'true';
     } catch (error) {
         console.warn('Unable to read the 3D model preference.', error);
-        return true;
+        return false;
     }
 };
 
@@ -40,9 +40,15 @@ if (!enabled) {
     viewer?.setAttribute('hidden', '');
     if (status) {
         status.classList.add('is-unavailable');
-        status.textContent = '3D model disabled';
+        status.textContent = 'Enable the 3D model to load it';
     }
 } else if (viewer) {
+    viewer.removeAttribute('hidden');
+    if (status) {
+        status.classList.remove('is-unavailable');
+        status.innerHTML = '<span class="model-loading-spinner" aria-hidden="true"></span>Loading 3D model…';
+    }
+
     const loadScript = (source, attributes = {}) => new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = source;
