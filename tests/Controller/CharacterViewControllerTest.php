@@ -70,7 +70,7 @@ class CharacterViewControllerTest extends KernelTestCase
         $snapshot->setScrapedAt(new \DateTimeImmutable('-2 days'));
 
         $snapshotRepo = $this->createMock(CharacterSnapshotRepository::class);
-        $snapshotRepo->expects($this->once())
+        $snapshotRepo->expects($this->exactly(2))
             ->method('findByNameAndRealm')
             ->with('Understyx', 'Icecrown')
             ->willReturn($snapshot);
@@ -124,11 +124,9 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringContainsString('id="stats-tab"', $response->getContent());
         $this->assertStringContainsString('id="achievements-tab"', $response->getContent());
         $this->assertStringContainsString('data-achievements-url="/characters/Understyx/Icecrown/achievements"', $response->getContent());
-        $this->assertStringContainsString('Stats at level 80', $response->getContent());
-        $this->assertStringContainsString('Only Hit and Expertise are currently reliable', $response->getContent());
-        $this->assertStringContainsString('href="/characters/Understyx/Icecrown/stats"', $response->getContent());
-        $this->assertStringContainsString('Class at 80', $response->getContent());
-        $this->assertStringContainsString('class="calculated-stat-total">175', $response->getContent());
+        $this->assertStringContainsString('data-stats-url="/characters/Understyx/Icecrown/stats-panel"', $response->getContent());
+        $this->assertStringContainsString('Loading character stats', $response->getContent());
+        $this->assertStringNotContainsString('Stats at level 80', $response->getContent());
         $this->assertStringNotContainsString('Level growth', $response->getContent());
         $this->assertStringContainsString('Uwu-logs overall points', $response->getContent());
         $this->assertStringContainsString('data-points="98" data-rank="1525" style="color: #ff3c00">98.00', $response->getContent());
@@ -162,6 +160,14 @@ class CharacterViewControllerTest extends KernelTestCase
             strpos($response->getContent(), 'Specialization & Talent Trees'),
             strpos($response->getContent(), 'Professions')
         );
+
+        $statsResponse = $controller->viewCharacterStatsPanel('Understyx', 'Icecrown');
+        $this->assertSame(Response::HTTP_OK, $statsResponse->getStatusCode());
+        $this->assertStringContainsString('Stats at level 80', $statsResponse->getContent());
+        $this->assertStringContainsString('Only Hit and Expertise are currently reliable', $statsResponse->getContent());
+        $this->assertStringContainsString('href="/characters/Understyx/Icecrown/stats"', $statsResponse->getContent());
+        $this->assertStringContainsString('Class at 80', $statsResponse->getContent());
+        $this->assertStringContainsString('class="calculated-stat-total">175', $statsResponse->getContent());
     }
 
     public function testAchievementsEndpointRendersLazyRaidGroupTabsWithoutFetchingWarmane(): void

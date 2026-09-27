@@ -117,4 +117,29 @@ class ItemDatabaseServiceTest extends TestCase
         self::assertNotNull($result);
         self::assertSame([], $result['external_effects']);
     }
+
+    public function testBulkReadNeverQueuesTooltipWork(): void
+    {
+        $item = (new WowItem())
+            ->setItemId(50363)
+            ->setName("Deathbringer's Will")
+            ->setTooltipData([
+                'spells' => [['id' => 71562, 'trigger' => 1]],
+                'item_set_id' => 0,
+            ]);
+        $items = $this->createMock(WowItemRepository::class);
+        $items->method('findByItemIds')->with([50363])->willReturn([50363 => $item]);
+        $enrichment = $this->createMock(TooltipEnrichmentRepository::class);
+        $enrichment->method('findForItems')->willReturn([
+            50363 => ['effects' => [], 'set' => null, 'checked' => false],
+        ]);
+        $enrichment->expects(self::never())->method('shouldQueue');
+        $enrichment->expects(self::never())->method('markQueued');
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->expects(self::never())->method('dispatch');
+
+        $result = (new ItemDatabaseService($items, $enrichment, $bus))->getItemsBulk([50363]);
+
+        self::assertSame([], $result[50363]['external_effects']);
+    }
 }

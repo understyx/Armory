@@ -127,6 +127,38 @@ class CharacterViewController extends AbstractController
         ]);
     }
 
+    #[Route('/characters/{characterName}/{realmName}/stats-panel', name: 'app_character_stats_panel', methods: ['GET'])]
+    #[Route('/character/{characterName}/{realmName}/stats-panel', name: 'app_character_stats_panel_legacy', methods: ['GET'])]
+    public function viewCharacterStatsPanel(string $characterName, string $realmName): Response
+    {
+        $snapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
+        if ($snapshot === null) {
+            return new Response('Character snapshot unavailable.', Response::HTTP_NOT_FOUND);
+        }
+
+        $parsedSpecs = $this->talentTreeService->parseTalentTrees(
+            $snapshot->getClass(),
+            $snapshot->getSpecializations() ?? [],
+            $snapshot->getTalentStrings() ?? [],
+            $snapshot->getTalentTreesData() ?? [],
+        );
+        $paperdollData = $this->paperdollService->buildPaperdollSlots(
+            $snapshot->getEquippedItems() ?? [],
+            $snapshot->getClass(),
+        );
+
+        return $this->render('character_view/_stats_panel.html.twig', [
+            'characterName' => $snapshot->getName(),
+            'realmName' => $snapshot->getRealm(),
+            'characterDetails' => ['level' => $snapshot->getLevel()],
+            'calculatedStatsBySpec' => $this->buildCalculatedStatsBySpec(
+                $snapshot,
+                $parsedSpecs,
+                $paperdollData['enrichedItems'],
+            ),
+        ]);
+    }
+
     #[Route('/characters/{characterName}/{realmName}/refresh', name: 'app_character_refresh', methods: ['POST'])]
     #[Route('/character/{characterName}/{realmName}/refresh', name: 'app_character_refresh_legacy', methods: ['POST'])]
     public function refreshCharacter(string $characterName, string $realmName): Response
@@ -442,12 +474,6 @@ class CharacterViewController extends AbstractController
             $snapshot->getClass()
         );
 
-        $calculatedStatsBySpec = $this->buildCalculatedStatsBySpec(
-            $snapshot,
-            $parsedSpecs,
-            $paperdollData['enrichedItems'],
-        );
-
         return $this->render('character_view/index.html.twig', [
             'characterName' => $snapshot->getName(),
             'realmName' => $snapshot->getRealm(),
@@ -468,7 +494,6 @@ class CharacterViewController extends AbstractController
             'paperdollSlots' => $paperdollData['slots'],
             'itemTooltips' => $paperdollData['tooltips'],
             'transmogItems' => $paperdollData['transmogItems'],
-            'calculatedStatsBySpec' => $calculatedStatsBySpec,
             'characterModel' => $snapshot->getCharacterModel(),
             'gearScore' => $snapshot->getGearScore(),
             'avgIlvl' => $snapshot->getAvgIlvl(),

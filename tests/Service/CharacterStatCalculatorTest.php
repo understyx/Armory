@@ -3,10 +3,26 @@
 namespace App\Tests\Service;
 
 use App\Service\CharacterStatCalculator;
+use App\Service\ItemDatabaseService;
 use PHPUnit\Framework\TestCase;
 
 class CharacterStatCalculatorTest extends TestCase
 {
+    public function testAlreadyEnrichedPaperdollItemsDoNotRepeatDatabaseLookups(): void
+    {
+        $itemDatabase = $this->createMock(ItemDatabaseService::class);
+        $itemDatabase->expects(self::never())->method('getItemsBulk');
+        $calculator = new CharacterStatCalculator(itemDatabaseService: $itemDatabase);
+
+        $result = $calculator->calculate('Human', 'Warrior', 80, [[
+            'id' => 50001,
+            'name' => 'Enriched Helm',
+            'tooltip' => ['stats' => [['type' => 4, 'value' => 20]]],
+        ]]);
+
+        self::assertSame(20, $result['primary']['strength']['gear']);
+    }
+
     public function testItCombinesBaseGearGemsEnchantsSocketBonusesTalentsAndRatings(): void
     {
         $items = [[

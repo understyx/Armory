@@ -26,7 +26,7 @@ class ItemDatabaseService
 
         $formatted = $this->formatItem($item);
         $items = [$itemId => $formatted];
-        $this->applyTooltipEnrichment($items);
+        $this->applyTooltipEnrichment($items, true);
 
         return $items[$itemId];
     }
@@ -45,7 +45,9 @@ class ItemDatabaseService
             $result[$id] = $formatted;
         }
 
-        $this->applyTooltipEnrichment($result);
+        // Character pages use the bulk path. Keep it read-only: a cached page
+        // must not fan out into per-item queue checks and writes.
+        $this->applyTooltipEnrichment($result, false);
 
         return $result;
     }
@@ -71,7 +73,7 @@ class ItemDatabaseService
     }
 
     /** @param array<int, array<string, mixed>> $items */
-    private function applyTooltipEnrichment(array &$items): void
+    private function applyTooltipEnrichment(array &$items, bool $queueMissing): void
     {
         if ($items === [] || $this->tooltipEnrichmentRepository === null) {
             return;
@@ -96,7 +98,8 @@ class ItemDatabaseService
             $needsEffects = $hasSpells && $details['effects'] === [];
             $needsSet = $setId > 0 && $details['set'] === null;
             if (
-                !$details['checked']
+                $queueMissing
+                && !$details['checked']
                 && ($needsEffects || $needsSet)
                 && $this->messageBus !== null
                 && $this->tooltipEnrichmentRepository->shouldQueue($itemId)

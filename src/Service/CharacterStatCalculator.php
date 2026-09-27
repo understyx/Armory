@@ -473,11 +473,26 @@ final class CharacterStatCalculator
     /** @param array<int, array<string, mixed>> $items */
     private function enrichItems(array $items): array
     {
-        if ($this->itemDatabaseService === null) {
+        if ($this->itemDatabaseService === null || $items === []) {
             return $items;
         }
 
-        $ids = array_values(array_filter(array_map(static fn (array $item): int => (int) ($item['id'] ?? 0), $items)));
+        $ids = [];
+        foreach ($items as $item) {
+            // Paperdoll items have already been enriched in one bulk query.
+            // Avoid repeating that query once for every specialization.
+            if (!array_key_exists('tooltip', $item)) {
+                $id = (int) ($item['id'] ?? 0);
+                if ($id > 0) {
+                    $ids[] = $id;
+                }
+            }
+        }
+        if ($ids === []) {
+            return $items;
+        }
+
+        $ids = array_values(array_unique($ids));
         $databaseItems = $this->itemDatabaseService->getItemsBulk($ids);
         foreach ($items as &$item) {
             $databaseItem = $databaseItems[(int) ($item['id'] ?? 0)] ?? [];

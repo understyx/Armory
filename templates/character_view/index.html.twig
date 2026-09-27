@@ -120,7 +120,7 @@
                 <div class="gear-header-actions">
                     <div class="character-tab-list" role="tablist" aria-label="Character details">
                         <button id="equipment-tab" class="character-tab active" type="button" role="tab" aria-selected="true" aria-controls="equipment-panel" onclick="setCharacterTab('equipment', this)">Equipment</button>
-                        <button id="stats-tab" class="character-tab" type="button" role="tab" aria-selected="false" aria-controls="stats-panel" onclick="setCharacterTab('stats', this)">Stats</button>
+                        <button id="stats-tab" class="character-tab" type="button" role="tab" aria-selected="false" aria-controls="stats-panel" data-stats-url="{{ path('app_character_stats_panel', {'characterName': characterName, 'realmName': realmName}) }}" onclick="setCharacterTab('stats', this)">Stats</button>
                         <button id="achievements-tab" class="character-tab" type="button" role="tab" aria-selected="false" aria-controls="achievements-panel" data-achievements-url="{{ path('app_character_achievements', {'characterName': characterName, 'realmName': realmName}) }}" onclick="setCharacterTab('achievements', this)">Achievements</button>
                     </div>
                     {% if characterModel %}
@@ -191,7 +191,7 @@
                                            target="_blank"
                                            rel="noopener">
                                             {% if slot.item.icon_url %}
-                                                <img src="{{ slot.item.icon_url }}" data-fallback-src="{{ slot.item.icon_fallback_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';this.nextElementSibling.style.display='flex';}" />
+                                                <img src="{{ slot.item.icon_url }}" data-fallback-src="{{ slot.item.icon_fallback_url }}" alt="{{ slot.item.name }}" class="slot-img" decoding="async" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';this.nextElementSibling.style.display='flex';}" />
                                             {% endif %}
                                             <div class="slot-fallback-symbol" {% if slot.item.icon_url %}style="display:none;"{% endif %}>{{ slot.fallback }}</div>
                                             <div class="slot-quality-glow"></div>
@@ -227,7 +227,7 @@
                                                     {% for gem in slot.item.gem_details %}
                                                         {% if gem %}
                                                             <a href="{% if gem.id > 0 %}https://wotlk.evowow.com/?item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" rel="noopener" class="gem-icon-link" title="{{ gem.name }}">
-                                                                <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
+                                                                <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" decoding="async" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
                                                             </a>
                                                         {% endif %}
                                                     {% endfor %}
@@ -270,7 +270,7 @@
                                                     {% for gem in slot.item.gem_details %}
                                                         {% if gem %}
                                                             <a href="{% if gem.id > 0 %}https://wotlk.evowow.com/?item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" rel="noopener" class="gem-icon-link" title="{{ gem.name }}">
-                                                                <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
+                                                                <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" decoding="async" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
                                                             </a>
                                                         {% endif %}
                                                     {% endfor %}
@@ -290,7 +290,7 @@
                                            target="_blank"
                                            rel="noopener">
                                             {% if slot.item.icon_url %}
-                                                <img src="{{ slot.item.icon_url }}" data-fallback-src="{{ slot.item.icon_fallback_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';this.nextElementSibling.style.display='flex';}" />
+                                                <img src="{{ slot.item.icon_url }}" data-fallback-src="{{ slot.item.icon_fallback_url }}" alt="{{ slot.item.name }}" class="slot-img" decoding="async" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';this.nextElementSibling.style.display='flex';}" />
                                             {% endif %}
                                             <div class="slot-fallback-symbol" {% if slot.item.icon_url %}style="display:none;"{% endif %}>{{ slot.fallback }}</div>
                                             <div class="slot-quality-glow"></div>
@@ -323,7 +323,7 @@
                                        target="_blank"
                                        rel="noopener">
                                         {% if slot.item.icon_url %}
-                                            <img src="{{ slot.item.icon_url }}" data-fallback-src="{{ slot.item.icon_fallback_url }}" alt="{{ slot.item.name }}" class="slot-img" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';this.nextElementSibling.style.display='flex';}" />
+                                            <img src="{{ slot.item.icon_url }}" data-fallback-src="{{ slot.item.icon_fallback_url }}" alt="{{ slot.item.name }}" class="slot-img" decoding="async" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';this.nextElementSibling.style.display='flex';}" />
                                         {% endif %}
                                         <div class="slot-fallback-symbol" {% if slot.item.icon_url %}style="display:none;"{% endif %}>{{ slot.fallback }}</div>
                                         <div class="slot-quality-glow"></div>
@@ -359,7 +359,7 @@
                                                 {% for gem in slot.item.gem_details %}
                                                     {% if gem %}
                                                         <a href="{% if gem.id > 0 %}https://wotlk.evowow.com/?item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" rel="noopener" class="gem-icon-link" title="{{ gem.name }}">
-                                                            <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
+                                                            <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" decoding="async" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
                                                         </a>
                                                     {% endif %}
                                                 {% endfor %}
@@ -387,139 +387,10 @@
             </div>
 
             <div id="stats-panel" class="character-tab-panel" role="tabpanel" aria-labelledby="stats-tab" hidden>
-                <div class="alert-banner alert-warning" role="alert">
-                    ⚠️ Only Hit and Expertise are currently reliable. All other displayed stats may be inaccurate.
+                <div class="achievements-loading">
+                    <span class="model-loading-spinner" aria-hidden="true"></span>
+                    Loading character stats…
                 </div>
-                <div class="stats-panel-heading">
-                    <div>
-                        <h3>Stats at level {{ characterDetails.level }}</h3>
-                        <p>Current character only: (race + class at this level + equipped gear) × permanent talent multipliers.</p>
-                        <a class="stats-debug-link" href="{{ path('app_character_stats', {'characterName': characterName, 'realmName': realmName}) }}">Open full calculation breakdown</a>
-                    </div>
-                    {% if calculatedStatsBySpec|length > 1 %}
-                        <div class="stats-spec-tabs" role="tablist" aria-label="Stats specialization">
-                            {% for entry in calculatedStatsBySpec %}
-                                <button
-                                    id="stats-spec-tab-{{ entry.specId }}"
-                                    class="stats-spec-tab{% if loop.first %} active{% endif %}"
-                                    type="button"
-                                    role="tab"
-                                    aria-selected="{{ loop.first ? 'true' : 'false' }}"
-                                    aria-controls="stats-spec-panel-{{ entry.specId }}"
-                                    onclick="setStatsSpec('{{ entry.specId }}', this)"
-                                >{{ entry.specName }}{% if entry.pointsSummary %} ({{ entry.pointsSummary }}){% endif %}</button>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-
-                {% for entry in calculatedStatsBySpec %}
-                    {% set calculatedStats = entry.stats %}
-                    <div
-                        id="stats-spec-panel-{{ entry.specId }}"
-                        class="stats-spec-panel"
-                        role="tabpanel"
-                        aria-labelledby="stats-spec-tab-{{ entry.specId }}"
-                        {% if not loop.first %}hidden{% endif %}
-                    >
-                        {% if calculatedStats.available|default(false) %}
-                            <div class="calculated-stat-table-wrap">
-                                <table class="calculated-stat-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Attribute</th>
-                                            <th>Race</th>
-                                            <th>Class at {{ calculatedStats.level }}</th>
-                                            <th>Gear</th>
-                                            <th>Talent</th>
-                                            <th>Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for stat in calculatedStats.primary %}
-                                            <tr>
-                                                <th scope="row">{{ stat.name }}</th>
-                                                <td>{{ stat.race >= 0 ? '+' : '' }}{{ stat.race }}</td>
-                                                <td>{{ stat.classAtLevel }}</td>
-                                                <td>{{ stat.gear >= 0 ? '+' : '' }}{{ stat.gear }}</td>
-                                                <td>
-                                                    {{ stat.talents >= 0 ? '+' : '' }}{{ stat.talents }}
-                                                    {% if stat.talentPercent != 0 %}<small>({{ stat.talentPercent }}%)</small>{% endif %}
-                                                </td>
-                                                <td class="calculated-stat-total">{{ stat.total }}</td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {% if calculatedStats.secondary is not empty %}
-                                <h4 class="stat-subheading">Gear stats</h4>
-                                <div class="secondary-stat-grid" aria-label="Equipment stats">
-                                    {% for stat in calculatedStats.secondary %}
-                                        <div class="secondary-stat-card">
-                                            <span>{{ stat.name }}</span>
-                                            <strong>{{ stat.value|number_format }}</strong>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-
-                            {% if calculatedStats.ratings is not empty %}
-                                <h4 class="stat-subheading">Combat stats at level {{ calculatedStats.level }}</h4>
-                                <div class="rating-conversion-grid">
-                                    {% for rating in calculatedStats.ratings %}
-                                        <div class="rating-conversion-card">
-                                            <span class="rating-conversion-name">{{ rating.name }}</span>
-                                            <strong>{{ rating.value|number_format(2) }}{{ rating.unit }}</strong>
-                                            {% if rating.isCriticalStrike|default(false) %}
-                                                <small>{{ rating.basePercent|number_format(2) }}% base · {{ rating.attributeValue }} {{ rating.attribute }} = {{ rating.attributePercent|number_format(2) }}% · {{ rating.rating }} rating = {{ rating.ratingPercent|number_format(2) }}%{% if rating.flatBonusPercent != 0 %} · talents/stance = +{{ rating.flatBonusPercent|number_format(2) }}%{% endif %}</small>
-                                            {% else %}
-                                                <small>{{ rating.rating }} rating · {{ rating.ratingPerUnit }} per {{ rating.unitLabel }}{% if rating.flatBonusPercent != 0 %} · talents/stance = +{{ rating.flatBonusPercent|number_format(2) }}%{% endif %}</small>
-                                            {% endif %}
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-
-                            {% if calculatedStats.hitBonuses is not empty %}
-                                <h4 class="stat-subheading">Talent hit bonuses</h4>
-                                <div class="hit-bonus-grid">
-                                    {% for scope, percent in calculatedStats.hitBonuses %}
-                                        <div class="hit-bonus-card">
-                                            <span>{{ scope }}</span>
-                                            <strong>+{{ percent|number_format(2) }}%</strong>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-
-                            {% if calculatedStats.talentModifiers is not empty %}
-                                <div class="talent-modifier-summary">
-                                    <strong>Applied talents:</strong>
-                                    {% for talent in calculatedStats.talentModifiers %}
-                                        <span>{{ talent.name }} ({{ talent.points }} {{ talent.points == 1 ? 'point' : 'points' }})</span>{% if not loop.last %}, {% endif %}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-
-                            {% if calculatedStats.assumedEffects is not empty %}
-                                <div class="talent-modifier-summary">
-                                    <strong>Assumed combat state:</strong>
-                                    {% for effect in calculatedStats.assumedEffects %}<span>{{ effect.name }} — {{ effect.reason }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
-                                </div>
-                            {% endif %}
-
-                            <ul class="stat-calculation-notes">
-                                {% for note in calculatedStats.notes %}<li>{{ note }}</li>{% endfor %}
-                            </ul>
-                        {% else %}
-                            <p class="stat-unavailable">{{ calculatedStats.reason|default('Stats could not be calculated for this character.') }}</p>
-                        {% endif %}
-                    </div>
-                {% else %}
-                    <p class="stat-unavailable">Stats could not be calculated for this character.</p>
-                {% endfor %}
             </div>
 
             <div id="achievements-panel" class="character-tab-panel" role="tabpanel" aria-labelledby="achievements-tab" aria-live="polite" hidden>
@@ -588,7 +459,7 @@
                                                                    class="talent-icon-box status-{{ talent.status }}"
                                                                    title="Spell #{{ talent.spellId }}: {{ talent.pointsText }}">
                                                                     {% if talent.iconUrl %}
-                                                                        <img src="{{ talent.iconUrl }}" data-fallback-src="{{ talent.iconFallbackUrl }}" alt="Talent" class="talent-icon-img" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.opacity='0';}" />
+                                                                        <img src="{{ talent.iconUrl }}" data-fallback-src="{{ talent.iconFallbackUrl }}" alt="Talent" class="talent-icon-img" loading="lazy" decoding="async" fetchpriority="low" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.opacity='0';}" />
                                                                     {% endif %}
                                                                     <div class="talent-rank-badge status-{{ talent.status }}">
                                                                         {{ talent.pointsText }}
@@ -617,7 +488,7 @@
                                 {% for tree in spec.trees %}
                                     <div class="tree-footer-item">
                                         {% if tree.iconUrl %}
-                                            <img src="{{ tree.iconUrl }}" data-fallback-src="{{ tree.iconFallbackUrl }}" alt="{{ tree.name }}" class="tree-footer-icon" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
+                                            <img src="{{ tree.iconUrl }}" data-fallback-src="{{ tree.iconFallbackUrl }}" alt="{{ tree.name }}" class="tree-footer-icon" loading="lazy" decoding="async" fetchpriority="low" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
                                         {% endif %}
                                         <span class="tree-footer-name">{{ tree.name }}</span>
                                         <span class="tree-footer-points">{{ tree.points }}</span>
@@ -974,7 +845,28 @@
             const transmogAction = document.querySelector('[data-equipment-action]');
             if (transmogAction) transmogAction.hidden = tabName !== 'equipment';
 
+            if (tabName === 'stats') loadStatsPanel(button);
             if (tabName === 'achievements') loadAchievementsShell(button);
+        }
+
+        async function loadStatsPanel(button) {
+            const panel = document.getElementById('stats-panel');
+            if (!panel || panel.dataset.loaded === 'true' || panel.dataset.loading === 'true') return;
+
+            panel.dataset.loading = 'true';
+            try {
+                const response = await fetch(button.dataset.statsUrl, {
+                    headers: { 'Accept': 'text/html' }
+                });
+                if (!response.ok) throw new Error('Stats request failed');
+
+                panel.innerHTML = await response.text();
+                panel.dataset.loaded = 'true';
+            } catch (error) {
+                panel.innerHTML = '<div class="achievements-error">Character stats are temporarily unavailable. Please try again later.</div>';
+            } finally {
+                delete panel.dataset.loading;
+            }
         }
 
         async function loadAchievementsShell(button) {
