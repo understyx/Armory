@@ -17,8 +17,13 @@ class ItemTooltipHtmlParser
      *     set: array{name: string, members: array<int, array{item_id: int, name: string}>, bonuses: array<int, array{required_count: int, spell_id: int|null, description: string}>}|null
      * }
      */
-    public function parse(string $html): array
+    public function parse(string $html, bool $includeUnlinkedEffects = false): array
     {
+        if ($includeUnlinkedEffects) {
+            // Evowow may include this literal placeholder, which HTML parsing
+            // would otherwise treat as a tag and discard.
+            $html = preg_replace('/<his\/her>/iu', '&lt;his/her&gt;', $html) ?? $html;
+        }
         $document = new DOMDocument();
         $previous = libxml_use_internal_errors(true);
         try {
@@ -34,13 +39,13 @@ class ItemTooltipHtmlParser
         $xpath = new DOMXPath($document);
 
         return [
-            'effects' => $this->parseEffects($xpath),
+            'effects' => $this->parseEffects($xpath, $includeUnlinkedEffects),
             'set' => $this->parseSet($xpath),
         ];
     }
 
     /** @return array<int, array{spell_id: int|null, trigger_type: string, description: string}> */
-    private function parseEffects(DOMXPath $xpath): array
+    private function parseEffects(DOMXPath $xpath, bool $includeUnlinkedEffects): array
     {
         $effects = [];
         $nodes = $xpath->query('//span[contains(concat(" ", normalize-space(@class), " "), " q2 ")]');
@@ -53,7 +58,7 @@ class ItemTooltipHtmlParser
                 continue;
             }
 
-            $text = $this->normalizeText($node->textContent);
+            $text = $this->normalizeText($node->textContent, $includeUnlinkedEffects);
             if (!preg_match('/^(Equip|Use|Chance on hit)\s*:\s*(.+)$/iu', $text, $matches)) {
                 continue;
             }
@@ -61,7 +66,7 @@ class ItemTooltipHtmlParser
             $spellId = $this->firstLinkedId($xpath, $node, 'spell');
             // Plain green stat lines are already generated from Trinity item stats.
             // Linked spell lines are the proc/use effects that the world DB cannot describe.
-            if ($spellId === null) {
+            if ($spellId === null && !$includeUnlinkedEffects) {
                 continue;
             }
 
@@ -137,9 +142,14 @@ class ItemTooltipHtmlParser
         return (int) $matches[1];
     }
 
-    private function normalizeText(string $text): string
+    private function normalizeText(string $text, bool $normalizeGenderPlaceholder = false): string
     {
-        return trim(preg_replace('/\s+/u', ' ', html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?? $text);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if ($normalizeGenderPlaceholder) {
+            $text = preg_replace('/<his\/her>/iu', 'his/her', $text) ?? $text;
+        }
+
+        return trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
     }
 
     private function normalizeTrigger(string $trigger): string

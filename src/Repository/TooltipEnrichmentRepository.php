@@ -74,7 +74,7 @@ class TooltipEnrichmentRepository
     public function findItemContext(int $itemId): ?array
     {
         $row = $this->connection->fetchAssociative(
-            'SELECT item_id, tooltip_data FROM wow_items WHERE item_id = ?',
+            'SELECT item_id, class, tooltip_data FROM wow_items WHERE item_id = ?',
             [$itemId]
         );
         if ($row === false) {
@@ -85,6 +85,7 @@ class TooltipEnrichmentRepository
 
         return [
             'item_id' => (int) $row['item_id'],
+            'class' => (int) $row['class'],
             'tooltip' => $tooltip,
             'set_id' => (int) ($tooltip['item_set_id'] ?? 0),
         ];

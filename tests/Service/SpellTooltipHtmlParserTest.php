@@ -41,4 +41,24 @@ final class SpellTooltipHtmlParserTest extends TestCase
     {
         self::assertNull((new SpellTooltipHtmlParser())->parse(12345, '<html>Not found</html>'));
     }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('rawDurationProvider')]
+    public function testConvertsRawMillisecondDurations(string $source, string $expected): void
+    {
+        $html = '<div id="t1-generic"><b>Talent</b><span class="q">'.$source.'</span></div>';
+
+        self::assertSame($expected, (new SpellTooltipHtmlParser())->parse(1, $html)['description']);
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function rawDurationProvider(): iterable
+    {
+        yield 'hundredths' => ['reduces the cast time by 250.2 sec.', 'reduces the cast time by 0.25 sec.'];
+        yield 'tenths' => ['Reduces the global cooldown by 500.1 sec.', 'Reduces the global cooldown by 0.5 sec.'];
+        yield 'whole seconds' => ['increased by 5000 sec. Following', 'increased by 5 sec. Following'];
+        yield 'minutes' => ['is reduced by 120000 min.', 'is reduced by 2 min.'];
+        yield 'real decimal stays' => ['cast time by 1.5 sec.', 'cast time by 1.5 sec.'];
+        yield 'real duration stays' => ['taken for 15 sec.', 'taken for 15 sec.'];
+        yield 'real minutes stay' => ['lasts 30 min.', 'lasts 30 min.'];
+    }
 }

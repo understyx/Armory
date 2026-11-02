@@ -38,7 +38,9 @@ class TooltipEnrichmentService
         }
 
         $rawSpells = [];
-        foreach ($context['tooltip']['spells'] ?? [] as $spell) {
+        $rawSpellEntries = $context['tooltip']['spells'] ?? [];
+        $rawSpellCount = count($rawSpellEntries);
+        foreach ($rawSpellEntries as $spell) {
             $spellId = (int) ($spell['id'] ?? 0);
             if ($spellId > 0) {
                 $rawSpells[$spellId] = (int) ($spell['trigger'] ?? 1);
@@ -57,6 +59,10 @@ class TooltipEnrichmentService
         }
 
         foreach ($this->providers as $provider) {
+            if ($provider->getName() === 'evowow' && (int) ($context['class'] ?? 0) !== 16) {
+                continue;
+            }
+
             try {
                 $result = $provider->fetch($itemId, $locale);
                 $this->repository->recordAttempt(
@@ -72,6 +78,7 @@ class TooltipEnrichmentService
                     $effects = $this->normalizeEffects(
                         $result['effects'],
                         $rawSpells,
+                        $rawSpellCount,
                         $provider->getName(),
                         $result['source_url']
                     );
@@ -126,8 +133,18 @@ class TooltipEnrichmentService
      * @param array<int, int> $rawSpells
      * @return array<int, array{spell_id: int|null, trigger_type: string, description: string, source: string, source_url: string}>
      */
-    private function normalizeEffects(array $effects, array $rawSpells, string $source, string $sourceUrl): array
+    private function normalizeEffects(
+        array $effects,
+        array $rawSpells,
+        int $rawSpellCount,
+        string $source,
+        string $sourceUrl,
+    ): array
     {
+        if (count($effects) === 1 && $rawSpellCount === 1 && $effects[0]['spell_id'] === null) {
+            $effects[0]['spell_id'] = array_key_first($rawSpells);
+        }
+
         $normalized = [];
         foreach ($effects as $effect) {
             $spellId = $effect['spell_id'];

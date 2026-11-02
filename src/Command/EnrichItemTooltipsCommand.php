@@ -18,11 +18,17 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 class EnrichItemTooltipsCommand extends Command
 {
+    private const GLYPH_REQUEST_GAP_MICROSECONDS = 300_000;
+
+    private readonly \Closure $pause;
+
     public function __construct(
         private readonly TooltipEnrichmentRepository $repository,
         private readonly TooltipEnrichmentService $enrichmentService,
+        ?\Closure $pause = null,
     ) {
         parent::__construct();
+        $this->pause = $pause ?? usleep(...);
     }
 
     protected function configure(): void
@@ -77,6 +83,9 @@ class EnrichItemTooltipsCommand extends Command
                 $successful++;
             }
             $io->write(sprintf("\rProcessed %d/%d items", $index + 1, count($candidates)));
+            if ($glyphs && $index < count($candidates) - 1) {
+                ($this->pause)(self::GLYPH_REQUEST_GAP_MICROSECONDS);
+            }
         }
         $io->newLine(2);
         $io->success(sprintf('Enriched or retained %d of %d item tooltips.', $successful, count($candidates)));

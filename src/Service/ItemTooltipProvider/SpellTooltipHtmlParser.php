@@ -62,10 +62,36 @@ final class SpellTooltipHtmlParser
         $descriptionNodes = $xpath->query('.//span[contains(concat(" ", normalize-space(@class), " "), " q ")]', $root);
         $descriptionNode = $descriptionNodes !== false ? $descriptionNodes->item(0) : null;
         if ($descriptionNode !== null) {
-            $description = $this->normalizeText($descriptionNode->textContent);
+            $description = $this->convertRawDurations($this->normalizeText($descriptionNode->textContent));
         }
 
         return ['name' => $name, 'spell_rank' => $rank, 'description' => $description];
+    }
+
+    /**
+     * Cavern of Time prints some spell formulas without dividing their millisecond
+     * values, e.g. "100.2 sec" for 0.1 sec and "120000 min" for 2 min.
+     */
+    private function convertRawDurations(string $text): string
+    {
+        $seconds = static fn (float $value): string => rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
+
+        $text = preg_replace_callback(
+            '/\b(\d{3,})\.\d (sec|seconds)\b/',
+            static fn (array $match): string => $seconds((int) $match[1] / 1000).' '.$match[2],
+            $text,
+        ) ?? $text;
+        $text = preg_replace_callback(
+            '/\b(\d{4,}) (sec|seconds)\b/',
+            static fn (array $match): string => $seconds((int) $match[1] / 1000).' '.$match[2],
+            $text,
+        ) ?? $text;
+
+        return preg_replace_callback(
+            '/\b(\d{5,}) (min|minutes)\b/',
+            static fn (array $match): string => $seconds((int) $match[1] / 60000).' '.$match[2],
+            $text,
+        ) ?? $text;
     }
 
     private function normalizeText(string $text): string
