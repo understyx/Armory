@@ -5,10 +5,72 @@ namespace App\Tests\Repository;
 use App\Entity\CharacterSnapshot;
 use App\Repository\CharacterSnapshotRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Query;
+use Doctrine\ORM\QueryBuilder;
 use PHPUnit\Framework\TestCase;
 
 class CharacterSnapshotRepositoryTest extends TestCase
 {
+    public function testRecentlyViewedQuerySelectsOnlyHomepageFields(): void
+    {
+        $query = $this->createMock(Query::class);
+        $query->expects(self::once())->method('getScalarResult')->willReturn([
+            ['name' => 'Understyx', 'realm' => 'Icecrown'],
+        ]);
+        $builder = $this->createMock(QueryBuilder::class);
+        $builder->expects(self::once())->method('select')->with('c.name AS name, c.realm AS realm')->willReturnSelf();
+        $builder->expects(self::once())->method('orderBy')->with('c.scrapedAt', 'DESC')->willReturnSelf();
+        $builder->expects(self::once())->method('setMaxResults')->with(10)->willReturnSelf();
+        $builder->expects(self::once())->method('getQuery')->willReturn($query);
+        $repository = new class($builder) extends CharacterSnapshotRepository {
+            public function __construct(private readonly QueryBuilder $builder)
+            {
+            }
+
+            public function createQueryBuilder(string $alias, ?string $indexBy = null): QueryBuilder
+            {
+                return $this->builder;
+            }
+        };
+
+        self::assertSame([
+            ['name' => 'Understyx', 'realm' => 'Icecrown'],
+        ], $repository->findRecentlyViewed(10));
+    }
+
+    public function testSnapshotPageAndApiProjectionsSelectOnlyRenderedData(): void
+    {
+        $projections = [
+            'findViewByNameAndRealm' => 'PARTIAL c.{id, name, realm, level, race, class, guild, gearScore, avgIlvl, professions, specializations, equippedItems, characterModel, talentStrings, talentTreesData, glyphs, enchantsStatus, gemsStatus, killStats, pvpStats, matchHistory, scrapedAt}',
+            'findStatsByNameAndRealm' => 'PARTIAL c.{id, name, realm, level, race, class, equippedItems, talentStrings, talentTreesData, specializations, scrapedAt}',
+            'findApiByNameAndRealm' => 'PARTIAL c.{id, name, realm, level, race, class, guild, gearScore, avgIlvl, professions, specializations, equippedItems, characterModel, talentStrings, talentTreesData, raidAchievements, scrapedAt}',
+            'findAchievementsByNameAndRealm' => 'PARTIAL c.{id, name, realm, raidAchievements, scrapedAt}',
+        ];
+
+        foreach ($projections as $method => $selection) {
+            $query = $this->createMock(Query::class);
+            $query->expects(self::once())->method('getOneOrNullResult')->willReturn(null);
+            $builder = $this->createMock(QueryBuilder::class);
+            $builder->expects(self::once())->method('select')->with($selection)->willReturnSelf();
+            $builder->method('where')->willReturnSelf();
+            $builder->method('andWhere')->willReturnSelf();
+            $builder->method('setParameter')->willReturnSelf();
+            $builder->expects(self::once())->method('getQuery')->willReturn($query);
+            $repository = new class($builder) extends CharacterSnapshotRepository {
+                public function __construct(private readonly QueryBuilder $builder)
+                {
+                }
+
+                public function createQueryBuilder(string $alias, ?string $indexBy = null): QueryBuilder
+                {
+                    return $this->builder;
+                }
+            };
+
+            self::assertNull($repository->{$method}('Understyx', 'Icecrown'));
+        }
+    }
+
     public function testUpsertDoesNotAdvanceTimestampWhenScrapedDataIsUnchanged(): void
     {
         $storedAt = new \DateTimeImmutable('2026-08-20 10:00:00');

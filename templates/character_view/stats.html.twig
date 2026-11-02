@@ -15,7 +15,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Review a breakdown of {{ characterName }}'s calculated stats on {{ realmName }}, including race, class, gear and talent contributions.">
     <title>{{ characterName }} Stats Breakdown — Warmane Armory</title>
+    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,6 +25,7 @@
 </head>
 <body>
     <main class="armory-wrapper stats-debug-page">
+        {% include '_site_header.html.twig' with {currentRealm: realmName} %}
         <a class="stats-debug-back" href="{{ path('app_character_view', {'characterName': characterName, 'realmName': realmName}) }}">← Back to character</a>
 
         <header class="header-card stats-debug-header">

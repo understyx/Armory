@@ -131,6 +131,30 @@ apt-get install -y \
     "php${PHP_VERSION}-xml" \
     "php${PHP_VERSION}-zip"
 
+log "Configuring PHP OPcache"
+PHP_FPM_CONF_DIR="/etc/php/${PHP_VERSION}/fpm/conf.d"
+install -d -m 0755 "$PHP_FPM_CONF_DIR"
+cat > "$PHP_FPM_CONF_DIR/99-armory-performance.ini" <<'PHP_INI'
+opcache.enable=1
+opcache.memory_consumption=256
+opcache.interned_strings_buffer=32
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=0
+PHP_INI
+chmod 0644 "$PHP_FPM_CONF_DIR/99-armory-performance.ini"
+
+log "Configuring MariaDB buffer pool"
+MARIADB_TUNING_FILE="/etc/mysql/mariadb.conf.d/60-armory-performance.cnf"
+MARIADB_TUNING_CHANGED=0
+if ! cmp -s "$MARIADB_TUNING_FILE" <(printf '[mysqld]\ninnodb_buffer_pool_size=1G\n'); then
+    cat > "$MARIADB_TUNING_FILE" <<'MYSQL_CNF'
+[mysqld]
+innodb_buffer_pool_size=1G
+MYSQL_CNF
+    chmod 0644 "$MARIADB_TUNING_FILE"
+    MARIADB_TUNING_CHANGED=1
+fi
+
 apt-get install -y composer
 
 if ! php -r 'exit(version_compare(PHP_VERSION, "8.2.0", ">=") ? 0 : 1);'; then
@@ -143,6 +167,9 @@ for extension in curl intl mbstring pdo_mysql xml zip; do
 done
 
 systemctl enable --now mariadb "php${PHP_VERSION}-fpm" nginx
+if [[ "$MARIADB_TUNING_CHANGED" == "1" ]]; then
+    systemctl restart mariadb
+fi
 
 log "Creating the ${APP_USER} system account"
 if ! getent group "$APP_GROUP" >/dev/null; then
@@ -299,6 +326,20 @@ find "$DEPLOY_DIR/var" -type d -exec chmod 2770 {} +
 find "$DEPLOY_DIR/var" -type f -exec chmod 0660 {} +
 
 PHP_FPM_SOCKET="/run/php/php${PHP_VERSION}-fpm.sock"
+FPM_POOL_DIR="/etc/php/${PHP_VERSION}/fpm/pool.d"
+FPM_POOL_FILE="${FPM_POOL_DIR}/zz-armory-tuning.conf"
+
+log "Tuning the stock PHP-FPM www pool"
+rm -f "${FPM_POOL_DIR}/armory.conf"
+cat > "$FPM_POOL_FILE" <<FPM_POOL
+[www]
+pm.max_children = 12
+pm.start_servers = 3
+pm.min_spare_servers = 2
+pm.max_spare_servers = 6
+pm.max_requests = 500
+FPM_POOL
+chmod 0644 "$FPM_POOL_FILE"
 NGINX_SITE="/etc/nginx/sites-available/armory"
 
 log "Configuring Nginx"
@@ -325,6 +366,16 @@ server {
 
     root ${DEPLOY_DIR}/public;
     index index.php;
+
+    gzip on;
+    gzip_vary on;
+    gzip_types text/css text/javascript application/javascript application/json image/svg+xml;
+
+    location ^~ /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files \$uri =404;
+    }
 
     location / {
         try_files \$uri /index.php\$is_args\$args;
@@ -355,6 +406,16 @@ server {
 
     root ${DEPLOY_DIR}/public;
     index index.php;
+
+    gzip on;
+    gzip_vary on;
+    gzip_types text/css text/javascript application/javascript application/json image/svg+xml;
+
+    location ^~ /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files \$uri =404;
+    }
 
     location / {
         try_files \$uri /index.php\$is_args\$args;

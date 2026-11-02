@@ -1,0 +1,30 @@
+User-agent: *
+Allow: /
+Disallow: /characters/*/load
+Disallow: /characters/*/load-status
+Disallow: /characters/*/refresh
+Disallow: /characters/*/match-details/
+Disallow: /characters/*/stats-panel
+Disallow: /characters/*/uwu-logs
+Disallow: /characters/*/achievements/
+Disallow: /guilds/*/refresh
+Disallow: /api/requestupdate/
+Disallow: /api/armory/
+Disallow: /api/character/
+Disallow: /character/
+Disallow: /guild/
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /

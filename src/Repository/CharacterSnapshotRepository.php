@@ -27,16 +27,92 @@ class CharacterSnapshotRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
-    /**
-     * @return CharacterSnapshot[]
-     */
+    /** @return list<array{name: string, realm: string}> */
     public function findRecentlyViewed(int $limit = 10): array
     {
         return $this->createQueryBuilder('c')
+            ->select('c.name AS name, c.realm AS realm')
             ->orderBy('c.scrapedAt', 'DESC')
             ->setMaxResults($limit)
             ->getQuery()
-            ->getResult();
+            ->getScalarResult();
+    }
+
+    public function existsByNameAndRealm(string $name, string $realm): bool
+    {
+        return $this->createQueryBuilder('c')
+            ->select('c.id')
+            ->where('c.name = :name')
+            ->andWhere('c.realm = :realm')
+            ->setParameter('name', trim($name))
+            ->setParameter('realm', trim($realm))
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult() !== null;
+    }
+
+    /**
+     * Returns a partial entity; do not follow this with a full lookup in the same
+     * EntityManager because the identity map will return the partial instance.
+     */
+    public function findViewByNameAndRealm(string $name, string $realm): ?CharacterSnapshot
+    {
+        return $this->createQueryBuilder('c')
+            ->select('PARTIAL c.{id, name, realm, level, race, class, guild, gearScore, avgIlvl, professions, specializations, equippedItems, characterModel, talentStrings, talentTreesData, glyphs, enchantsStatus, gemsStatus, killStats, pvpStats, matchHistory, scrapedAt}')
+            ->where('c.name = :name')
+            ->andWhere('c.realm = :realm')
+            ->setParameter('name', trim($name))
+            ->setParameter('realm', trim($realm))
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * Returns a partial entity; do not follow this with a full lookup in the same
+     * EntityManager because the identity map will return the partial instance.
+     */
+    public function findStatsByNameAndRealm(string $name, string $realm): ?CharacterSnapshot
+    {
+        return $this->createQueryBuilder('c')
+            ->select('PARTIAL c.{id, name, realm, level, race, class, equippedItems, talentStrings, talentTreesData, specializations, scrapedAt}')
+            ->where('c.name = :name')
+            ->andWhere('c.realm = :realm')
+            ->setParameter('name', trim($name))
+            ->setParameter('realm', trim($realm))
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * Returns a partial entity; do not follow this with a full lookup in the same
+     * EntityManager because the identity map will return the partial instance.
+     */
+    public function findApiByNameAndRealm(string $name, string $realm): ?CharacterSnapshot
+    {
+        return $this->createQueryBuilder('c')
+            ->select('PARTIAL c.{id, name, realm, level, race, class, guild, gearScore, avgIlvl, professions, specializations, equippedItems, characterModel, talentStrings, talentTreesData, raidAchievements, scrapedAt}')
+            ->where('c.name = :name')
+            ->andWhere('c.realm = :realm')
+            ->setParameter('name', trim($name))
+            ->setParameter('realm', trim($realm))
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * Returns a partial entity; do not follow this with a full lookup in the same
+     * EntityManager because the identity map will return the partial instance.
+     */
+    public function findAchievementsByNameAndRealm(string $name, string $realm): ?CharacterSnapshot
+    {
+        return $this->createQueryBuilder('c')
+            ->select('PARTIAL c.{id, name, realm, raidAchievements, scrapedAt}')
+            ->where('c.name = :name')
+            ->andWhere('c.realm = :realm')
+            ->setParameter('name', trim($name))
+            ->setParameter('realm', trim($realm))
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 
     /**

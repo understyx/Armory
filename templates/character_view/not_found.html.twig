@@ -3,20 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Character not found — Armory</title>
+    <meta name="description" content="The character {{ characterName }} was not found on {{ realmName }}. Check the realm and spelling, then search again.">
+    <title>{{ characterName }} not found — Warmane Armory</title>
+    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
 </head>
 <body>
-    <main class="not-found-page">
+    <div class="armory-wrapper not-found-layout">
+        {% include '_site_header.html.twig' with {currentRealm: realmName} %}
+        <main class="not-found-content">
         <section class="not-found-card" aria-labelledby="not-found-title">
-            <p class="not-found-brand">Armory</p>
             <h1 id="not-found-title">Character not found</h1>
             <p>We couldn't find {{ characterName }} on {{ realmName }}.</p>
-            <a class="not-found-link" href="{{ path('app_characters') }}">Back to search</a>
+            <p class="not-found-hint">Check the character spelling and selected realm, then search again above.</p>
         </section>
-    </main>
+        </main>
+    </div>
 </body>
 </html>

@@ -6,6 +6,7 @@ use App\Enum\ItemTypes;
 use App\Service\ArmoryScraperService;
 use App\Service\ItemDatabaseService;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -39,6 +40,19 @@ class ArmoryScraperServiceTest extends TestCase
         $this->assertTrue($service->isCloudflareBlock('<html><body>Cloudflare Access denied Ray ID: 87123681723</body></html>'));
         $this->assertTrue($service->isCloudflareBlock('You are being rate limited'));
         $this->assertFalse($service->isCloudflareBlock('<html><body><div class="character-details">Understyx</div></body></html>'));
+    }
+
+    public function testKillCountTreatsEmptyAndNonJsonResponsesAsUnavailableData(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::never())->method('error');
+        $logger->expects(self::never())->method('warning');
+        $service = new ArmoryScraperService(null, $logger);
+
+        self::assertSame([], $service->extractKillCount('', 'general_kills'));
+        self::assertSame([], $service->extractKillCount(" \n ", 'general_kills'));
+        self::assertSame([], $service->extractKillCount('<html><body>Temporarily unavailable</body></html>', 'general_kills'));
+        self::assertSame([], $service->extractKillCount('{"content":""}', 'general_kills'));
     }
 
     public function testFetchWithRetryRetriesOnRateLimitAndSucceeds(): void

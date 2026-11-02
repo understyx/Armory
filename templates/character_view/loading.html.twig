@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex">
+    <meta name="description" content="Loading the latest saved snapshot and character details for {{ characterName }} on {{ realmName }}.">
     <title>{{ isRefresh|default(false) ? 'Refreshing' : 'Loading' }} {{ characterName }} — Warmane Armory</title>
+    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -12,6 +14,7 @@
 </head>
 <body>
     <main class="character-loading-page">
+        {% include '_site_header.html.twig' with {currentRealm: realmName} %}
         <section
             class="character-loading-card"
             data-status-url="{{ statusUrl }}"
@@ -26,7 +29,7 @@
             <h1 id="loading-character-title">{{ characterName }}</h1>
             <p class="character-loading-realm">{{ realmName }}</p>
 
-            <div class="character-loading-progress-bar" aria-hidden="true">
+            <div class="character-loading-progress-bar" role="progressbar" aria-label="Character data loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5">
                 <div class="character-loading-progress-fill"></div>
             </div>
 
@@ -39,6 +42,7 @@
             <div class="character-loading-actions">
                 <a id="character-loading-home-btn" class="character-loading-home" href="{{ path('app_homepage') }}">Back to search</a>
             </div>
+            <noscript><p class="character-loading-error">JavaScript is required to check progress. You can return to search and try again later.</p></noscript>
         </section>
     </main>
 
@@ -70,6 +74,7 @@
 
             const stageTimer = setInterval(() => {
                 stageIndex++;
+                progressBar.setAttribute('aria-valuenow', String(Math.min(90, 5 + stageIndex * 17)));
                 if (stageIndex < stages.length) {
                     status.textContent = stages[stageIndex];
                 } else if (stageIndex === stages.length) {
@@ -78,11 +83,14 @@
             }, 2600);
 
             let completed = false;
+            let timeoutTimer;
 
             const onComplete = (redirectUrl) => {
                 if (completed) return;
                 completed = true;
                 clearInterval(stageTimer);
+                clearTimeout(timeoutTimer);
+                progressBar.setAttribute('aria-valuenow', '100');
                 status.textContent = isRefresh ? 'Data updated! Opening profile…' : 'Character ready! Opening profile…';
                 const target = redirectUrl || card.dataset.characterUrl;
                 setTimeout(() => {
@@ -94,12 +102,17 @@
                 if (completed) return;
                 completed = true;
                 clearInterval(stageTimer);
+                clearTimeout(timeoutTimer);
                 spinner.style.display = 'none';
                 if (progressBar) progressBar.style.display = 'none';
                 status.style.display = 'none';
                 errorBox.textContent = message || 'An error occurred while loading this character.';
                 errorBox.style.display = 'block';
             };
+
+            timeoutTimer = setTimeout(() => {
+                onError('This request timed out while waiting for character data. Return to search and try again in a moment.');
+            }, 90000);
 
             const isQueued = card.dataset.isQueued === '1';
 

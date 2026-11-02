@@ -4,6 +4,7 @@ namespace App\Tests\Controller;
 
 use App\Controller\ReferenceDataApiController;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class ReferenceDataApiControllerTest extends TestCase
@@ -29,6 +30,20 @@ class ReferenceDataApiControllerTest extends TestCase
         self::assertStringContainsString('public', $cacheControl);
         self::assertStringContainsString('max-age=3600', $cacheControl);
         self::assertSame('*', $response->headers->get('Access-Control-Allow-Origin'));
+    }
+
+    public function testCachedJsonEndpointReturns304WithItsCurrentValidator(): void
+    {
+        $first = $this->controller->enchants();
+        $etag = $first->headers->get('ETag');
+        self::assertNotEmpty($etag);
+
+        $request = new Request(server: ['HTTP_IF_NONE_MATCH' => $etag]);
+        $notModified = $this->controller->enchants($request);
+
+        self::assertSame(Response::HTTP_NOT_MODIFIED, $notModified->getStatusCode());
+        self::assertSame('', $notModified->getContent());
+        self::assertSame('*', $notModified->headers->get('Access-Control-Allow-Origin'));
     }
 
     public function testGemsEndpointReturnsItemsWithEnchantAndSpellIds(): void

@@ -60,7 +60,7 @@ class UwuLogRank
     public function getScoreColor(): string
     {
         return match (true) {
-            $this->getOverallPoints() < 25 => '#666666',
+            $this->getOverallPoints() < 25 => '#9ea7bb',
             $this->getOverallPoints() < 50 => '#1eff00',
             $this->getOverallPoints() < 75 => '#0070ff',
             $this->getOverallPoints() < 90 => '#a335ee',

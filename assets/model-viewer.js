@@ -2,6 +2,7 @@ const preferenceKey = 'armorystuff.modelViewer.enabled';
 const toggle = document.getElementById('model-viewer-enabled');
 const viewer = document.getElementById('character-model-viewer');
 const status = document.getElementById('character-model-status');
+const paperdollLayout = viewer?.closest('.paperdoll-main-layout');
 
 const readPreference = () => {
     try {
@@ -37,12 +38,14 @@ if (toggle) {
 }
 
 if (!enabled) {
+    paperdollLayout?.classList.add('model-off');
     viewer?.setAttribute('hidden', '');
     if (status) {
         status.classList.add('is-unavailable');
         status.textContent = 'Enable the 3D model to load it';
     }
 } else if (viewer) {
+    paperdollLayout?.classList.remove('model-off');
     viewer.removeAttribute('hidden');
     if (status) {
         status.classList.remove('is-unavailable');

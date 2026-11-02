@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Achievement information for {{ characterName }} on {{ realmName }}, with a direct Warmane Armory link.">
+    <title>{{ characterName }} Achievements — Warmane Armory</title>
+    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+</head>
+<body>
+    <main class="armory-wrapper">
+        {% include '_site_header.html.twig' with {currentRealm: realmName} %}
+        <section class="content-card section-card" aria-labelledby="achievements-title">
+            <h1 id="achievements-title">{{ characterName }} achievements</h1>
+            <p>Achievement details load in the character profile. You can also view the progression directly on Warmane.</p>
+            <p><a href="{{ sourceUrl }}" target="_blank" rel="noopener">View achievements on Warmane</a></p>
+            <p><a href="{{ path('app_character_view', {characterName: characterName, realmName: realmName}) }}">Back to {{ characterName }}’s character page</a></p>
+        </section>
+    </main>
+</body>
+</html>

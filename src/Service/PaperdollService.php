@@ -16,7 +16,11 @@ class PaperdollService
      * Maps a raw list of equipped items into standard Paperdoll slots.
      * Returns an array with 'slots' (keyed by slot name) and 'enrichedItems'.
      */
-    public function buildPaperdollSlots(array $equippedItems, ?string $characterClass = null): array
+    public function buildPaperdollSlots(
+        array $equippedItems,
+        ?string $characterClass = null,
+        bool $includeTooltips = true,
+    ): array
     {
         $canDualWieldTwoHandedWeapons = strcasecmp($characterClass ?? '', 'Warrior') === 0;
         $itemIds = array_values(array_filter(
@@ -106,7 +110,7 @@ class PaperdollService
         }
 
         $itemTooltips = [];
-        if ($this->itemTooltipService !== null) {
+        if ($includeTooltips && $this->itemTooltipService !== null) {
             foreach ($enrichedItems as &$enrichedItem) {
                 $tooltip = $this->itemTooltipService->build(
                     $enrichedItem,
@@ -280,8 +284,36 @@ class PaperdollService
             'slots' => $slots,
             'enrichedItems' => $enrichedItems,
             'tooltips' => $itemTooltips,
+            'tooltipPayload' => $includeTooltips ? $this->compactTooltipPayload($itemTooltips) : [],
             'transmogItems' => array_values($transmogItems),
         ];
+    }
+
+    /** @param array<string, array<string, mixed>> $tooltips */
+    private function compactTooltipPayload(array $tooltips): array
+    {
+        if ($tooltips === []) {
+            return [];
+        }
+
+        $unique = [];
+        $hashToIndex = [];
+        $references = [];
+        foreach ($tooltips as $key => $tooltip) {
+            $hash = hash('sha256', json_encode($tooltip, JSON_THROW_ON_ERROR));
+            if (!array_key_exists($hash, $hashToIndex)) {
+                $hashToIndex[$hash] = count($unique);
+                $unique[] = $tooltip;
+            }
+            $references[$key] = $hashToIndex[$hash];
+        }
+
+        $compact = ['entries' => $unique, 'references' => $references];
+        $flags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+        $flatSize = strlen(json_encode($tooltips, $flags | JSON_THROW_ON_ERROR));
+        $compactSize = strlen(json_encode($compact, $flags | JSON_THROW_ON_ERROR));
+
+        return $compactSize < $flatSize ? $compact : $tooltips;
     }
 
     public function resolveGemFromEnchantId(int $gemEnchantId): array

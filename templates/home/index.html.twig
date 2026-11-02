@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Armory</title>
+    <meta name="description" content="Search Warmane characters and guilds, browse recent character snapshots, and explore public Armory data.">
+    <title>Armory — Warmane character and guild search</title>
+    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -14,27 +16,34 @@
         <section class="landing-content" aria-labelledby="armory-title">
             <h1 id="armory-title" class="landing-title">Armory</h1>
 
-            <form class="character-search" action="{{ path('app_characters') }}" method="get">
-                <label class="visually-hidden" for="character">Character name</label>
+            <form class="character-search home-search" action="{{ path('app_characters') }}" method="get" aria-label="Search characters and guilds">
+                <label class="visually-hidden" for="home-search-name">Character or guild name</label>
                 <input
-                    id="character"
+                    id="home-search-name"
                     class="character-search-input"
                     type="search"
                     name="character"
-                    placeholder="Character name"
+                    placeholder="Character or guild name"
+                    aria-label="Character or guild name"
                     autocomplete="off"
                     required
                     autofocus
                 >
 
-                <label class="visually-hidden" for="realm">Realm</label>
-                <select id="realm" class="character-search-realm" name="realm" aria-label="Realm">
+                <label class="visually-hidden" for="home-search-type">Search type</label>
+                <select id="home-search-type" class="character-search-type" name="type" aria-label="Search type">
+                    <option value="character">Character</option>
+                    <option value="guild">Guild</option>
+                </select>
+
+                <label class="visually-hidden" for="home-search-realm">Realm</label>
+                <select id="home-search-realm" class="character-search-realm" name="realm" aria-label="Realm">
                     {% for realm in realms %}
                         <option value="{{ realm }}">{{ realm }}</option>
                     {% endfor %}
                 </select>
 
-                <button class="character-search-button" type="submit" aria-label="Search for character">
+            <button class="character-search-button" type="submit" aria-label="Search">
                     <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="11" cy="11" r="8"></circle>
                         <path d="m21 21-4.35-4.35"></path>
@@ -45,7 +54,7 @@
 
             {% if recentCharacters is not empty %}
                 <section class="recent-searches" aria-labelledby="recent-searches-title">
-                    <h2 id="recent-searches-title" class="recent-searches-title">Recently searched</h2>
+                    <h2 id="recent-searches-title" class="recent-searches-title">Recently updated</h2>
                     <ul class="recent-searches-list">
                         {% for character in recentCharacters %}
                             <li>
@@ -66,15 +75,6 @@
         </section>
     </main>
 
-    <script>
-        document.querySelectorAll('form.character-search').forEach(form => {
-            form.addEventListener('submit', () => {
-                const btn = form.querySelector('.character-search-button');
-                if (btn) {
-                    btn.classList.add('is-loading');
-                }
-            });
-        });
-    </script>
+    <script type="module" src="{{ asset('search-preferences.js') }}"></script>
 </body>
 </html>

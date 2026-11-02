@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\CharacterSnapshot;
+use App\Http\ConditionalResponse;
 use App\Repository\CharacterSnapshotRepository;
 use App\Service\ArmoryScraperService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -28,7 +29,12 @@ class ArmoryController extends AbstractController
         $existingSnapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
 
         if (!$forceRefresh && $existingSnapshot !== null) {
-            return $this->buildJsonResponse($existingSnapshot, false);
+            $response = $this->buildJsonResponse($existingSnapshot, false);
+
+            return ConditionalResponse::apply($response, $request, [
+                __FILE__,
+                dirname(__DIR__).'/Entity/CharacterSnapshot.php',
+            ], sessionIndependent: true);
         }
 
         // Scrape fresh

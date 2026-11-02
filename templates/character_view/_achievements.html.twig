@@ -8,16 +8,16 @@
 
 <div class="raid-group-tabs" role="tablist" aria-label="Wrath raid group">
     {% for routeKey, tab in achievementTabs %}
-        <button
+        <a
             id="raid-group-tab-{{ routeKey }}"
             class="raid-group-tab{% if loop.first %} active{% endif %}"
-            type="button"
             role="tab"
             aria-selected="{{ loop.first ? 'true' : 'false' }}"
             aria-controls="raid-group-panel-{{ routeKey }}"
+            href="{{ path('app_character_achievement_group', {'characterName': characterName, 'realmName': realmName, 'groupName': routeKey}) }}"
             data-group-url="{{ path('app_character_achievement_group', {'characterName': characterName, 'realmName': realmName, 'groupName': routeKey}) }}"
-            onclick="setAchievementGroupTab('{{ routeKey }}', this)"
-        >{{ tab.title }}</button>
+            onclick="setAchievementGroupTab('{{ routeKey }}', this); return false;"
+        >{{ tab.title }}</a>
     {% endfor %}
 </div>
 

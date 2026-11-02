@@ -2,8 +2,15 @@ const dataElement = document.getElementById('item-tooltip-data');
 
 if (dataElement) {
     let tooltips = {};
+    let tooltipReferences = null;
     try {
-        tooltips = JSON.parse(dataElement.textContent || '{}');
+        const payload = JSON.parse(dataElement.textContent || '{}');
+        if (payload.entries && payload.references) {
+            tooltips = payload.entries;
+            tooltipReferences = payload.references;
+        } else {
+            tooltips = payload;
+        }
     } catch (error) {
         console.error('Unable to parse local item tooltip data.', error);
     }
@@ -48,6 +55,9 @@ if (dataElement) {
         if (item.icon_url) {
             const icon = document.createElement('img');
             icon.className = `item-tooltip-icon q-${item.quality}`;
+            icon.width = 48;
+            icon.height = 48;
+            icon.decoding = 'async';
             setIconSource(icon, item.icon_url, item.icon_fallback_url);
             icon.alt = '';
             tooltip.appendChild(icon);
@@ -100,6 +110,9 @@ if (dataElement) {
 
             if (socket.gem?.icon_url) {
                 const gemIcon = document.createElement('img');
+                gemIcon.width = 15;
+                gemIcon.height = 15;
+                gemIcon.decoding = 'async';
                 setIconSource(gemIcon, socket.gem.icon_url, socket.gem.icon_fallback_url);
                 gemIcon.alt = '';
                 row.appendChild(gemIcon);
@@ -243,7 +256,10 @@ if (dataElement) {
     };
 
     const showTooltip = (trigger) => {
-        const item = tooltips[trigger.dataset.itemTooltip];
+        const key = trigger.dataset.itemTooltip;
+        const item = tooltipReferences
+            ? tooltips[tooltipReferences[key]]
+            : tooltips[key];
         if (!item) return;
         if (activeTrigger === trigger && activeTooltip?.isConnected) return;
 

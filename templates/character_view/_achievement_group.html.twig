@@ -12,7 +12,7 @@
                         <article class="icc-achievement{% if achievement.earned %} is-earned{% else %} is-locked{% endif %}">
                             <div class="icc-achievement-icon" aria-hidden="true">
                                 {% if achievement.iconUrl %}
-                                    <img src="{{ achievement.iconUrl }}" alt="" loading="lazy">
+                                    <img src="{{ achievement.iconUrl }}" alt="" width="50" height="50" loading="lazy" decoding="async">
                                 {% endif %}
                             </div>
                             <div class="icc-achievement-copy">

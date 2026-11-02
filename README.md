@@ -28,7 +28,11 @@ DB_PORT=3306
 DB_USER=raidbot
 DB_PASSWORD=raidbot
 DB_NAME=raidbot
+DB_SERVER_VERSION=11.8.0-MariaDB
 ```
+
+Set `DB_SERVER_VERSION` to the server version understood by Doctrine, such as
+`11.8.0-MariaDB` for MariaDB 11.8 or `8.0.0` for MySQL 8.
 
 For canonical item data and local tooltips, place a TrinityCore 3.3.5a full-world dump outside Git and run:
 
@@ -97,6 +101,12 @@ the checkout if tracked files have local modifications or the branch has
 diverged. Ignored deployment files such as `.env.local` are preserved.
 After installing the locked Composer dependencies, every run applies all pending
 Doctrine migrations before compiling assets and clearing the production cache.
+The installer also applies the Armory vhost's gzip and immutable asset rules,
+tunes the stock `www` PHP-FPM pool to 12 children, and configures OPcache and
+MariaDB's InnoDB buffer pool to 1 GB. It restarts PHP-FPM after each deployment
+so `opcache.validate_timestamps=0` sees the new release. Set
+`DB_SERVER_VERSION` for the Doctrine platform; the default is MariaDB 11.8, and
+MySQL 8 deployments should use `8.0.0`.
 
 The key's public half must be registered with GitHub, either on the user account
 or in the repository's **Settings → Deploy keys** page. Read-only repository

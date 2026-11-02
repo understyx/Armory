@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\CharacterSnapshot;
+use App\Http\ConditionalResponse;
 use App\Message\RefreshCharacterSnapshotMessage;
 use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
@@ -17,6 +18,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -46,9 +48,10 @@ class CharacterViewController extends AbstractController
 
     #[Route('/characters/{characterName}/{realmName}', name: 'app_character_view', methods: ['GET'])]
     #[Route('/character/{characterName}/{realmName}', name: 'app_character_view_legacy', methods: ['GET'])]
-    public function viewCharacter(string $characterName, string $realmName): Response
+    public function viewCharacter(string $characterName, string $realmName, ?Request $request = null): Response
     {
-        $snapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
+        $request ??= new Request();
+        $snapshot = $this->snapshotRepository->findViewByNameAndRealm($characterName, $realmName);
         $warningMessage = null;
 
         if ($snapshot === null) {
@@ -78,14 +81,15 @@ class CharacterViewController extends AbstractController
             ? intdiv($snapshotAgeSeconds, 86400)
             : null;
 
-        return $this->renderCharacterView($snapshot, $staleAgeDays, $warningMessage);
+        return $this->renderCharacterView($snapshot, $staleAgeDays, $warningMessage, $request);
     }
 
     #[Route('/characters/{characterName}/{realmName}/stats', name: 'app_character_stats', methods: ['GET'])]
     #[Route('/character/{characterName}/{realmName}/stats', name: 'app_character_stats_legacy', methods: ['GET'])]
-    public function viewCharacterStats(string $characterName, string $realmName): Response
+    public function viewCharacterStats(string $characterName, string $realmName, ?Request $request = null): Response
     {
-        $snapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
+        $request ??= new Request();
+        $snapshot = $this->snapshotRepository->findStatsByNameAndRealm($characterName, $realmName);
         if ($snapshot === null) {
             if ($this->messageBus !== null) {
                 return $this->queueCharacterLoad($characterName, $realmName, 'app_character_stats');
@@ -110,6 +114,7 @@ class CharacterViewController extends AbstractController
         $paperdollData = $this->paperdollService->buildPaperdollSlots(
             $snapshot->getEquippedItems() ?? [],
             $snapshot->getClass(),
+            false,
         );
         $calculatedStatsBySpec = $this->buildCalculatedStatsBySpec(
             $snapshot,
@@ -117,7 +122,7 @@ class CharacterViewController extends AbstractController
             $paperdollData['enrichedItems'],
         );
 
-        return $this->render('character_view/stats.html.twig', [
+        $response = $this->render('character_view/stats.html.twig', [
             'characterName' => $snapshot->getName(),
             'realmName' => $snapshot->getRealm(),
             'characterDetails' => [
@@ -128,13 +133,23 @@ class CharacterViewController extends AbstractController
             'calculatedStatsBySpec' => $calculatedStatsBySpec,
             'scrapedAt' => $snapshot->getScrapedAt(),
         ]);
+
+        return ConditionalResponse::apply($response, $request, [
+            __FILE__,
+            dirname(__DIR__, 2).'/templates/character_view/stats.html.twig',
+            dirname(__DIR__, 2).'/templates/_site_header.html.twig',
+            dirname(__DIR__).'/Entity/CharacterSnapshot.php',
+            dirname(__DIR__).'/Service/CharacterStatCalculator.php',
+            dirname(__DIR__).'/Service/WotlkBaseStatTable.php',
+        ]);
     }
 
     #[Route('/characters/{characterName}/{realmName}/stats-panel', name: 'app_character_stats_panel', methods: ['GET'])]
     #[Route('/character/{characterName}/{realmName}/stats-panel', name: 'app_character_stats_panel_legacy', methods: ['GET'])]
-    public function viewCharacterStatsPanel(string $characterName, string $realmName): Response
+    public function viewCharacterStatsPanel(string $characterName, string $realmName, ?Request $request = null): Response
     {
-        $snapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
+        $request ??= new Request();
+        $snapshot = $this->snapshotRepository->findStatsByNameAndRealm($characterName, $realmName);
         if ($snapshot === null) {
             return new Response('Character snapshot unavailable.', Response::HTTP_NOT_FOUND);
         }
@@ -148,9 +163,10 @@ class CharacterViewController extends AbstractController
         $paperdollData = $this->paperdollService->buildPaperdollSlots(
             $snapshot->getEquippedItems() ?? [],
             $snapshot->getClass(),
+            false,
         );
 
-        return $this->render('character_view/_stats_panel.html.twig', [
+        $response = $this->render('character_view/_stats_panel.html.twig', [
             'characterName' => $snapshot->getName(),
             'realmName' => $snapshot->getRealm(),
             'characterDetails' => ['level' => $snapshot->getLevel()],
@@ -159,6 +175,14 @@ class CharacterViewController extends AbstractController
                 $parsedSpecs,
                 $paperdollData['enrichedItems'],
             ),
+        ]);
+
+        return ConditionalResponse::apply($response, $request, [
+            __FILE__,
+            dirname(__DIR__, 2).'/templates/character_view/_stats_panel.html.twig',
+            dirname(__DIR__).'/Entity/CharacterSnapshot.php',
+            dirname(__DIR__).'/Service/CharacterStatCalculator.php',
+            dirname(__DIR__).'/Service/WotlkBaseStatTable.php',
         ]);
     }
 
@@ -181,12 +205,12 @@ class CharacterViewController extends AbstractController
             ]);
         }
 
-        $existingSnapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
+        $hasSnapshot = $this->snapshotRepository->existsByNameAndRealm($characterName, $realmName);
 
         if ($this->messageBus !== null) {
             $this->messageBus->dispatch(new RefreshCharacterSnapshotMessage($characterName, $realmName));
 
-            if ($existingSnapshot === null) {
+            if (!$hasSnapshot) {
                 return $this->renderLoadingPage($characterName, $realmName);
             }
 
@@ -201,7 +225,7 @@ class CharacterViewController extends AbstractController
         $scrapeResult = $this->scrapeAndSave($characterName, $realmName);
 
         if ($scrapeResult['status'] === 'error') {
-            if ($existingSnapshot !== null) {
+            if ($hasSnapshot) {
                 $this->addFlash('warning', 'Warmane armory is currently unreachable. Showing previously saved data.');
                 return $this->redirectToRoute('app_character_view', [
                     'characterName' => $characterName,
@@ -245,8 +269,7 @@ class CharacterViewController extends AbstractController
         $characterName = trim($characterName);
         $realmName = trim($realmName);
 
-        $existingSnapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
-        if ($existingSnapshot !== null) {
+        if ($this->snapshotRepository->existsByNameAndRealm($characterName, $realmName)) {
             return new JsonResponse([
                 'ready' => true,
                 'status' => 'ready',
@@ -308,16 +331,16 @@ class CharacterViewController extends AbstractController
     #[Route('/character/{characterName}/{realmName}/load-status', name: 'app_character_load_status_legacy', methods: ['GET'])]
     public function loadStatus(string $characterName, string $realmName): JsonResponse
     {
-        $snapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
+        $hasSnapshot = $this->snapshotRepository->existsByNameAndRealm($characterName, $realmName);
         $response = new JsonResponse(
             [
-                'ready' => $snapshot !== null,
+                'ready' => $hasSnapshot,
                 'characterUrl' => $this->generateUrl('app_character_view', [
                     'characterName' => $characterName,
                     'realmName' => $realmName,
                 ]),
             ],
-            $snapshot !== null ? Response::HTTP_OK : Response::HTTP_ACCEPTED,
+            $hasSnapshot ? Response::HTTP_OK : Response::HTTP_ACCEPTED,
         );
         $response->headers->set('Cache-Control', 'no-store');
 
@@ -326,9 +349,9 @@ class CharacterViewController extends AbstractController
 
     #[Route('/characters/{characterName}/{realmName}/achievements', name: 'app_character_achievements', methods: ['GET'])]
     #[Route('/character/{characterName}/{realmName}/achievements', name: 'app_character_achievements_legacy', methods: ['GET'])]
-    public function viewCharacterAchievements(string $characterName, string $realmName): Response
+    public function viewCharacterAchievements(string $characterName, string $realmName, ?Request $request = null): Response
     {
-        return $this->render('character_view/_achievements.html.twig', [
+        $templateData = [
             'achievementTabs' => self::ACHIEVEMENT_GROUPS,
             'characterName' => $characterName,
             'realmName' => $realmName,
@@ -337,7 +360,14 @@ class CharacterViewController extends AbstractController
                 rawurlencode($characterName),
                 rawurlencode($realmName),
             ),
-        ]);
+        ];
+
+        return $this->render(
+            $request?->isXmlHttpRequest()
+                ? 'character_view/_achievements.html.twig'
+                : 'character_view/achievements_fallback.html.twig',
+            $templateData,
+        );
     }
 
     #[Route(
@@ -359,7 +389,7 @@ class CharacterViewController extends AbstractController
             throw $this->createNotFoundException('Unknown achievement group.');
         }
 
-        $snapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
+        $snapshot = $this->snapshotRepository->findAchievementsByNameAndRealm($characterName, $realmName);
         $cachedCategories = $snapshot?->getRaidAchievements() ?? [];
         $cacheChanged = false;
         $categoryResults = [];
@@ -541,7 +571,7 @@ class CharacterViewController extends AbstractController
         return $response;
     }
 
-    private function renderCharacterView(CharacterSnapshot $snapshot, ?int $staleAgeDays = null, ?string $warningMessage = null): Response
+    private function renderCharacterView(CharacterSnapshot $snapshot, ?int $staleAgeDays, ?string $warningMessage, Request $request): Response
     {
         $isWotlkServer = $this->talentTreeService->isWotlkServer(
             $snapshot->getRealm(),
@@ -560,7 +590,7 @@ class CharacterViewController extends AbstractController
             $snapshot->getClass()
         );
 
-        return $this->render('character_view/index.html.twig', [
+        $response = $this->render('character_view/index.html.twig', [
             'characterName' => $snapshot->getName(),
             'realmName' => $snapshot->getRealm(),
             'characterDetails' => [
@@ -571,14 +601,11 @@ class CharacterViewController extends AbstractController
             ],
             'guild' => $snapshot->getGuild(),
             'professions' => $snapshot->getProfessions(),
-            'specializations' => $snapshot->getSpecializations(),
             'glyphs' => $snapshot->getGlyphs(),
-            'talentStrings' => $snapshot->getTalentStrings(),
             'parsedSpecs' => $parsedSpecs,
             'isWotlkServer' => $isWotlkServer,
-            'equippedItems' => $paperdollData['enrichedItems'],
             'paperdollSlots' => $paperdollData['slots'],
-            'itemTooltips' => $paperdollData['tooltips'],
+            'itemTooltips' => $paperdollData['tooltipPayload'],
             'transmogItems' => $paperdollData['transmogItems'],
             'characterModel' => $snapshot->getCharacterModel(),
             'gearScore' => $snapshot->getGearScore(),
@@ -592,6 +619,21 @@ class CharacterViewController extends AbstractController
             'staleAgeDays' => $staleAgeDays,
             'warningMessage' => $warningMessage,
             'uwuRank' => $this->uwuRankRepository?->findBest((string) $snapshot->getName(), (string) $snapshot->getRealm()),
+            'flashes' => ConditionalResponse::flashes($request),
+        ]);
+
+        return ConditionalResponse::apply($response, $request, [
+            __FILE__,
+            dirname(__DIR__, 2).'/templates/character_view/index.html.twig',
+            dirname(__DIR__, 2).'/templates/_site_header.html.twig',
+            dirname(__DIR__).'/Repository/UwuLogRankRepository.php',
+            dirname(__DIR__).'/Entity/CharacterSnapshot.php',
+            dirname(__DIR__).'/Entity/UwuLogRank.php',
+            dirname(__DIR__).'/Service/TalentTreeService.php',
+            dirname(__DIR__).'/Service/PaperdollService.php',
+            dirname(__DIR__).'/Service/ItemTooltipService.php',
+            dirname(__DIR__).'/Service/ItemDatabaseService.php',
+            dirname(__DIR__).'/Repository/TooltipEnrichmentRepository.php',
         ]);
     }
 

@@ -1579,21 +1579,25 @@ class ArmoryScraperService
      */
     public function extractKillCount(string $jsonHtmlContent, string $category): array // Returns processed stats or empty array
     {
-        if (empty($jsonHtmlContent)) {
+        $jsonHtmlContent = trim($jsonHtmlContent);
+        if ($jsonHtmlContent === '' || $jsonHtmlContent[0] !== '{') {
             return [];
         }
         try {
             $data = json_decode($jsonHtmlContent, true); // Decode JSON into an associative array
 
             if (json_last_error() !== JSON_ERROR_NONE) {
-                $this->log('error', "Failed to decode JSON for killcount: " . json_last_error_msg());
+                $this->log('warning', "Malformed JSON for killcount response: " . json_last_error_msg());
+                return [];
+            }
+
+            if (!is_array($data)) {
                 return [];
             }
 
             $htmlContent = $data["content"] ?? null; // Get the HTML from the "content" key
 
-            if (empty($htmlContent)) {
-                $this->log('warning', "No 'content' key found in JSON or content is empty for killcount.");
+            if (!is_string($htmlContent) || trim($htmlContent) === '') {
                 return [];
             }
 

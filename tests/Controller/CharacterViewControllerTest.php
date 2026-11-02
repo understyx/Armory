@@ -72,8 +72,12 @@ class CharacterViewControllerTest extends KernelTestCase
         $snapshot->setScrapedAt(new \DateTimeImmutable('-2 days'));
 
         $snapshotRepo = $this->createMock(CharacterSnapshotRepository::class);
-        $snapshotRepo->expects($this->exactly(2))
-            ->method('findByNameAndRealm')
+        $snapshotRepo->expects($this->once())
+            ->method('findViewByNameAndRealm')
+            ->with('Understyx', 'Icecrown')
+            ->willReturn($snapshot);
+        $snapshotRepo->expects($this->once())
+            ->method('findStatsByNameAndRealm')
             ->with('Understyx', 'Icecrown')
             ->willReturn($snapshot);
 
@@ -135,12 +139,13 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringContainsString('id="header-uwu-rank" class="stat-rank">#1,525', $response->getContent());
         $this->assertStringContainsString('id="header-uwu-spec" class="stat-meta">Unholy', $response->getContent());
         $this->assertStringContainsString('href="/guilds/Cadence/Icecrown"', $response->getContent());
-        $this->assertStringContainsString('Level 80 Male Human', $response->getContent());
+        $this->assertStringContainsString('Level 80 Male', $response->getContent());
+        $this->assertStringContainsString('Human <span aria-hidden="true">·</span>', $response->getContent());
         $this->assertStringContainsString('Interactive 3D model of Understyx, male', $response->getContent());
         $this->assertStringContainsString('id="model-viewer-enabled" type="checkbox" role="switch"', $response->getContent());
         $this->assertStringContainsString('<script type="module" src="/assets/model-viewer-', $response->getContent());
         $this->assertStringNotContainsString('<script src="https://wow.zamimg.com/modelviewer/', $response->getContent());
-        $this->assertStringContainsString('class="character-search character-page-search"', $response->getContent());
+        $this->assertStringContainsString('class="character-search site-header-search"', $response->getContent());
         $this->assertStringContainsString('action="/characters"', $response->getContent());
         $this->assertStringContainsString('<option value="Icecrown" selected>', $response->getContent());
         $this->assertStringContainsString('<option value="Onyxia">', $response->getContent());
@@ -154,7 +159,7 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringContainsString('Fetch rankings from Uwu-logs', $response->getContent());
         $this->assertStringContainsString('/characters/Understyx/Icecrown/uwu-logs', $response->getContent());
         $this->assertStringContainsString('Rankings are fetched only when you request them.', $response->getContent());
-        $this->assertStringContainsString("Hasn't been updated in 2 days and could be out of date.", $response->getContent());
+        $this->assertStringContainsString('May be out of date', $response->getContent());
         $this->assertStringNotContainsString('Outdated', $response->getContent());
         $this->assertStringContainsString('Show all 11 matches', $response->getContent());
         $this->assertSame(1, substr_count($response->getContent(), 'class="match-history-extra" hidden'));
@@ -187,7 +192,13 @@ class CharacterViewControllerTest extends KernelTestCase
         );
         $controller->setContainer(self::getContainer());
 
-        $response = $controller->viewCharacterAchievements('Puredecay', 'Icecrown');
+        $fallback = $controller->viewCharacterAchievements('Puredecay', 'Icecrown');
+        self::assertStringContainsString('class="character-search site-header-search"', $fallback->getContent());
+        self::assertStringContainsString('View achievements on Warmane', $fallback->getContent());
+
+        $request = Request::create('/characters/Puredecay/Icecrown/achievements');
+        $request->headers->set('X-Requested-With', 'XMLHttpRequest');
+        $response = $controller->viewCharacterAchievements('Puredecay', 'Icecrown', $request);
         $content = $response->getContent();
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
@@ -205,7 +216,7 @@ class CharacterViewControllerTest extends KernelTestCase
     {
         $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
         $snapshotRepository->expects(self::once())
-            ->method('findByNameAndRealm')
+            ->method('findViewByNameAndRealm')
             ->with('Understyx', 'Icecrown')
             ->willReturn(null);
 
@@ -254,9 +265,9 @@ class CharacterViewControllerTest extends KernelTestCase
 
         $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
         $snapshotRepository->expects(self::once())
-            ->method('findByNameAndRealm')
+            ->method('existsByNameAndRealm')
             ->with('Understyx', 'Icecrown')
-            ->willReturn($snapshot);
+            ->willReturn(true);
 
         $controller = new CharacterViewController(
             $this->createMock(ArmoryScraperService::class),
@@ -284,9 +295,9 @@ class CharacterViewControllerTest extends KernelTestCase
 
         $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
         $snapshotRepository->expects(self::once())
-            ->method('findByNameAndRealm')
+            ->method('existsByNameAndRealm')
             ->with('Newchar', 'Icecrown')
-            ->willReturn(null);
+            ->willReturn(false);
 
         $updater = $this->createMock(CharacterSnapshotUpdater::class);
         $updater->expects(self::once())
@@ -320,9 +331,9 @@ class CharacterViewControllerTest extends KernelTestCase
     {
         $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
         $snapshotRepository->expects(self::once())
-            ->method('findByNameAndRealm')
+            ->method('existsByNameAndRealm')
             ->with('Missing', 'Icecrown')
-            ->willReturn(null);
+            ->willReturn(false);
 
         $updater = $this->createMock(CharacterSnapshotUpdater::class);
         $updater->expects(self::once())
@@ -356,9 +367,9 @@ class CharacterViewControllerTest extends KernelTestCase
     {
         $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
         $snapshotRepository->expects(self::once())
-            ->method('findByNameAndRealm')
+            ->method('existsByNameAndRealm')
             ->with('Timeoutchar', 'Icecrown')
-            ->willReturn(null);
+            ->willReturn(false);
 
         $updater = $this->createMock(CharacterSnapshotUpdater::class);
         $updater->expects(self::once())
@@ -396,9 +407,9 @@ class CharacterViewControllerTest extends KernelTestCase
 
         $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
         $snapshotRepository->expects(self::once())
-            ->method('findByNameAndRealm')
+            ->method('existsByNameAndRealm')
             ->with('Understyx', 'Icecrown')
-            ->willReturn($snapshot);
+            ->willReturn(true);
 
         $controller = new CharacterViewController(
             $this->createMock(ArmoryScraperService::class),
@@ -439,7 +450,7 @@ class CharacterViewControllerTest extends KernelTestCase
             ->setScrapedAt(new \DateTimeImmutable());
 
         $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
-        $snapshotRepository->method('findByNameAndRealm')->willReturn($snapshot);
+        $snapshotRepository->method('findViewByNameAndRealm')->willReturn($snapshot);
         $snapshotRepository->expects(self::never())->method('save');
         $scraper = $this->createMock(ArmoryScraperService::class);
         $scraper->expects(self::never())->method('fetchArmoryHtml');
@@ -467,7 +478,7 @@ class CharacterViewControllerTest extends KernelTestCase
             ->setRealm('Icecrown');
         $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
         $snapshotRepository->expects(self::once())
-            ->method('findByNameAndRealm')
+            ->method('findAchievementsByNameAndRealm')
             ->with('Puredecay', 'Icecrown')
             ->willReturn($snapshot);
         $snapshotRepository->expects(self::once())
@@ -549,7 +560,7 @@ class CharacterViewControllerTest extends KernelTestCase
                 '15002' => ['3812' => '07/15/2020'],
             ]);
         $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
-        $snapshotRepository->expects(self::once())->method('findByNameAndRealm')->willReturn($snapshot);
+        $snapshotRepository->expects(self::once())->method('findAchievementsByNameAndRealm')->willReturn($snapshot);
         $snapshotRepository->expects(self::never())->method('save');
 
         $realScraper = new ArmoryScraperService();
@@ -608,7 +619,7 @@ class CharacterViewControllerTest extends KernelTestCase
 
         $snapshotRepo = $this->createMock(CharacterSnapshotRepository::class);
         $snapshotRepo->expects(self::once())
-            ->method('findByNameAndRealm')
+            ->method('findStatsByNameAndRealm')
             ->with('Understyx', 'Icecrown')
             ->willReturn($snapshot);
         $scraperService = $this->createMock(ArmoryScraperService::class);
@@ -659,7 +670,7 @@ class CharacterViewControllerTest extends KernelTestCase
     {
         $snapshotRepo = $this->createMock(CharacterSnapshotRepository::class);
         $snapshotRepo->expects($this->once())
-            ->method('findByNameAndRealm')
+            ->method('findViewByNameAndRealm')
             ->with('Missing', 'Icecrown')
             ->willReturn(null);
 
@@ -712,8 +723,8 @@ class CharacterViewControllerTest extends KernelTestCase
 
         $snapshotRepo = $this->createMock(CharacterSnapshotRepository::class);
         $snapshotRepo->expects($this->once())
-            ->method('findByNameAndRealm')
-            ->willReturn($existing);
+            ->method('existsByNameAndRealm')
+            ->willReturn(true);
         $snapshotRepo->expects($this->once())
             ->method('upsert')
             ->willReturn(false);
@@ -772,7 +783,7 @@ class CharacterViewControllerTest extends KernelTestCase
     public function testRefreshIsRejectedDuringFiveMinuteCooldown(): void
     {
         $snapshotRepo = $this->createMock(CharacterSnapshotRepository::class);
-        $snapshotRepo->expects(self::never())->method('findByNameAndRealm');
+        $snapshotRepo->expects(self::never())->method('existsByNameAndRealm');
         $scraperService = $this->createMock(ArmoryScraperService::class);
         $scraperService->expects(self::never())->method('fetchArmoryHtml');
         $updateThrottle = $this->createMock(CharacterUpdateThrottle::class);

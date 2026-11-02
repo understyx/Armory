@@ -96,6 +96,46 @@ class PaperdollServiceTest extends TestCase
         $this->assertSame('Frostbr& 1', $result['tooltips']['50002-1']['enchant']);
     }
 
+    public function testCompactsIdenticalInlineTooltipsWithoutMergingDifferentItems(): void
+    {
+        $mockItemDb = $this->createMock(ItemDatabaseService::class);
+        $mockItemDb->method('getItemsBulk')->willReturn([
+            50002 => [
+                'name' => 'Ring of Testing',
+                'quality' => 4,
+                'type' => ItemTypes::RING->value,
+                'tooltip' => [
+                    'flags' => 0,
+                    'bonding' => 1,
+                    'max_count' => 0,
+                    'stats' => [],
+                    'damage' => [],
+                    'sockets' => [],
+                    'socket_bonus_id' => 0,
+                    'sell_price' => 0,
+                    'description' => '',
+                    'item_set_id' => 0,
+                ],
+            ],
+        ]);
+
+        $result = (new PaperdollService($mockItemDb, new ItemTooltipService()))->buildPaperdollSlots([
+            ['id' => 50002],
+            ['id' => 50002],
+        ]);
+        $payload = $result['tooltipPayload'];
+
+        self::assertArrayHasKey('entries', $payload);
+        self::assertArrayHasKey('references', $payload);
+        self::assertSame($payload['references']['50002-0'], $payload['references']['50002-1']);
+        self::assertCount(1, $payload['entries']);
+        $flags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+        self::assertLessThan(
+            strlen(json_encode($result['tooltips'], $flags | JSON_THROW_ON_ERROR)),
+            strlen(json_encode($payload, $flags | JSON_THROW_ON_ERROR)),
+        );
+    }
+
     public function testResolvesTransmogItemsForTooltipAndPaperdollList(): void
     {
         $mockItemDb = $this->createMock(ItemDatabaseService::class);

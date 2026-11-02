@@ -2,7 +2,6 @@
 
 namespace App\Tests\Controller;
 
-use App\Entity\CharacterSnapshot;
 use App\Repository\CharacterSnapshotRepository;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
@@ -34,14 +33,20 @@ class HomeControllerTest extends WebTestCase
         self::assertResponseRedirects('/characters/Understyx/Icecrown');
     }
 
-    public function testLandingPageShowsTenMostRecentlySearchedCharacters(): void
+    public function testGuildTypeSearchRedirectsToPublicGuildPage(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/characters?character=VIVAMAX&type=guild&realm=Icecrown');
+
+        self::assertResponseRedirects('/guilds/VIVAMAX/Icecrown');
+    }
+
+    public function testLandingPageShowsTenRecentlyUpdatedCharacters(): void
     {
         $client = static::createClient();
         $characters = array_map(
-            static fn(int $number): CharacterSnapshot => (new CharacterSnapshot())
-                ->setName('Character'.$number)
-                ->setRealm('Icecrown'),
-            range(1, 10)
+            static fn(int $number): array => ['name' => 'Character'.$number, 'realm' => 'Icecrown'],
+            range(1, 10),
         );
 
         $repository = $this->createMock(CharacterSnapshotRepository::class);
@@ -54,7 +59,7 @@ class HomeControllerTest extends WebTestCase
         $client->request('GET', '/');
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('#recent-searches-title', 'Recently searched');
+        self::assertSelectorTextContains('#recent-searches-title', 'Recently updated');
         self::assertSelectorCount(10, '.recent-searches-list li');
         self::assertSelectorExists('a[href="/characters/Character1/Icecrown"]');
         self::assertSelectorTextContains('a[href="/api"]', 'API documentation');

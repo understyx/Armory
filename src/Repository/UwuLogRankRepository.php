@@ -2,9 +2,12 @@
 
 namespace App\Repository;
 
+use App\Entity\GuildRankSummary;
 use App\Entity\UwuLogRank;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 
 /** @extends ServiceEntityRepository<UwuLogRank> */
 class UwuLogRankRepository extends ServiceEntityRepository
@@ -66,26 +69,39 @@ class UwuLogRankRepository extends ServiceEntityRepository
         return $best;
     }
 
-    /** @param list<string> $names @return array<string, UwuLogRank> */
+    /** @param list<string> $names @return array<string, GuildRankSummary> */
     public function findBestForCharacters(array $names, string $realm): array
     {
         if ($names === []) {
             return [];
         }
 
-        $rows = $this->createQueryBuilder('r')
-            ->where('r.name IN (:names)')
-            ->andWhere('r.realm = :realm')
-            ->setParameter('names', array_values(array_unique($names)))
-            ->setParameter('realm', trim($realm))
-            ->getQuery()
-            ->getResult();
+        $connection = $this->getEntityManager()->getConnection();
+        $overallPointsExpression = $connection->getDatabasePlatform() instanceof SQLitePlatform
+            ? "json_extract(payload, '$.overallPoints')"
+            : "CAST(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.overallPoints')) AS DECIMAL(10, 2))";
+        $rows = $connection->executeQuery(
+            <<<SQL
+                SELECT name, spec, overall_rank,
+                       {$overallPointsExpression} AS overall_points
+                FROM uwu_log_ranks
+                WHERE name IN (?) AND realm = ?
+                SQL,
+            [array_values(array_unique($names)), trim($realm)],
+            [ArrayParameterType::STRING, \PDO::PARAM_STR],
+        )->fetchAllAssociative();
 
         $best = [];
-        foreach ($rows as $rank) {
-            $key = strtolower((string) $rank->getName());
-            if ($rank->isBetterThan($best[$key] ?? null)) {
-                $best[$key] = $rank;
+        foreach ($rows as $row) {
+            $key = strtolower((string) $row['name']);
+            $points = (float) ($row['overall_points'] ?? 0);
+            $rank = (int) $row['overall_rank'];
+            $current = $best[$key] ?? null;
+            if ($current === null
+                || $points > $current->getOverallPoints()
+                || ($points === $current->getOverallPoints() && $rank > 0
+                    && ($current->getOverallRank() === 0 || $rank < $current->getOverallRank()))) {
+                $best[$key] = new GuildRankSummary($points, $rank, (string) $row['spec']);
             }
         }
 

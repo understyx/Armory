@@ -14,6 +14,7 @@ use App\Service\CharacterStatCalculator;
 use App\Service\CharacterUpdateThrottle;
 use App\Service\CharacterUpdateThrottleDecision;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -25,7 +26,7 @@ class CharacterApiControllerTest extends TestCase
         $snapshot = $this->createSnapshot();
         $repository = $this->createMock(CharacterSnapshotRepository::class);
         $repository->expects(self::once())
-            ->method('findByNameAndRealm')
+            ->method('findApiByNameAndRealm')
             ->with('Understyx', 'Icecrown')
             ->willReturn($snapshot);
         $throttle = $this->createMock(CharacterUpdateThrottle::class);
@@ -44,13 +45,37 @@ class CharacterApiControllerTest extends TestCase
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
         self::assertSame('Understyx', $payload['character']['name']);
         self::assertStringContainsString('public', (string) $response->headers->get('Cache-Control'));
-        self::assertStringContainsString('max-age=60', (string) $response->headers->get('Cache-Control'));
+        self::assertStringContainsString('max-age=0', (string) $response->headers->get('Cache-Control'));
+        self::assertStringContainsString('s-maxage=60', (string) $response->headers->get('Cache-Control'));
+        self::assertNotNull($response->headers->get('ETag'));
+    }
+
+    public function testCharacterEndpointReturns304AndChangesValidatorWithSnapshotOutput(): void
+    {
+        $snapshot = $this->createSnapshot();
+        $repository = $this->createMock(CharacterSnapshotRepository::class);
+        $repository->method('findApiByNameAndRealm')->willReturn($snapshot);
+        $controller = $this->createController($repository);
+
+        $first = $controller->character('Understyx', 'Icecrown');
+        $etag = $first->headers->get('ETag');
+        self::assertNotEmpty($etag);
+
+        $notModifiedRequest = new Request(server: ['HTTP_IF_NONE_MATCH' => $etag]);
+        $notModified = $controller->character('Understyx', 'Icecrown', $notModifiedRequest);
+        self::assertSame(Response::HTTP_NOT_MODIFIED, $notModified->getStatusCode());
+        self::assertSame('', $notModified->getContent());
+
+        $snapshot->setGearScore(6100);
+        $changed = $controller->character('Understyx', 'Icecrown', $notModifiedRequest);
+        self::assertSame(Response::HTTP_OK, $changed->getStatusCode());
+        self::assertNotSame($etag, $changed->headers->get('ETag'));
     }
 
     public function testCharacterReturnsNotFoundWhenThereIsNoSnapshot(): void
     {
         $repository = $this->createMock(CharacterSnapshotRepository::class);
-        $repository->method('findByNameAndRealm')->willReturn(null);
+        $repository->method('findApiByNameAndRealm')->willReturn(null);
 
         $response = $this->createController($repository)->character('Missing', 'Icecrown');
         $payload = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
@@ -63,7 +88,7 @@ class CharacterApiControllerTest extends TestCase
     {
         $snapshot = $this->createSnapshot();
         $repository = $this->createMock(CharacterSnapshotRepository::class);
-        $repository->method('findByNameAndRealm')->willReturn($snapshot);
+        $repository->method('findApiByNameAndRealm')->willReturn($snapshot);
         $rank = (new UwuLogRank())
             ->setName('Understyx')
             ->setRealm('Icecrown')
@@ -94,7 +119,7 @@ class CharacterApiControllerTest extends TestCase
     public function testDedicatedStatsEndpointReturnsOnlyConsumerFacingValues(): void
     {
         $repository = $this->createMock(CharacterSnapshotRepository::class);
-        $repository->method('findByNameAndRealm')->willReturn($this->createSnapshot());
+        $repository->method('findStatsByNameAndRealm')->willReturn($this->createSnapshot());
         $controller = new CharacterApiController(
             $repository,
             new CharacterApiFormatter(new CharacterStatCalculator()),
@@ -125,7 +150,7 @@ class CharacterApiControllerTest extends TestCase
             '15041' => ['4583' => '11/02/2020'],
         ]);
         $repository = $this->createMock(CharacterSnapshotRepository::class);
-        $repository->method('findByNameAndRealm')->willReturn($snapshot);
+        $repository->method('findAchievementsByNameAndRealm')->willReturn($snapshot);
         $controller = new CharacterApiController(
             $repository,
             new CharacterApiFormatter(null, new ArmoryScraperService()),
@@ -189,7 +214,7 @@ class CharacterApiControllerTest extends TestCase
     public function testInvalidIdentifiersAreRejectedBeforeDatabaseAccess(): void
     {
         $repository = $this->createMock(CharacterSnapshotRepository::class);
-        $repository->expects(self::never())->method('findByNameAndRealm');
+        $repository->expects(self::never())->method('findApiByNameAndRealm');
 
         $response = $this->createController($repository)->character('bad name', 'Icecrown');
 

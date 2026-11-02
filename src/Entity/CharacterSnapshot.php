@@ -6,7 +6,7 @@ use App\Repository\CharacterSnapshotRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: CharacterSnapshotRepository::class)]
-#[ORM\Table(name: 'character_snapshots')]
+#[ORM\Table(name: 'character_snapshots', indexes: [new ORM\Index(name: 'IDX_CHAR_SCRAPED_AT', columns: ['scraped_at'])])]
 #[ORM\UniqueConstraint(name: 'UNIQ_CHAR_REALM', columns: ['name', 'realm'])]
 class CharacterSnapshot
 {

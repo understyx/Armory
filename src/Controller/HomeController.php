@@ -2,6 +2,7 @@
 // src/Controller/HomeController.php
 namespace App\Controller;
 
+use App\Http\ConditionalResponse;
 use App\Repository\CharacterSnapshotRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,10 +20,18 @@ class HomeController extends AbstractController
     {
         $characterName = trim($request->query->getString('character'));
         $realmName = $request->query->getString('realm', self::REALMS[0]);
+        $searchType = $request->query->getString('type', 'character');
 
         if ($characterName !== '') {
             if (!in_array($realmName, self::REALMS, true)) {
                 $realmName = self::REALMS[0];
+            }
+
+            if ($searchType === 'guild') {
+                return $this->redirectToRoute('app_guild_view', [
+                    'guildName' => $characterName,
+                    'realmName' => $realmName,
+                ]);
             }
 
             return $this->redirectToRoute('app_character_view', [
@@ -31,9 +40,16 @@ class HomeController extends AbstractController
             ]);
         }
 
-        return $this->render('home/index.html.twig', [
+        $response = $this->render('home/index.html.twig', [
             'realms' => self::REALMS,
             'recentCharacters' => $snapshotRepository->findRecentlyViewed(10),
+        ]);
+
+        return ConditionalResponse::apply($response, $request, [
+            __FILE__,
+            dirname(__DIR__, 2).'/templates/home/index.html.twig',
+            dirname(__DIR__, 2).'/templates/_site_header.html.twig',
+            dirname(__DIR__).'/Repository/CharacterSnapshotRepository.php',
         ]);
     }
 

@@ -26,4 +26,20 @@ class GuildUpdateThrottle
 
         return new GuildUpdateThrottleDecision($inserted === 1, $tomorrow);
     }
+
+    public function inspect(string $guildName, string $realmName): GuildUpdateThrottleDecision
+    {
+        $now = new \DateTimeImmutable();
+        $tomorrow = $now->modify('tomorrow midnight');
+        $usedToday = $this->connection->fetchOne(
+            'SELECT 1 FROM guild_update_requests WHERE name = :name AND realm = :realm AND requested_on = :day',
+            [
+                'name' => strtolower(trim($guildName)),
+                'realm' => strtolower(trim($realmName)),
+                'day' => $now->format('Y-m-d'),
+            ],
+        ) !== false;
+
+        return new GuildUpdateThrottleDecision(!$usedToday, $tomorrow);
+    }
 }
