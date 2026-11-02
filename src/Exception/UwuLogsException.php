@@ -2,7 +2,7 @@
 
 namespace App\Exception;
 
-final class UwuLogsException extends \RuntimeException
+class UwuLogsException extends \RuntimeException
 {
     public function __construct(string $message, private readonly int $httpStatus = 502)
     {

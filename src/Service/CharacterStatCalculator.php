@@ -48,7 +48,7 @@ final class CharacterStatCalculator
         31216 => ['name' => 'Sinister Calling', 'percent' => ['agility' => 0.03]],
         18551 => ['name' => 'Mental Strength', 'percent' => ['intellect' => 0.03]],
         14901 => ['name' => 'Enlightenment', 'percent' => ['stamina' => 0.02, 'spirit' => 0.02]],
-        29593 => ['name' => 'Vitality', 'percent' => ['strength' => 0.02, 'stamina' => 0.03]],
+        29140 => ['name' => 'Vitality', 'percent' => ['strength' => 0.02, 'stamina' => 0.03]],
         48978 => ['name' => 'Ravenous Dead', 'percent' => ['strength' => 0.01]],
         49471 => ['name' => 'Veteran of the Third War', 'percent' => ['strength' => 0.02, 'stamina' => 0.01]],
         49137 => ['name' => 'Endless Winter', 'percent' => ['strength' => 0.02]],
@@ -65,9 +65,11 @@ final class CharacterStatCalculator
         53620 => ['name' => 'Focused Aim', 'hit' => ['Melee and ranged attacks' => 1.0]],
         15260 => ['name' => 'Shadow Focus', 'hit' => ['Shadow spells' => 1.0]],
         48962 => ['name' => 'Virulence', 'hit' => ['Spells' => 1.0]],
+        // WotLK 3.3.5a Shaman Dual Wield Specialization increases physical hit by 2% per point.
+        // https://wotlkdb.com/?spell=30816
+        30816 => ['name' => 'Dual Wield Specialization', 'hit' => ['Attacks while dual wielding' => 2.0]],
         49226 => ['name' => 'Nerves of Cold Steel', 'hit' => ['One-handed melee weapons' => 1.0]],
         30672 => ['name' => 'Elemental Precision', 'hit' => ['Fire, Frost and Nature spells' => 1.0]],
-        30816 => ['name' => 'Dual Wield Specialization', 'hit' => ['Attacks while dual wielding' => 2.0]],
         11222 => ['name' => 'Arcane Focus', 'hit' => ['Arcane spells' => 1.0]],
         29438 => ['name' => 'Precision', 'hit' => ['Spells' => 1.0]],
         18174 => ['name' => 'Suppression', 'hit' => ['Spells' => 1.0]],
@@ -98,7 +100,7 @@ final class CharacterStatCalculator
         31217 => 31216, 31218 => 31216, 31219 => 31216, 31220 => 31216,
         18552 => 18551, 18553 => 18551, 18554 => 18551, 18555 => 18551,
         14909 => 14901, 15017 => 14901,
-        29594 => 29593, 29595 => 29593,
+        29141 => 29140, 29144 => 29140,
         48979 => 48978, 48980 => 48978,
         49472 => 49471, 49473 => 49471,
         49657 => 49137,
@@ -115,9 +117,9 @@ final class CharacterStatCalculator
         53621 => 53620, 53622 => 53620,
         15327 => 15260, 15328 => 15260,
         49567 => 48962, 49568 => 48962,
+        30818 => 30816, 30819 => 30816,
         50137 => 49226, 50138 => 49226,
         30673 => 30672, 30674 => 30672,
-        30818 => 30816, 30819 => 30816,
         12839 => 11222, 12840 => 11222,
         29439 => 29438, 29440 => 29438,
         18175 => 18174, 18176 => 18174,
@@ -139,6 +141,8 @@ final class CharacterStatCalculator
 
     /** @var array<int, array<string, int>> */
     private const ENCHANT_STAT_OVERRIDES = [
+        // Nitro Boosts enchantment 3606 is +24 critical strike rating in 3.3.5a.
+        // https://wotlk.evowow.com/?enchantment=3606
         3606 => [
             'melee_crit_rating' => 24,
             'ranged_crit_rating' => 24,
@@ -146,7 +150,13 @@ final class CharacterStatCalculator
         ],
     ];
 
-    /** Rating required for one percentage point at anchor levels. */
+    /**
+     * Rating required for one percentage point at anchor levels. The level-80
+     * avoidance, block, defense, and resilience values are the post-3.2 table;
+     * TrinityCore applies the class rating scalar from gtOCTClassCombatRatingScalar.
+     * https://wowpedia.fandom.com/wiki/Combat_rating_system
+     * https://github.com/TrinityCore/TrinityCore/blob/3.3.5/src/server/game/Entities/Player/Player.cpp
+     */
     private const RATING_ANCHORS = [
         'melee_hit_rating' => [60 => 10.0, 70 => 15.769, 80 => 32.789989],
         'ranged_hit_rating' => [60 => 10.0, 70 => 15.769, 80 => 32.789989],
@@ -158,10 +168,10 @@ final class CharacterStatCalculator
         'ranged_haste_rating' => [60 => 10.0, 70 => 15.769, 80 => 32.789989],
         'spell_haste_rating' => [60 => 10.0, 70 => 15.769, 80 => 32.789989],
         'defense_rating' => [60 => 37.5, 70 => 59.134, 80 => 122.9625],
-        'dodge_rating' => [60 => 12.0, 70 => 18.923, 80 => 39.34799],
+        'dodge_rating' => [60 => 13.8, 70 => 21.759, 80 => 45.25],
         'parry_rating' => [60 => 13.8, 70 => 21.759, 80 => 45.25019],
         'block_rating' => [60 => 5.0, 70 => 7.885, 80 => 16.394995],
-        'resilience_rating' => [60 => 25.0, 70 => 39.423, 80 => 82.0],
+        'resilience_rating' => [60 => 28.75, 70 => 45.34, 80 => 94.27],
         'expertise_rating' => [60 => 2.5, 70 => 3.94225, 80 => 8.197497],
         'armor_penetration_rating' => [60 => 4.269, 70 => 6.731, 80 => 13.995727],
     ];
@@ -373,10 +383,13 @@ final class CharacterStatCalculator
                 'ranged_crit_rating',
                 'spell_crit_rating',
             ], true);
+            if ($isCriticalStrike && $stat === 'ranged_crit_rating') {
+                $flatBonusPercent += $this->racialRangedCritBonus($race, $items);
+            }
             if ($rating === 0 && $flatBonusPercent === 0.0 && (!$isCriticalStrike || $level !== 80)) {
                 continue;
             }
-            $ratingPerUnit = $this->ratingPerPercent($anchors, $level);
+            $ratingPerUnit = $this->ratingPerPercent($anchors, $level, $class, $stat);
             $isExpertise = $stat === 'expertise_rating';
             $ratingValue = $rating / $ratingPerUnit;
             $value = round($ratingValue + $flatBonusPercent, 2);
@@ -741,16 +754,45 @@ final class CharacterStatCalculator
     }
 
     /** @param array<int, float> $anchors */
-    private function ratingPerPercent(array $anchors, int $level): float
+    private function ratingPerPercent(array $anchors, int $level, string $class, string $stat): float
     {
+        $classKey = strtolower(trim($class));
+        $meleeHasteScalar = $stat === 'melee_haste_rating'
+            && in_array($classKey, ['paladin', 'shaman', 'druid', 'death knight'], true)
+                ? 1.3
+                : 1.0;
         if ($level <= 60) {
-            return max(0.1, $anchors[60] * ($level / 60));
+            return max(0.1, $anchors[60] * ($level / 60) / $meleeHasteScalar);
         }
         if ($level <= 70) {
-            return $anchors[60] + (($anchors[70] - $anchors[60]) * (($level - 60) / 10));
+            return ($anchors[60] + (($anchors[70] - $anchors[60]) * (($level - 60) / 10))) / $meleeHasteScalar;
         }
 
-        return $anchors[70] + (($anchors[80] - $anchors[70]) * (($level - 70) / 10));
+        return ($anchors[70] + (($anchors[80] - $anchors[70]) * (($level - 70) / 10))) / $meleeHasteScalar;
+    }
+
+    /**
+     * Dwarf Gun Specialization and Troll Bow Specialization add 1% ranged crit
+     * with the matching equipped weapon in the 3.3.5a ruleset.
+     * https://wowwiki-archive.fandom.com/wiki/Gun_Specialization
+     * https://wowwiki-archive.fandom.com/wiki/Bow_Specialization
+     * @param array<int, array<string, mixed>> $items
+     */
+    private function racialRangedCritBonus(string $race, array $items): float
+    {
+        $raceKey = strtolower(trim($race));
+        foreach ($items as $item) {
+            if ((int) ($item['class'] ?? 0) !== 2) {
+                continue;
+            }
+
+            $subclass = (int) ($item['subclass'] ?? -1);
+            if (($raceKey === 'dwarf' && $subclass === 3) || ($raceKey === 'troll' && $subclass === 2)) {
+                return 1.0;
+            }
+        }
+
+        return 0.0;
     }
 
     /** @return array<string, int> */

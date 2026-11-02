@@ -3,6 +3,7 @@
 namespace App\Tests\Controller;
 
 use App\Exception\UwuLogsException;
+use App\Exception\UwuLogsThrottleException;
 use App\Service\UwuRankUpdater;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
@@ -49,5 +50,26 @@ final class UwuLogsControllerTest extends WebTestCase
             ['error' => 'Uwu-logs is currently unavailable. Please try again later.'],
             json_decode($client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR)
         );
+    }
+
+    public function testLocalThrottleAndUpstreamRateLimitBothRemain429Responses(): void
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        $exceptions = [
+            new UwuLogsThrottleException('Local request cooldown.', 429),
+            new UwuLogsException('Uwu-logs rate limit.', 429),
+        ];
+        $service = $this->createMock(UwuRankUpdater::class);
+        $service->method('getOrRefresh')->willReturnCallback(static function () use (&$exceptions): never {
+            throw array_shift($exceptions);
+        });
+        static::getContainer()->set(UwuRankUpdater::class, $service);
+
+        foreach ($exceptions as $_exception) {
+            $client->jsonRequest('POST', '/characters/Nomoredots/Icecrown/uwu-logs', ['spec' => '1']);
+
+            self::assertResponseStatusCodeSame(429);
+        }
     }
 }

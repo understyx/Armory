@@ -4,6 +4,7 @@ namespace App\Tests\Service;
 
 use App\Entity\UwuLogRank;
 use App\Exception\UwuLogsException;
+use App\Exception\UwuLogsThrottleException;
 use App\Repository\UwuLogRankRepository;
 use App\Service\UwuLogsService;
 use App\Service\UwuLogUpdateThrottle;
@@ -44,7 +45,7 @@ final class UwuRankUpdaterTest extends TestCase
         $service = $this->createMock(UwuLogsService::class);
         $service->expects(self::once())->method('fetchRankings')->willReturn($payload);
         $throttle = $this->createMock(UwuLogUpdateThrottle::class);
-        $throttle->method('claim')->willReturn(new UwuLogUpdateThrottleDecision(true, new \DateTimeImmutable('+30 seconds')));
+        $throttle->method('claim')->willReturn(new UwuLogUpdateThrottleDecision(true, new \DateTimeImmutable('+4 seconds')));
 
         $result = (new UwuRankUpdater($service, $repository, $throttle))->getOrRefresh('Imtilted', 'Icecrown', '1');
 
@@ -59,10 +60,10 @@ final class UwuRankUpdaterTest extends TestCase
         $service = $this->createMock(UwuLogsService::class);
         $service->expects(self::never())->method('fetchRankings');
         $throttle = $this->createMock(UwuLogUpdateThrottle::class);
-        $throttle->method('claim')->willReturn(new UwuLogUpdateThrottleDecision(false, new \DateTimeImmutable('+20 seconds')));
+        $throttle->method('claim')->willReturn(new UwuLogUpdateThrottleDecision(false, new \DateTimeImmutable('+2 seconds')));
 
-        $this->expectException(UwuLogsException::class);
-        $this->expectExceptionMessage('once per character every 30 seconds');
+        $this->expectException(UwuLogsThrottleException::class);
+        $this->expectExceptionMessage('once per character every 4 seconds');
 
         (new UwuRankUpdater($service, $repository, $throttle))->getOrRefresh('Imtilted', 'Icecrown', '2');
     }
@@ -76,7 +77,7 @@ final class UwuRankUpdaterTest extends TestCase
         $throttle = $this->createMock(UwuLogUpdateThrottle::class);
         $throttle->method('claim')->willReturn(new UwuLogUpdateThrottleDecision(
             true,
-            new \DateTimeImmutable('+30 seconds'),
+            new \DateTimeImmutable('+4 seconds'),
             'claim-token',
         ));
         $throttle->expects(self::once())->method('release')->with('Imtilted', 'Icecrown', 'claim-token');

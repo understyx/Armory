@@ -3,6 +3,7 @@
 namespace App\MessageHandler;
 
 use App\Exception\UwuLogsException;
+use App\Exception\UwuLogsThrottleException;
 use App\Message\RefreshUwuRankMessage;
 use App\Service\UwuRankUpdater;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -27,7 +28,8 @@ final readonly class RefreshUwuRankMessageHandler
                 return;
             }
             if ($exception->getHttpStatus() === 429) {
-                $this->messageBus->dispatch($message, [new DelayStamp(35000)]);
+                $delay = $exception instanceof UwuLogsThrottleException ? 5000 : 35000;
+                $this->messageBus->dispatch($message, [new DelayStamp($delay)]);
 
                 return;
             }

@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Exception\UwuLogsException;
+use App\Exception\UwuLogsThrottleException;
 use App\Repository\UwuLogRankRepository;
 
 class UwuRankUpdater
@@ -20,7 +21,7 @@ class UwuRankUpdater
             $characterName,
             $realmName,
             $spec,
-            new \DateTimeImmutable('-30 seconds'),
+            new \DateTimeImmutable('-'.UwuLogUpdateThrottle::COOLDOWN_SECONDS.' seconds'),
         );
         if ($cached !== null && $cached->getPayload() !== []) {
             return $cached->getPayload() + [
@@ -32,8 +33,9 @@ class UwuRankUpdater
         $decision = $this->updateThrottle->claim($characterName, $realmName);
         if (!$decision->accepted) {
             $seconds = max(1, $decision->retryAt->getTimestamp() - time());
-            throw new UwuLogsException(sprintf(
-                'Uwu-logs can only be updated once per character every 30 seconds. Try again in about %d %s.',
+            throw new UwuLogsThrottleException(sprintf(
+                'Uwu-logs can only be updated once per character every %d seconds. Try again in about %d %s.',
+                UwuLogUpdateThrottle::COOLDOWN_SECONDS,
                 $seconds,
                 $seconds === 1 ? 'second' : 'seconds',
             ), 429);

@@ -10,7 +10,7 @@ use Symfony\Component\Messenger\Stamp\DelayStamp;
 
 class GuildSnapshotUpdater
 {
-    private const UWU_REQUEST_SPACING_MS = 35000;
+    private const UWU_REQUEST_SPACING_MS = 5000;
 
     public function __construct(
         private readonly ArmoryScraperService $armoryScraperService,

@@ -62,7 +62,7 @@ class CharacterStatCalculatorTest extends TestCase
         self::assertSame(1000, $result['secondary']['armor']['value']);
         self::assertSame(52, $result['ratings']['melee_hit_rating']['rating']);
         self::assertSame(1.59, $result['ratings']['melee_hit_rating']['percent']);
-        self::assertSame(1.22, $result['ratings']['melee_haste_rating']['percent']);
+        self::assertSame(1.59, $result['ratings']['melee_haste_rating']['percent']);
         self::assertSame(10, $result['ratings']['spell_crit_rating']['rating']);
         self::assertSame('Divine Strength', $result['talentModifiers'][0]['name']);
         self::assertSame(80, $result['itemBreakdown'][0]['total']['strength']);
@@ -160,6 +160,139 @@ class CharacterStatCalculatorTest extends TestCase
         self::assertArrayNotHasKey('armor', $result['gearTotals']);
         self::assertSame(20, $result['gearTotals']['armor_penetration_rating']);
         self::assertSame(10, $result['gearTotals']['strength']);
+    }
+
+    public function testLevel80RatingAnchorsAndGenericItemStatIdsMatchWotlk335a(): void
+    {
+        $result = (new CharacterStatCalculator())->calculate('Human', 'Warrior', 80, [[
+            'tooltip' => ['stats' => [
+                ['type' => 13, 'value' => 45],
+                ['type' => 12, 'value' => 4],
+                ['type' => 14, 'value' => 45],
+                ['type' => 15, 'value' => 16],
+                ['type' => 35, 'value' => 94],
+                ['type' => 44, 'value' => 14],
+                ['type' => 37, 'value' => 8],
+                ['type' => 31, 'value' => 263],
+                ['type' => 32, 'value' => 46],
+                ['type' => 36, 'value' => 33],
+            ]],
+        ]]);
+
+        self::assertSame(0.99, $result['ratings']['dodge_rating']['percent']);
+        self::assertSame(45.25, $result['ratings']['dodge_rating']['ratingPerUnit']);
+        self::assertSame(45.25, $result['ratings']['parry_rating']['ratingPerUnit']);
+        self::assertSame(94.27, $result['ratings']['resilience_rating']['ratingPerUnit']);
+        self::assertSame(1.0, $result['ratings']['resilience_rating']['percent']);
+        self::assertSame(122.963, $result['ratings']['defense_rating']['ratingPerUnit']);
+        self::assertSame(4.92, round($result['ratings']['defense_rating']['ratingPerUnit'] / 25, 2));
+        self::assertSame(0.03, $result['ratings']['defense_rating']['percent']);
+        self::assertSame(0.98, $result['ratings']['block_rating']['percent']);
+        self::assertSame(16.395, $result['ratings']['block_rating']['ratingPerUnit']);
+        self::assertSame(8.197, $result['ratings']['expertise_rating']['ratingPerUnit']);
+        self::assertSame(1.0, $result['ratings']['armor_penetration_rating']['percent']);
+        self::assertSame(13.996, $result['ratings']['armor_penetration_rating']['ratingPerUnit']);
+        self::assertSame(0.98, $result['ratings']['expertise_rating']['value']);
+        self::assertSame(263, $result['ratings']['melee_hit_rating']['rating']);
+        self::assertSame(263, $result['ratings']['ranged_hit_rating']['rating']);
+        self::assertSame(263, $result['ratings']['spell_hit_rating']['rating']);
+        self::assertSame(46, $result['ratings']['melee_crit_rating']['rating']);
+        self::assertSame(46, $result['ratings']['ranged_crit_rating']['rating']);
+        self::assertSame(46, $result['ratings']['spell_crit_rating']['rating']);
+        self::assertSame(33, $result['ratings']['melee_haste_rating']['rating']);
+        self::assertSame(33, $result['ratings']['ranged_haste_rating']['rating']);
+        self::assertSame(33, $result['ratings']['spell_haste_rating']['rating']);
+    }
+
+    public function testPost32DodgeAndResilienceAnchorsAtLevel60And70(): void
+    {
+        $calculator = new CharacterStatCalculator();
+        $item = [[
+            'tooltip' => ['stats' => [
+                ['type' => 13, 'value' => 1],
+                ['type' => 35, 'value' => 1],
+            ]],
+        ]];
+
+        $level60 = $calculator->calculate('Human', 'Warrior', 60, $item);
+        $level70 = $calculator->calculate('Human', 'Warrior', 70, $item);
+
+        self::assertSame(13.8, $level60['ratings']['dodge_rating']['ratingPerUnit']);
+        self::assertSame(28.75, $level60['ratings']['resilience_rating']['ratingPerUnit']);
+        self::assertSame(21.759, $level70['ratings']['dodge_rating']['ratingPerUnit']);
+        self::assertSame(45.34, $level70['ratings']['resilience_rating']['ratingPerUnit']);
+    }
+
+    public function testHybridClassScalarAppliesOnlyToMeleeHaste(): void
+    {
+        $item = [[
+            'tooltip' => ['stats' => [
+                ['type' => 28, 'value' => 33],
+                ['type' => 29, 'value' => 33],
+                ['type' => 30, 'value' => 33],
+            ]],
+        ]];
+
+        $paladin = (new CharacterStatCalculator())->calculate('Human', 'Paladin', 80, $item);
+        $warrior = (new CharacterStatCalculator())->calculate('Human', 'Warrior', 80, $item);
+
+        self::assertSame(1.31, $paladin['ratings']['melee_haste_rating']['percent']);
+        self::assertSame(25.223, $paladin['ratings']['melee_haste_rating']['ratingPerUnit']);
+        self::assertSame(1.01, $paladin['ratings']['ranged_haste_rating']['percent']);
+        self::assertSame(1.01, $paladin['ratings']['spell_haste_rating']['percent']);
+        self::assertSame(32.79, $paladin['ratings']['ranged_haste_rating']['ratingPerUnit']);
+        self::assertSame(32.79, $paladin['ratings']['spell_haste_rating']['ratingPerUnit']);
+        self::assertSame(1.01, $warrior['ratings']['melee_haste_rating']['percent']);
+
+        foreach (['Shaman', 'Druid', 'Death Knight'] as $class) {
+            $hybrid = (new CharacterStatCalculator())->calculate('Human', $class, 80, $item);
+            self::assertSame(25.223, $hybrid['ratings']['melee_haste_rating']['ratingPerUnit']);
+            self::assertSame(32.79, $hybrid['ratings']['ranged_haste_rating']['ratingPerUnit']);
+            self::assertSame(32.79, $hybrid['ratings']['spell_haste_rating']['ratingPerUnit']);
+        }
+    }
+
+    public function testDwarfGunAndTrollBowRacialsOnlyAddRangedCriticalChanceWithTheirWeapon(): void
+    {
+        $calculator = new CharacterStatCalculator();
+        $gun = ['class' => 2, 'subclass' => 3, 'tooltip' => ['stats' => []]];
+        $bow = ['class' => 2, 'subclass' => 2, 'tooltip' => ['stats' => []]];
+
+        $dwarfGun = $calculator->calculate('Dwarf', 'Hunter', 80, [$gun]);
+        $dwarfBow = $calculator->calculate('Dwarf', 'Hunter', 80, [$bow]);
+        $trollBow = $calculator->calculate('Troll', 'Hunter', 80, [$bow]);
+        $trollGun = $calculator->calculate('Troll', 'Hunter', 80, [$gun]);
+
+        self::assertSame(1.0, $dwarfGun['ratings']['ranged_crit_rating']['flatBonusPercent']);
+        self::assertSame(0.0, $dwarfBow['ratings']['ranged_crit_rating']['flatBonusPercent']);
+        self::assertSame(1.0, $trollBow['ratings']['ranged_crit_rating']['flatBonusPercent']);
+        self::assertSame(0.0, $trollGun['ratings']['ranged_crit_rating']['flatBonusPercent']);
+    }
+
+    public function testWotlkDualWieldSpecializationAddsPhysicalHitAndVitalityUsesIts3Ranks(): void
+    {
+        $talents = ['0' => [[
+            'name' => 'Enhancement',
+            'tiers' => [[
+                ['spellId' => 30819, 'pointsText' => '3/3'],
+            ]],
+        ]]];
+        $shaman = (new CharacterStatCalculator())->calculate('Orc', 'Shaman', 80, [], $talents);
+        self::assertSame(['Attacks while dual wielding' => 6.0], $shaman['hitBonuses']);
+
+        $warriorTalents = ['0' => [[
+            'name' => 'Protection',
+            'tiers' => [[
+                ['spellId' => 29144, 'pointsText' => '3/3'],
+                ['spellId' => 29595, 'pointsText' => '3/3'],
+            ]],
+        ]]];
+        $warrior = (new CharacterStatCalculator())->calculate('Human', 'Warrior', 80, [], $warriorTalents);
+
+        self::assertSame(6.0, $warrior['primary']['strength']['talentPercent']);
+        self::assertSame(9.0, $warrior['primary']['stamina']['talentPercent']);
+        self::assertSame(['Vitality'], array_column($warrior['talentModifiers'], 'name'));
+        self::assertSame(false, $warrior['talentBreakdown'][1]['recognized']);
     }
 
     public function testSpellCriticalStrikeIncludesIntellectClassBaseAndRating(): void

@@ -8,6 +8,7 @@ use App\Message\RefreshCharacterSnapshotMessage;
 use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\ArmoryScraperService;
+use App\Service\CharacterHitExpertiseService;
 use App\Service\CharacterRefreshResult;
 use App\Service\CharacterSnapshotUpdater;
 use App\Service\CharacterStatCalculator;
@@ -43,6 +44,7 @@ class CharacterViewController extends AbstractController
         private readonly ?CharacterStatCalculator $characterStatCalculator = null,
         private readonly ?MessageBusInterface $messageBus = null,
         private readonly ?CharacterSnapshotUpdater $snapshotUpdater = null,
+        private readonly ?CharacterHitExpertiseService $characterHitExpertiseService = null,
     ) {
     }
 
@@ -589,6 +591,14 @@ class CharacterViewController extends AbstractController
             $snapshot->getEquippedItems() ?? [],
             $snapshot->getClass()
         );
+        $hitExpertiseBySpec = $this->characterHitExpertiseService?->build(
+            (string) $snapshot->getRace(),
+            (string) $snapshot->getClass(),
+            (int) $snapshot->getLevel(),
+            $parsedSpecs,
+            $paperdollData['enrichedItems'],
+            $snapshot->getTalentTreesData() ?? [],
+        ) ?? [];
 
         $response = $this->render('character_view/index.html.twig', [
             'characterName' => $snapshot->getName(),
@@ -605,6 +615,7 @@ class CharacterViewController extends AbstractController
             'parsedSpecs' => $parsedSpecs,
             'isWotlkServer' => $isWotlkServer,
             'paperdollSlots' => $paperdollData['slots'],
+            'hitExpertiseBySpec' => $hitExpertiseBySpec,
             'itemTooltips' => $paperdollData['tooltipPayload'],
             'transmogItems' => $paperdollData['transmogItems'],
             'characterModel' => $snapshot->getCharacterModel(),
@@ -634,6 +645,10 @@ class CharacterViewController extends AbstractController
             dirname(__DIR__).'/Service/ItemTooltipService.php',
             dirname(__DIR__).'/Service/ItemDatabaseService.php',
             dirname(__DIR__).'/Repository/TooltipEnrichmentRepository.php',
+            dirname(__DIR__).'/Service/CharacterHitExpertiseService.php',
+            dirname(__DIR__).'/Service/CharacterStatCalculator.php',
+            dirname(__DIR__).'/Service/WotlkBaseStatTable.php',
+            dirname(__DIR__, 2).'/assets/styles/app.css',
         ]);
     }
 

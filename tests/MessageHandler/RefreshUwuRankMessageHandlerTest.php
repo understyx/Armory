@@ -3,6 +3,7 @@
 namespace App\Tests\MessageHandler;
 
 use App\Exception\UwuLogsException;
+use App\Exception\UwuLogsThrottleException;
 use App\Message\RefreshUwuRankMessage;
 use App\MessageHandler\RefreshUwuRankMessageHandler;
 use App\Service\UwuRankUpdater;
@@ -36,17 +37,36 @@ final class RefreshUwuRankMessageHandlerTest extends TestCase
         );
     }
 
-    public function testItRequeuesAThrottledSpecInsteadOfDiscardingIt(): void
+    public function testItRequeuesAnUpstreamRateLimitAfterTheProviderBackoff(): void
     {
         $message = new RefreshUwuRankMessage('Imtilted', 'Icecrown', '3');
         $updater = $this->createMock(UwuRankUpdater::class);
-        $updater->method('getOrRefresh')->willThrowException(new UwuLogsException('Throttled', 429));
+        $updater->method('getOrRefresh')->willThrowException(new UwuLogsException('Upstream rate limited', 429));
         $bus = $this->createMock(MessageBusInterface::class);
         $bus->expects(self::once())->method('dispatch')->willReturnCallback(
             static function (object $redispatched, array $stamps) use ($message): Envelope {
                 self::assertSame($message, $redispatched);
                 self::assertInstanceOf(DelayStamp::class, $stamps[0]);
                 self::assertSame(35000, $stamps[0]->getDelay());
+
+                return new Envelope($redispatched, $stamps);
+            },
+        );
+
+        (new RefreshUwuRankMessageHandler($updater, $bus))($message);
+    }
+
+    public function testItRequeuesALocalThrottleRejectionAfterOneQueueInterval(): void
+    {
+        $message = new RefreshUwuRankMessage('Imtilted', 'Icecrown', '2');
+        $updater = $this->createMock(UwuRankUpdater::class);
+        $updater->method('getOrRefresh')->willThrowException(new UwuLogsThrottleException('Local throttle', 429));
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->expects(self::once())->method('dispatch')->willReturnCallback(
+            static function (object $redispatched, array $stamps) use ($message): Envelope {
+                self::assertSame($message, $redispatched);
+                self::assertInstanceOf(DelayStamp::class, $stamps[0]);
+                self::assertSame(5000, $stamps[0]->getDelay());
 
                 return new Envelope($redispatched, $stamps);
             },

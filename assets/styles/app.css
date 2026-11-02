@@ -1419,6 +1419,102 @@ body {
     margin: 16px 0 0;
 }
 
+.hit-expertise-section {
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: var(--bg-slot);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+}
+
+.hit-expertise-heading h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.hit-expertise-heading p {
+    margin: 3px 0 10px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    line-height: 1.35;
+}
+
+.hit-expertise-rows {
+    display: grid;
+    gap: 6px;
+}
+
+.hit-expertise-row {
+    display: grid;
+    grid-template-columns: minmax(100px, 1fr) minmax(112px, 1fr) minmax(160px, 1.3fr);
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+}
+
+.hit-expertise-spec,
+.hit-expertise-metric {
+    min-width: 0;
+}
+
+.hit-expertise-spec strong,
+.hit-expertise-spec span,
+.hit-expertise-metric > span {
+    display: block;
+}
+
+.hit-expertise-spec strong {
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    line-height: 1.25;
+}
+
+.hit-expertise-spec span,
+.hit-expertise-metric > span {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    line-height: 1.25;
+}
+
+.hit-expertise-metric strong {
+    display: block;
+    color: var(--text-primary);
+    font-size: 0.86rem;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.hit-expertise-metric strong small {
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    font-weight: 500;
+}
+
+.hit-expertise-met {
+    color: var(--accent-green) !important;
+}
+
+.hit-expertise-unmet {
+    color: var(--accent-red) !important;
+}
+
+.expertise-cap-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px 8px;
+    margin-top: 2px;
+}
+
+.expertise-cap {
+    font-size: 0.63rem;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+
 .status-card {
     flex: 1;
     min-width: 280px;
@@ -1862,6 +1958,27 @@ body {
     }
     .glyphs-sidebar {
         flex-direction: column;
+    }
+}
+
+@media (max-width: 520px) {
+    .hit-expertise-section {
+        padding: 11px 10px;
+    }
+
+    .hit-expertise-row {
+        grid-template-columns: minmax(78px, 0.8fr) minmax(90px, 1fr) minmax(132px, 1.4fr);
+        gap: 5px;
+        padding: 7px 6px;
+    }
+
+    .hit-expertise-spec strong,
+    .hit-expertise-metric strong {
+        font-size: 0.75rem;
+    }
+
+    .expertise-cap-list {
+        column-gap: 5px;
     }
 }
 

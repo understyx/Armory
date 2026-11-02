@@ -369,6 +369,48 @@
                     <strong>Gems:</strong> {{ gemsStatus }}
                 </div>
             </div>
+
+            {% if hitExpertiseBySpec is not empty %}
+                <section class="hit-expertise-section" aria-labelledby="hit-expertise-title">
+                    <div class="hit-expertise-heading">
+                        <div>
+                            <h3 id="hit-expertise-title">Hit &amp; Expertise</h3>
+                            <p>From gear and talents; your permanent racials are included. Party buffs and target debuffs are excluded.</p>
+                        </div>
+                    </div>
+                    <div class="hit-expertise-rows">
+                        {% for row in hitExpertiseBySpec %}
+                            <div class="hit-expertise-row">
+                                <div class="hit-expertise-spec">
+                                    <strong>{{ row.specName }}</strong>
+                                    {% if row.specLabel is not empty %}
+                                        <span>{{ row.specLabel }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="hit-expertise-metric" title="{{ row.hitTooltip }}">
+                                    <span>{{ row.hitLabel }}</span>
+                                    <strong class="{{ row.hitMet ? 'hit-expertise-met' : 'hit-expertise-unmet' }}">
+                                        {{ row.hitValue|number_format(2) }}% <small>vs {{ row.hitTarget|number_format(0) }}%</small>
+                                    </strong>
+                                </div>
+                                {% if row.expertise is defined %}
+                                    <div class="hit-expertise-metric" title="{{ row.expertiseTooltip }}">
+                                        <span>Expertise</span>
+                                        <strong>{{ row.expertise }} pts</strong>
+                                        <div class="expertise-cap-list">
+                                            {% for target in row.expertiseTargets %}
+                                                <span class="expertise-cap {{ target.met ? 'hit-expertise-met' : 'hit-expertise-unmet' }}">
+                                                    {{ target.value }} {{ target.label }}
+                                                </span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
             </div>
 
             <div id="stats-panel" class="character-tab-panel" role="tabpanel" tabindex="0" aria-labelledby="stats-tab" hidden>
@@ -570,7 +612,7 @@
             <div class="section-header uwu-logs-header">
                 <div>
                     <h2>📊 Uwu-logs Raid Rankings</h2>
-                    <p class="section-subtitle">Rankings are fetched only when you request them. Results are cached for 30 seconds, with one new request allowed per character during that time.</p>
+                    <p class="section-subtitle">Rankings are fetched only when you request them. Results are cached for 4 seconds, with one new request allowed per character during that time.</p>
                 </div>
                 <div class="uwu-logs-actions">
                     <label for="uwu-logs-spec" class="visually-hidden">Uwu-logs specialization</label>
