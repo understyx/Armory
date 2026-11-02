@@ -58,6 +58,47 @@ class PaperdollServiceTest extends TestCase
         );
     }
 
+    public function testBuildsGemTooltipFromItemRowAndAddsTheGemEffect(): void
+    {
+        $mockItemDb = $this->createMock(ItemDatabaseService::class);
+        $mockItemDb->expects(self::once())
+            ->method('getItemsBulk')
+            ->with([50001, 39906])
+            ->willReturn([
+                50001 => ['name' => 'Test Helm', 'quality' => 4, 'type' => ItemTypes::HEAD->value],
+                39906 => [
+                    'name' => 'Bright Bloodstone',
+                    'quality' => 2,
+                    'icon' => 'inv_jewelcrafting_gem_22',
+                    'tooltip' => ['stats' => [], 'spells' => []],
+                ],
+            ]);
+
+        $result = (new PaperdollService($mockItemDb, new ItemTooltipService()))
+            ->buildPaperdollSlots([['id' => 50001, 'gems' => [3375]]]);
+
+        self::assertSame('Bright Bloodstone', $result['tooltips']['item-39906']['name']);
+        self::assertSame('+24 AP', $result['tooltips']['item-39906']['gem_effect']);
+        self::assertSame('item-39906', $result['slots']['head']['item']['gem_details'][0]['tooltip_key']);
+    }
+
+    public function testBuildsMinimalGemTooltipWhenItemRowIsMissing(): void
+    {
+        $mockItemDb = $this->createMock(ItemDatabaseService::class);
+        $mockItemDb->expects(self::once())
+            ->method('getItemsBulk')
+            ->with([50001, 39906])
+            ->willReturn([50001 => ['name' => 'Test Helm', 'quality' => 4, 'type' => ItemTypes::HEAD->value]]);
+
+        $result = (new PaperdollService($mockItemDb, new ItemTooltipService()))
+            ->buildPaperdollSlots([['id' => 50001, 'gems' => [3375]]]);
+
+        self::assertSame(39906, $result['tooltips']['item-39906']['id']);
+        self::assertSame('Bright Bloodstone', $result['tooltips']['item-39906']['name']);
+        self::assertSame('+24 AP', $result['tooltips']['item-39906']['gem_effect']);
+        self::assertArrayHasKey('item-39906', $result['tooltipPayload']['references'] ?? $result['tooltipPayload']);
+    }
+
     public function testBuildsDistinctDynamicTooltipsForTwoInstancesOfTheSameItem(): void
     {
         $mockItemDb = $this->createMock(ItemDatabaseService::class);

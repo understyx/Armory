@@ -32,7 +32,8 @@ class EnrichItemTooltipsCommand extends Command
             ->addOption('all', null, InputOption::VALUE_NONE, 'Explicitly enrich every candidate item')
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum number of candidate items (0 means all)', '0')
             ->addOption('locale', null, InputOption::VALUE_REQUIRED, 'Tooltip locale', 'enUS')
-            ->addOption('force', null, InputOption::VALUE_NONE, 'Refetch items that already have a successful cache entry');
+            ->addOption('force', null, InputOption::VALUE_NONE, 'Refetch items that already have a successful cache entry')
+            ->addOption('glyphs', null, InputOption::VALUE_NONE, 'Limit candidates to glyph items (class 16)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -44,8 +45,9 @@ class EnrichItemTooltipsCommand extends Command
         $limit = max(0, (int) $input->getOption('limit'));
         $locale = (string) $input->getOption('locale');
         $force = (bool) $input->getOption('force');
+        $glyphs = (bool) $input->getOption('glyphs');
 
-        if ($itemId === null && !$all) {
+        if ($itemId === null && !$all && !$glyphs) {
             $io->note('No items were changed. Supply an item ID for one item, or use --all explicitly for bulk enrichment.');
 
             return Command::SUCCESS;
@@ -56,7 +58,7 @@ class EnrichItemTooltipsCommand extends Command
             return Command::INVALID;
         }
 
-        $candidates = $this->repository->findCandidateItems($itemId, $limit);
+        $candidates = $this->repository->findCandidateItems($itemId, $limit, $glyphs);
 
         if ($candidates === []) {
             $io->warning('No item tooltip candidates were found.');

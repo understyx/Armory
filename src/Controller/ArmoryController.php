@@ -6,6 +6,7 @@ use App\Entity\CharacterSnapshot;
 use App\Http\ConditionalResponse;
 use App\Repository\CharacterSnapshotRepository;
 use App\Service\ArmoryScraperService;
+use App\Service\CharacterTooltipEnrichmentQueue;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,7 +16,8 @@ class ArmoryController extends AbstractController
 {
     public function __construct(
         private readonly ArmoryScraperService $armoryScraperService,
-        private readonly CharacterSnapshotRepository $snapshotRepository
+        private readonly CharacterSnapshotRepository $snapshotRepository,
+        private readonly ?CharacterTooltipEnrichmentQueue $tooltipEnrichmentQueue = null,
     ) {
     }
 
@@ -121,6 +123,9 @@ class ArmoryController extends AbstractController
         $newSnapshot->setScrapedAt(new \DateTimeImmutable());
 
         $updated = $this->snapshotRepository->upsert($newSnapshot);
+        if ($updated) {
+            $this->tooltipEnrichmentQueue?->queueAfterRefresh($newSnapshot);
+        }
 
         if (!$updated && $existingSnapshot !== null) {
             return $this->buildJsonResponse(

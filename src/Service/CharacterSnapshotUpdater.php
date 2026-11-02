@@ -10,6 +10,7 @@ class CharacterSnapshotUpdater
     public function __construct(
         private readonly ArmoryScraperService $armoryScraperService,
         private readonly CharacterSnapshotRepository $snapshotRepository,
+        private readonly ?CharacterTooltipEnrichmentQueue $tooltipEnrichmentQueue = null,
     ) {
     }
 
@@ -82,8 +83,12 @@ class CharacterSnapshotUpdater
             ->setMatchHistory($matchHistory)
             ->setScrapedAt(new \DateTimeImmutable());
 
-        if (!$this->snapshotRepository->upsert($newSnapshot) && $existingSnapshot !== null) {
+        $updated = $this->snapshotRepository->upsert($newSnapshot);
+        if (!$updated && $existingSnapshot !== null) {
             return new CharacterRefreshResult(CharacterRefreshResult::UNCHANGED, $existingSnapshot);
+        }
+        if ($updated) {
+            $this->tooltipEnrichmentQueue?->queueAfterRefresh($newSnapshot);
         }
 
         return new CharacterRefreshResult(CharacterRefreshResult::UPDATED, $newSnapshot);

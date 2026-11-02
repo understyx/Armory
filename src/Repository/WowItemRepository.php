@@ -78,4 +78,41 @@ class WowItemRepository extends ServiceEntityRepository
 
         return $result;
     }
+
+    /**
+     * Resolve stored glyph names to their lowest class-16 item ID.
+     *
+     * @param string[] $names
+     * @return array<string, int>
+     */
+    public function findGlyphItemIdsByNames(array $names): array
+    {
+        $names = array_values(array_unique(array_filter(
+            array_map(static fn (mixed $name): string => trim((string) $name), $names),
+            static fn (string $name): bool => $name !== '',
+        )));
+        if ($names === []) {
+            return [];
+        }
+
+        $items = $this->createQueryBuilder('w')
+            ->where('w.class = :itemClass')
+            ->andWhere('w.name IN (:names)')
+            ->setParameter('itemClass', 16)
+            ->setParameter('names', $names)
+            ->orderBy('w.itemId', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $wanted = array_fill_keys($names, true);
+        $resolved = [];
+        foreach ($items as $item) {
+            $name = $item->getName();
+            if ($name !== null && isset($wanted[$name]) && !isset($resolved[$name])) {
+                $resolved[$name] = (int) $item->getItemId();
+            }
+        }
+
+        return $resolved;
+    }
 }

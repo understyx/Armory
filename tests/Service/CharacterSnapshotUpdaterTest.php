@@ -6,6 +6,7 @@ use App\Repository\CharacterSnapshotRepository;
 use App\Service\ArmoryScraperService;
 use App\Service\CharacterRefreshResult;
 use App\Service\CharacterSnapshotUpdater;
+use App\Service\CharacterTooltipEnrichmentQueue;
 use PHPUnit\Framework\TestCase;
 
 class CharacterSnapshotUpdaterTest extends TestCase
@@ -39,7 +40,12 @@ class CharacterSnapshotUpdaterTest extends TestCase
         $scraper->method('calculateGearScore')->willReturn(6000);
         $scraper->method('calculateAvgIlvl')->willReturn(264.5);
 
-        $result = (new CharacterSnapshotUpdater($scraper, $repository))
+        $tooltipQueue = $this->createMock(CharacterTooltipEnrichmentQueue::class);
+        $tooltipQueue->expects(self::once())
+            ->method('queueAfterRefresh')
+            ->with(self::callback(static fn ($snapshot): bool => $snapshot->getTalentTreesData() === []));
+
+        $result = (new CharacterSnapshotUpdater($scraper, $repository, $tooltipQueue))
             ->refresh('Understyx', 'Icecrown');
 
         self::assertSame(CharacterRefreshResult::UPDATED, $result->status);

@@ -63,6 +63,13 @@ php bin/console app:enrich-item-tooltips 50363
 php bin/console app:enrich-item-tooltips 50363 --force
 ```
 
+Glyph tooltips use the normal item tooltip, and talent tooltips use 3.3.5a text from Cavern of Time. New data is queued after a character refresh. To backfill existing characters, run these once. They fetch directly, without Messenger, so they cannot delay character refreshes:
+
+```bash
+php bin/console app:enrich-item-tooltips --glyphs
+php bin/console app:enrich-spell-tooltips
+```
+
 Development environments should run both workers in separate terminals:
 
 ```bash

@@ -93,10 +93,13 @@ class TooltipEnrichmentRepository
     /**
      * @return array<int, array{item_id: int, set_id: int}>
      */
-    public function findCandidateItems(?int $onlyItemId = null, int $limit = 0): array
+    public function findCandidateItems(?int $onlyItemId = null, int $limit = 0, bool $glyphsOnly = false): array
     {
         $sql = 'SELECT item_id, tooltip_data FROM wow_items WHERE tooltip_data IS NOT NULL';
         $params = [];
+        if ($glyphsOnly) {
+            $sql .= ' AND class = 16';
+        }
         if ($onlyItemId !== null) {
             $sql .= ' AND item_id = ?';
             $params[] = $onlyItemId;

@@ -4,6 +4,7 @@ namespace App\Tests\Message;
 
 use App\Message\RefreshCharacterSnapshotMessage;
 use App\Message\RefreshUwuRankMessage;
+use App\Message\EnrichSpellTooltipMessage;
 use App\Service\DeduplicatingMessageDispatcher;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -34,14 +35,17 @@ final class MessageRoutingTest extends KernelTestCase
             DeduplicatingMessageDispatcher::dispatch($bus, new RefreshCharacterSnapshotMessage(' test ', 'icecrown'));
             DeduplicatingMessageDispatcher::dispatch($bus, new RefreshCharacterSnapshotMessage('Test', 'Lordaeron'));
             DeduplicatingMessageDispatcher::dispatch($bus, new RefreshCharacterSnapshotMessage('Other', 'Icecrown'));
+            DeduplicatingMessageDispatcher::dispatch($bus, new EnrichSpellTooltipMessage(56175));
+            DeduplicatingMessageDispatcher::dispatch($bus, new EnrichSpellTooltipMessage(56175));
 
             $uwuMessages = $container->get('messenger.transport.uwu')->get();
             $asyncMessages = $container->get('messenger.transport.async')->get();
 
             self::assertCount(4, $uwuMessages);
             self::assertInstanceOf(RefreshUwuRankMessage::class, $uwuMessages[0]->getMessage());
-            self::assertCount(3, $asyncMessages);
+            self::assertCount(4, $asyncMessages);
             self::assertInstanceOf(RefreshCharacterSnapshotMessage::class, $asyncMessages[0]->getMessage());
+            self::assertInstanceOf(EnrichSpellTooltipMessage::class, $asyncMessages[3]->getMessage());
         } finally {
             self::ensureKernelShutdown();
 

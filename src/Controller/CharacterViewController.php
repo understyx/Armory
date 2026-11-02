@@ -8,6 +8,8 @@ use App\Message\RefreshCharacterSnapshotMessage;
 use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\ArmoryScraperService;
+use App\Service\CharacterPageTooltipService;
+use App\Service\CharacterTooltipEnrichmentQueue;
 use App\Service\CharacterHitExpertiseService;
 use App\Service\DeduplicatingMessageDispatcher;
 use App\Service\CharacterRefreshResult;
@@ -46,6 +48,8 @@ class CharacterViewController extends AbstractController
         private readonly ?MessageBusInterface $messageBus = null,
         private readonly ?CharacterSnapshotUpdater $snapshotUpdater = null,
         private readonly ?CharacterHitExpertiseService $characterHitExpertiseService = null,
+        private readonly ?CharacterPageTooltipService $characterPageTooltipService = null,
+        private readonly ?CharacterTooltipEnrichmentQueue $tooltipEnrichmentQueue = null,
     ) {
     }
 
@@ -524,6 +528,9 @@ class CharacterViewController extends AbstractController
         $snapshot->setScrapedAt(new \DateTimeImmutable());
 
         $updated = $this->snapshotRepository->upsert($snapshot);
+        if ($updated) {
+            $this->tooltipEnrichmentQueue?->queueAfterRefresh($snapshot);
+        }
 
         return [
             'status' => $updated ? 'success' : 'unchanged',
@@ -600,6 +607,15 @@ class CharacterViewController extends AbstractController
             $snapshot->getEquippedItems() ?? [],
             $snapshot->getClass()
         );
+        $tooltipData = $paperdollData['tooltips'];
+        $glyphTooltipKeys = [];
+        if ($this->characterPageTooltipService !== null) {
+            $glyphTooltipKeys = $this->characterPageTooltipService->addCustomTooltips(
+                $tooltipData,
+                $parsedSpecs,
+                $snapshot->getGlyphs(),
+            );
+        }
         $hitExpertiseBySpec = $this->characterHitExpertiseService?->build(
             (string) $snapshot->getRace(),
             (string) $snapshot->getClass(),
@@ -625,7 +641,8 @@ class CharacterViewController extends AbstractController
             'isWotlkServer' => $isWotlkServer,
             'paperdollSlots' => $paperdollData['slots'],
             'hitExpertiseBySpec' => $hitExpertiseBySpec,
-            'itemTooltips' => $paperdollData['tooltipPayload'],
+            'itemTooltips' => $this->paperdollService->compactTooltipPayload($tooltipData),
+            'glyphTooltipKeys' => $glyphTooltipKeys,
             'transmogItems' => $paperdollData['transmogItems'],
             'characterModel' => $snapshot->getCharacterModel(),
             'gearScore' => $snapshot->getGearScore(),
@@ -654,6 +671,9 @@ class CharacterViewController extends AbstractController
             dirname(__DIR__).'/Service/ItemTooltipService.php',
             dirname(__DIR__).'/Service/ItemDatabaseService.php',
             dirname(__DIR__).'/Repository/TooltipEnrichmentRepository.php',
+            dirname(__DIR__).'/Service/CharacterPageTooltipService.php',
+            dirname(__DIR__).'/Repository/WowItemRepository.php',
+            dirname(__DIR__).'/Repository/WowSpellTooltipRepository.php',
             dirname(__DIR__).'/Service/CharacterHitExpertiseService.php',
             dirname(__DIR__).'/Service/CharacterStatCalculator.php',
             dirname(__DIR__).'/Service/WotlkBaseStatTable.php',

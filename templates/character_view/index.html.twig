@@ -211,7 +211,7 @@
                                                 <div class="slot-gems-inline">
                                                     {% for gem in slot.item.gem_details %}
                                                         {% if gem %}
-                                                            <a href="{% if gem.id > 0 %}https://wotlk.evowow.com/?item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" rel="noopener" class="gem-icon-link" title="{{ gem.name }}">
+                                                            <a href="{% if gem.id > 0 %}https://wotlk.evowow.com/?item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" rel="noopener" class="gem-icon-link" data-item-tooltip="{{ gem.tooltip_key }}">
                                                                 <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" width="18" height="18" loading="lazy" decoding="async" fetchpriority="low" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
                                                             </a>
                                                         {% endif %}
@@ -254,7 +254,7 @@
                                                 <div class="slot-gems-inline">
                                                     {% for gem in slot.item.gem_details %}
                                                         {% if gem %}
-                                                            <a href="{% if gem.id > 0 %}https://wotlk.evowow.com/?item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" rel="noopener" class="gem-icon-link" title="{{ gem.name }}">
+                                                            <a href="{% if gem.id > 0 %}https://wotlk.evowow.com/?item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" rel="noopener" class="gem-icon-link" data-item-tooltip="{{ gem.tooltip_key }}">
                                                                 <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" width="18" height="18" loading="lazy" decoding="async" fetchpriority="low" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
                                                             </a>
                                                         {% endif %}
@@ -343,7 +343,7 @@
                                             <div class="slot-gems-inline">
                                                 {% for gem in slot.item.gem_details %}
                                                     {% if gem %}
-                                                        <a href="{% if gem.id > 0 %}https://wotlk.evowow.com/?item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" rel="noopener" class="gem-icon-link" title="{{ gem.name }}">
+                                                        <a href="{% if gem.id > 0 %}https://wotlk.evowow.com/?item={{ gem.id }}{% else %}javascript:void(0){% endif %}" target="_blank" rel="noopener" class="gem-icon-link" data-item-tooltip="{{ gem.tooltip_key }}">
                                                             <img src="{{ gem.icon_url }}" data-fallback-src="{{ gem.icon_fallback_url }}" alt="{{ gem.name }}" class="gem-icon-img q-{{ gem.quality }}" width="18" height="18" loading="lazy" decoding="async" fetchpriority="low" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.display='none';}" />
                                                         </a>
                                                     {% endif %}
@@ -484,9 +484,8 @@
                                                             {% if talent %}
                                                                 <a href="{{ talent.href }}"
                                                                    target="_blank"
-                                                                   rel="spell={{ talent.spellId }}"
-                                                                   class="talent-icon-box status-{{ talent.status }}"
-                                                                   title="Spell #{{ talent.spellId }}: {{ talent.pointsText }}">
+                                                                   class="talent-icon-box status-{{ talent.status }}"{% if talent.tooltip_key is defined %}
+                                                                   data-item-tooltip="{{ talent.tooltip_key }}"{% endif %}>
                                                                     {% if talent.iconUrl %}
                                                                         <img src="{{ talent.iconUrl }}" data-fallback-src="{{ talent.iconFallbackUrl }}" alt="{{ talent.name|default('Talent spell ' ~ talent.spellId) }}" class="talent-icon-img" width="36" height="36" loading="lazy" decoding="async" fetchpriority="low" onerror="const fallback=this.dataset.fallbackSrc;if(fallback){delete this.dataset.fallbackSrc;this.src=fallback;}else{this.style.opacity='0';}" />
                                                                     {% endif %}
@@ -536,7 +535,7 @@
                                     <div class="glyph-items-list">
                                         {% if specGlyphs and specGlyphs['Major Glyphs'] is defined and specGlyphs['Major Glyphs'] is not empty %}
                                             {% for glyph in specGlyphs['Major Glyphs'] %}
-                                                <div class="glyph-item major-item">
+                                                <div class="glyph-item major-item"{% if glyphTooltipKeys[glyph] is defined %} tabindex="0" data-item-tooltip="{{ glyphTooltipKeys[glyph] }}"{% endif %}>
                                                     <span class="glyph-ring-dot gold-ring"></span>
                                                     <span class="glyph-text">{{ glyph }}</span>
                                                 </div>
@@ -556,7 +555,7 @@
                                     <div class="glyph-items-list">
                                         {% if specGlyphs and specGlyphs['Minor Glyphs'] is defined and specGlyphs['Minor Glyphs'] is not empty %}
                                             {% for glyph in specGlyphs['Minor Glyphs'] %}
-                                                <div class="glyph-item minor-item">
+                                                <div class="glyph-item minor-item"{% if glyphTooltipKeys[glyph] is defined %} tabindex="0" data-item-tooltip="{{ glyphTooltipKeys[glyph] }}"{% endif %}>
                                                     <span class="glyph-ring-dot blue-ring"></span>
                                                     <span class="glyph-text">{{ glyph }}</span>
                                                 </div>
@@ -588,7 +587,7 @@
             {% for spec in parsedSpecs|slice(1) %}
                 {% set deferredTalentSpecs = deferredTalentSpecs|merge([spec|merge({'glyphs': glyphs[spec.specId]|default({})})]) %}
             {% endfor %}
-            <script id="talent-spec-data" type="application/json">{{ {'isWotlkServer': isWotlkServer, 'specs': deferredTalentSpecs}|json_encode(constant('JSON_HEX_TAG') + constant('JSON_HEX_AMP') + constant('JSON_HEX_APOS') + constant('JSON_HEX_QUOT'))|raw }}</script>
+            <script id="talent-spec-data" type="application/json">{{ {'isWotlkServer': isWotlkServer, 'specs': deferredTalentSpecs, 'glyphTooltipKeys': glyphTooltipKeys}|json_encode(constant('JSON_HEX_TAG') + constant('JSON_HEX_AMP') + constant('JSON_HEX_APOS') + constant('JSON_HEX_QUOT'))|raw }}</script>
             <noscript><p class="stat-unavailable">Enable JavaScript to switch to the other specialization talent trees. The primary tree is shown above.</p></noscript>
         </div>
 

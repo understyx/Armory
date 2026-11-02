@@ -7,6 +7,7 @@ use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class CharacterPageConditionalGetTest extends WebTestCase
 {
@@ -42,6 +43,9 @@ final class CharacterPageConditionalGetTest extends WebTestCase
         $rankRepository->method('findBest')->willReturn(null);
         static::getContainer()->set(CharacterSnapshotRepository::class, $snapshotRepository);
         static::getContainer()->set(UwuLogRankRepository::class, $rankRepository);
+        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient->expects(self::never())->method('request');
+        static::getContainer()->set('http_client', $httpClient);
 
         $client->request('GET', '/characters/Understyx/Icecrown');
         self::assertResponseIsSuccessful();

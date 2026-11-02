@@ -31,6 +31,7 @@ framework:
 
         routing:
             App\Message\EnrichItemTooltipMessage: async
+            App\Message\EnrichSpellTooltipMessage: async
             App\Message\RefreshCharacterSnapshotMessage: async
             App\Message\RefreshUwuRankMessage: uwu
             Symfony\Component\Mailer\Messenger\SendEmailMessage: async

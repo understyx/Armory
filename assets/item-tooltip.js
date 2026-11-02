@@ -68,6 +68,7 @@ if (dataElement) {
         tooltip.appendChild(content);
 
         appendLine(content, item.name, `item-tooltip-name q-${item.quality}`);
+        appendLine(content, item.spell_rank, 'item-tooltip-positive');
         if (item.heroic) appendLine(content, 'Heroic', 'item-tooltip-positive');
         if (Number(item.transmog_item?.id) > 0) {
             appendLine(content, `Transmogrified to: ${item.transmog_item.name}`, 'item-tooltip-transmog');
@@ -101,6 +102,7 @@ if (dataElement) {
         if (item.armor > 0) appendLine(content, `${item.armor} Armor`);
         if (item.block > 0) appendLine(content, `${item.block} Block`);
         (item.primary_stats || []).forEach((stat) => appendLine(content, stat));
+        appendLine(content, item.gem_effect, 'item-tooltip-positive');
 
         if (item.enchant) appendLine(content, item.enchant, 'item-tooltip-positive');
 
@@ -172,6 +174,7 @@ if (dataElement) {
             ));
         }
         appendLine(content, item.description, 'item-tooltip-flavor');
+        appendLine(content, item.spell_description, 'item-tooltip-spell-description');
 
         if (item.sell_price) {
             const price = document.createElement('div');
@@ -215,7 +218,8 @@ if (dataElement) {
         const leftPlacement = anchorRect.left - tooltipRect.width - margin;
         const fitsRight = rightPlacement + tooltipRect.width <= window.innerWidth - margin;
         const fitsLeft = leftPlacement - iconOffset >= margin;
-        const prefersLeft = itemContainer.classList.contains('right-row');
+        const prefersLeft = itemContainer.classList.contains('right-row')
+            || Boolean(trigger.closest('.glyphs-sidebar'));
         let left;
         let top = anchorRect.top;
         let placedVertically = false;

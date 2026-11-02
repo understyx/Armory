@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Message\EnrichItemTooltipMessage;
+use App\Message\EnrichSpellTooltipMessage;
 use App\Message\RefreshCharacterSnapshotMessage;
 use App\Message\RefreshUwuRankMessage;
 use Symfony\Component\Lock\Exception\LockAcquiringException;
@@ -30,6 +31,10 @@ final class DeduplicatingMessageDispatcher
                     self::normalize((string) $message->setId),
                     self::normalize($message->locale),
                 ])),
+                3600.0,
+            ],
+            $message instanceof EnrichSpellTooltipMessage => [
+                'spell-tooltip:'.$message->spellId,
                 3600.0,
             ],
             default => throw new \InvalidArgumentException(sprintf('No deduplication key is defined for %s.', $message::class)),

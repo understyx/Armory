@@ -1,12 +1,14 @@
 const dataElement = document.getElementById('talent-spec-data');
 let deferredSpecs = [];
 let renderGlyphs = false;
+let glyphTooltipKeys = {};
 
 if (dataElement) {
     try {
         const payload = JSON.parse(dataElement.textContent || '{}');
         deferredSpecs = Array.isArray(payload.specs) ? payload.specs : [];
         renderGlyphs = payload.isWotlkServer === true;
+        glyphTooltipKeys = payload.glyphTooltipKeys || {};
     } catch (error) {
         console.error('Unable to parse secondary talent tree data.', error);
     }
@@ -49,6 +51,10 @@ const renderGlyphList = (parent, kind, names) => {
     if (Array.isArray(names) && names.length > 0) {
         names.forEach((name) => {
             const row = makeElement('div', `glyph-item ${kind.toLowerCase()}-item`);
+            if (glyphTooltipKeys[name]) {
+                row.tabIndex = 0;
+                row.dataset.itemTooltip = glyphTooltipKeys[name];
+            }
             row.append(
                 makeElement('span', `glyph-ring-dot ${kind === 'Major' ? 'gold' : 'blue'}-ring`),
                 makeElement('span', 'glyph-text', name),
@@ -92,8 +98,7 @@ const renderDeferredSpec = (spec) => {
                     const link = makeElement('a', `talent-icon-box status-${talent.status || 'disabled'}`);
                     link.href = safeLink(talent.href);
                     link.target = '_blank';
-                    link.rel = `spell=${talent.spellId || ''}`;
-                    link.title = `Spell #${talent.spellId || ''}: ${talent.pointsText || ''}`;
+                    if (talent.tooltip_key) link.dataset.itemTooltip = talent.tooltip_key;
 
                     if (talent.iconUrl) {
                         const image = makeElement('img', 'talent-icon-img');

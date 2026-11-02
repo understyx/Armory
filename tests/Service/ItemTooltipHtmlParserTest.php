@@ -23,6 +23,19 @@ class ItemTooltipHtmlParserTest extends TestCase
         ]], $result['effects']);
     }
 
+    public function testParsesGlyphUseEffect(): void
+    {
+        $html = <<<'HTML'
+            <span class="q2">Use: <a href="spell=56175" class="q2">Your Power Word: Shield also heals the target for 20% of the absorption amount.</a></span>
+            HTML;
+
+        self::assertSame([[
+            'spell_id' => 56175,
+            'trigger_type' => 'use',
+            'description' => 'Your Power Word: Shield also heals the target for 20% of the absorption amount.',
+        ]], (new ItemTooltipHtmlParser())->parse($html)['effects']);
+    }
+
     public function testParsesItemSetMembersAndBonuses(): void
     {
         $html = <<<'HTML'

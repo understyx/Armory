@@ -1910,6 +1910,15 @@ body {
     color: var(--text-primary);
 }
 
+.glyph-item[data-item-tooltip] {
+    cursor: help;
+}
+
+.glyph-item[data-item-tooltip]:focus-visible {
+    outline: 1px solid var(--accent-gold);
+    outline-offset: 3px;
+}
+
 .glyph-ring-dot {
     width: 8px;
     height: 8px;
@@ -2535,6 +2544,10 @@ body {
 .item-tooltip-flavor {
     color: #ffd100;
     font-style: italic;
+}
+
+.item-tooltip-spell-description {
+    color: #ffd100;
 }
 
 .item-tooltip-set-name {

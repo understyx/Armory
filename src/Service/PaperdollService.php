@@ -32,8 +32,22 @@ class PaperdollService
             static fn (int $id): bool => $id > 0
         ));
 
-        // Fetch equipment and transmog item details together (gem IDs are spell/enchantment IDs, not item IDs).
-        $lookupIds = array_values(array_unique([...$itemIds, ...$transmogIds]));
+        $gemDetailsByItem = [];
+        $gemItemIds = [];
+        foreach ($equippedItems as $index => $item) {
+            $gemDetailsByItem[$index] = [];
+            foreach ($item['gems'] ?? [] as $gemEnchantId) {
+                $gemEnchantId = (int) $gemEnchantId;
+                $gem = $gemEnchantId > 0 ? $this->resolveGemFromEnchantId($gemEnchantId) : null;
+                $gemDetailsByItem[$index][] = $gem;
+                if ($includeTooltips && $this->itemTooltipService !== null && (int) ($gem['id'] ?? 0) > 0) {
+                    $gemItemIds[] = (int) $gem['id'];
+                }
+            }
+        }
+
+        // Resolve gems from enchant IDs first, then fetch all related item data together.
+        $lookupIds = array_values(array_unique([...$itemIds, ...$transmogIds, ...$gemItemIds]));
         $dbItems = $lookupIds !== [] ? $this->itemDatabaseService->getItemsBulk($lookupIds) : [];
 
         $enrichedItems = [];
@@ -48,13 +62,15 @@ class PaperdollService
             }
 
             $rawGems = $item['gems'] ?? [];
-            $gemDetails = [];
-            foreach ($rawGems as $gId) {
-                $gemEnchantId = (int)$gId;
-                $gemDetails[] = $gemEnchantId > 0
-                    ? $this->resolveGemFromEnchantId($gemEnchantId)
-                    : null;
+            $gemDetails = $gemDetailsByItem[$index] ?? [];
+            foreach ($gemDetails as &$gem) {
+                if ($gem !== null) {
+                    $gem['tooltip_key'] = (int) ($gem['id'] ?? 0) > 0
+                        ? 'item-'.(int) $gem['id']
+                        : 'item-0-'.(int) ($gem['enchant_id'] ?? 0);
+                }
             }
+            unset($gem);
 
             $transmogId = (int) ($item['transmog'] ?? 0);
             $transmogData = $transmogId > 0 ? ($dbItems[$transmogId] ?? []) : [];
@@ -124,6 +140,34 @@ class PaperdollService
                 }
             }
             unset($enrichedItem);
+
+            foreach ($enrichedItems as $enrichedItem) {
+                foreach ($enrichedItem['gem_details'] as $gem) {
+                    if ($gem === null || isset($itemTooltips[$gem['tooltip_key']])) {
+                        continue;
+                    }
+
+                    $itemId = (int) ($gem['id'] ?? 0);
+                    $gemItem = $itemId > 0 ? ($dbItems[$itemId] ?? null) : null;
+                    $tooltip = null;
+                    if ($gemItem !== null) {
+                        $gemItem['id'] = $itemId;
+                        $gemItem['icon_url'] = $this->externalIconUrl($gemItem['icon'] ?? null);
+                        $gemItem['icon_fallback_url'] = $this->localIconUrl($gemItem['icon'] ?? null);
+                        $tooltip = $this->itemTooltipService->build($gemItem);
+                    }
+
+                    $tooltip ??= [
+                        'id' => $itemId,
+                        'name' => (string) $gem['name'],
+                        'quality' => (int) $gem['quality'],
+                        'icon_url' => $gem['icon_url'] ?? null,
+                        'icon_fallback_url' => $gem['icon_fallback_url'] ?? null,
+                    ];
+                    $tooltip['gem_effect'] = (string) $gem['effect'];
+                    $itemTooltips[$gem['tooltip_key']] = $tooltip;
+                }
+            }
         }
 
         $slots = [
@@ -290,7 +334,7 @@ class PaperdollService
     }
 
     /** @param array<string, array<string, mixed>> $tooltips */
-    private function compactTooltipPayload(array $tooltips): array
+    public function compactTooltipPayload(array $tooltips): array
     {
         if ($tooltips === []) {
             return [];

@@ -9,6 +9,46 @@ use PHPUnit\Framework\TestCase;
 
 class TooltipEnrichmentServiceTest extends TestCase
 {
+    public function testRetainsGlyphUseEffectWhenTrinityContainsItsSpellId(): void
+    {
+        $provider = new class implements ItemTooltipProviderInterface {
+            public function getName(): string { return 'cavern_of_time'; }
+            public function getPriority(): int { return 100; }
+            public function fetch(int $itemId, string $locale = 'enUS'): array
+            {
+                return [
+                    'provider' => $this->getName(),
+                    'source_url' => 'https://wotlk.cavernoftime.com/item=43673',
+                    'raw_response' => '<tooltip />',
+                    'effects' => [[
+                        'spell_id' => 56175,
+                        'trigger_type' => 'use',
+                        'description' => 'Your Power Word: Shield also heals the target for 20%.',
+                    ]],
+                    'set' => null,
+                ];
+            }
+        };
+        $repository = $this->createMock(TooltipEnrichmentRepository::class);
+        $repository->method('hasSuccessfulEnrichment')->willReturn(false);
+        $repository->method('findItemContext')->willReturn([
+            'item_id' => 43673,
+            'set_id' => 0,
+            'tooltip' => ['spells' => [['id' => 56175, 'trigger' => 0]]],
+        ]);
+        $repository->expects(self::once())
+            ->method('saveEnrichment')
+            ->with(43673, self::callback(static fn (array $effects): bool => $effects === [[
+                'spell_id' => 56175,
+                'trigger_type' => 'use',
+                'description' => 'Your Power Word: Shield also heals the target for 20%.',
+                'source' => 'cavern_of_time',
+                'source_url' => 'https://wotlk.cavernoftime.com/item=43673',
+            ]]), null, 0, 'enUS');
+
+        self::assertTrue((new TooltipEnrichmentService($repository, [$provider]))->enrichItem(43673));
+    }
+
     public function testPrefersCavernAndUsesTrinityTriggerType(): void
     {
         $cavern = new class implements ItemTooltipProviderInterface {
