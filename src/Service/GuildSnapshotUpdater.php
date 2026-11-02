@@ -46,7 +46,8 @@ class GuildSnapshotUpdater
         foreach ($data['members'] as $member) {
             foreach (['1', '2', '3'] as $spec) {
                 $delay = ++$jobIndex * self::UWU_REQUEST_SPACING_MS;
-                $this->messageBus->dispatch(
+                DeduplicatingMessageDispatcher::dispatch(
+                    $this->messageBus,
                     new RefreshUwuRankMessage($member['name'], $realmName, $spec),
                     [new DelayStamp($delay)],
                 );

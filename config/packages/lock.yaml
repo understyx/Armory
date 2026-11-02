@@ -1,0 +1,10 @@
+framework:
+    lock:
+        resources:
+            default: doctrine.dbal.default_connection
+
+when@test:
+    framework:
+        lock:
+            resources:
+                default: in-memory

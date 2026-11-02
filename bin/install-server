@@ -445,10 +445,11 @@ nginx -t
 systemctl restart "php${PHP_VERSION}-fpm" nginx
 
 MESSENGER_SERVICE="/etc/systemd/system/armorystuff-messenger.service"
-log "Configuring the tooltip enrichment worker"
+UWU_SERVICE="/etc/systemd/system/armorystuff-uwu.service"
+log "Configuring the application and Uwu-logs workers"
 cat > "$MESSENGER_SERVICE" <<SERVICE
 [Unit]
-Description=Armorystuff background worker
+Description=Armorystuff application worker
 After=network-online.target mariadb.service
 Wants=network-online.target
 
@@ -467,9 +468,30 @@ RestartSec=5
 WantedBy=multi-user.target
 SERVICE
 
+cat > "$UWU_SERVICE" <<SERVICE
+[Unit]
+Description=Armorystuff Uwu-logs rank worker
+After=network-online.target mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${APP_USER}
+Group=${APP_GROUP}
+WorkingDirectory=${DEPLOY_DIR}
+Environment=APP_ENV=prod
+Environment=APP_DEBUG=0
+ExecStart=/usr/bin/php ${DEPLOY_DIR}/bin/console messenger:consume uwu --time-limit=3600 --memory-limit=128M --no-interaction
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
 systemctl daemon-reload
-systemctl enable armorystuff-messenger.service
-systemctl restart armorystuff-messenger.service
+systemctl enable armorystuff-messenger.service armorystuff-uwu.service
+systemctl restart armorystuff-messenger.service armorystuff-uwu.service
 
 log "Installation complete"
 printf 'Application: %s\n' "$APP_URL"

@@ -21,6 +21,7 @@ use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\DeduplicateStamp;
 
 class CharacterViewControllerTest extends KernelTestCase
 {
@@ -39,6 +40,7 @@ class CharacterViewControllerTest extends KernelTestCase
         $snapshot->setSpecializations(['Unholy']);
         $snapshot->setEquippedItems([
             ['id' => 50001, 'transmog' => 60001],
+            ['id' => 50002, 'class' => 2, 'type' => 17, 'tooltip' => ['stats' => []]],
         ]);
         $snapshot->setCharacterModel([
             'race' => 1,
@@ -51,6 +53,17 @@ class CharacterViewControllerTest extends KernelTestCase
             'items' => [],
         ]);
         $snapshot->setTalentStrings(['51 / 20 / 0']);
+        $snapshot->setTalentTreesData(['0' => [[
+            'name' => 'Unholy',
+            'points' => 71,
+            'tiers' => [[[
+                'spellId' => 990001,
+                'pointsText' => '2/3',
+                'href' => 'https://wotlk.evowow.com/?spell=990001',
+                'status' => 'active',
+                'iconUrl' => null,
+            ]]],
+        ]]]);
         $snapshot->setGlyphs([]);
         $snapshot->setEnchantsStatus('All items enchanted');
         $snapshot->setGemsStatus('All gem slots filled');
@@ -119,6 +132,9 @@ class CharacterViewControllerTest extends KernelTestCase
             $this->createMock(CharacterUpdateThrottle::class),
             $uwuRankRepository,
             new \App\Service\CharacterStatCalculator(),
+            null,
+            null,
+            new \App\Service\CharacterHitExpertiseService(new \App\Service\CharacterStatCalculator()),
         );
         $controller->setContainer($container);
 
@@ -126,6 +142,10 @@ class CharacterViewControllerTest extends KernelTestCase
 
         $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
         $this->assertStringContainsString('Understyx', $response->getContent());
+        $this->assertStringContainsString(
+            'Party buffs are excluded; caster targets assume the 3% spell-hit raid debuff.',
+            $response->getContent(),
+        );
         $this->assertStringContainsString('6000', $response->getContent());
         $this->assertStringContainsString('id="stats-tab"', $response->getContent());
         $this->assertStringContainsString('id="achievements-tab"', $response->getContent());
@@ -232,8 +252,8 @@ class CharacterViewControllerTest extends KernelTestCase
             ->method('dispatch')
             ->with(self::callback(static fn (object $message): bool => $message instanceof RefreshCharacterSnapshotMessage
                 && $message->characterName === 'Understyx'
-                && $message->realmName === 'Icecrown'))
-            ->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
+                && $message->realmName === 'Icecrown'), self::callback(static fn (array $stamps): bool => $stamps[0] instanceof DeduplicateStamp))
+            ->willReturnCallback(static fn (object $message, array $stamps): Envelope => new Envelope($message, $stamps));
 
         $controller = new CharacterViewController(
             $scraper,

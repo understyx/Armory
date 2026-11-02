@@ -63,15 +63,16 @@ php bin/console app:enrich-item-tooltips 50363
 php bin/console app:enrich-item-tooltips 50363 --force
 ```
 
-Development environments must have an async worker running for lazy enrichment:
+Development environments should run both workers in separate terminals:
 
 ```bash
 php bin/console messenger:consume async --time-limit=3600
+php bin/console messenger:consume uwu --time-limit=3600
 ```
 
-Guild imports queue paced Uwu-logs rank checks for every roster member and specialization. Requests are spaced by 5 seconds, per-character results are cached and throttled for 4 seconds, and a guild roster can be refreshed at most once per calendar day. Upstream rate limits retry after 35 seconds. Keep the Messenger worker running for these background rank sweeps.
+Guild imports queue paced Uwu-logs rank checks for every roster member and specialization. Requests are spaced by 5 seconds, per-character results are cached and throttled for 4 seconds, and a guild roster can be refreshed at most once per calendar day. The `armorystuff-uwu` worker also waits 5 seconds after each real request, so overdue jobs cannot reach Uwu-logs in a burst. Upstream rate limits retry after 35 seconds. Keep the `armorystuff-uwu` worker running for these background rank sweeps. Its separate process keeps slow rank calls from delaying character refreshes or tooltip enrichment.
 
-Production installs made with `bin/install-server` configure this worker as the `armorystuff-messenger` systemd service. Raw provider responses and parser versions are retained so cached pages can be reparsed if an external site changes its markup. External providers only supply display text; TrinityCore remains authoritative for item, spell-trigger, and set IDs. Custom items can be populated directly in the same cache tables when external databases do not know them.
+Production installs made with `bin/install-server` configure the `armorystuff-messenger` and `armorystuff-uwu` systemd services. Raw provider responses and parser versions are retained so cached pages can be reparsed if an external site changes its markup. External providers only supply display text; TrinityCore remains authoritative for item, spell-trigger, and set IDs. Custom items can be populated directly in the same cache tables when external databases do not know them.
 
 ## Production deployment
 
@@ -194,9 +195,10 @@ POST /api/requestupdate/{name}/{realm}
 
 Accepted requests return `202 Accepted`. A character may only be requested once
 every five minutes; requests made during that window return `429 Too Many Requests`
-with a `Retry-After` header. Refreshes are processed by the existing Messenger
-worker, so production must keep `armorystuff-messenger` (or an equivalent
-`messenger:consume async` process) running.
+with a `Retry-After` header. Refreshes are processed by the Messenger worker, so
+production must keep `armorystuff-messenger` (or an equivalent
+`messenger:consume async` process) running. Uwu-logs rank jobs use the separate
+`armorystuff-uwu` worker (`messenger:consume uwu`).
 
 ## Public reference API
 

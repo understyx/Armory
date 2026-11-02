@@ -9,6 +9,7 @@ use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\ArmoryScraperService;
 use App\Service\CharacterHitExpertiseService;
+use App\Service\DeduplicatingMessageDispatcher;
 use App\Service\CharacterRefreshResult;
 use App\Service\CharacterSnapshotUpdater;
 use App\Service\CharacterStatCalculator;
@@ -210,7 +211,10 @@ class CharacterViewController extends AbstractController
         $hasSnapshot = $this->snapshotRepository->existsByNameAndRealm($characterName, $realmName);
 
         if ($this->messageBus !== null) {
-            $this->messageBus->dispatch(new RefreshCharacterSnapshotMessage($characterName, $realmName));
+            DeduplicatingMessageDispatcher::dispatch(
+                $this->messageBus,
+                new RefreshCharacterSnapshotMessage($characterName, $realmName),
+            );
 
             if (!$hasSnapshot) {
                 return $this->renderLoadingPage($characterName, $realmName);
@@ -536,7 +540,12 @@ class CharacterViewController extends AbstractController
         $decision = $this->updateThrottle->claim($characterName, $realmName);
         $isQueued = false;
         if ($decision->accepted) {
-            $this->messageBus?->dispatch(new RefreshCharacterSnapshotMessage($characterName, $realmName));
+            if ($this->messageBus !== null) {
+                DeduplicatingMessageDispatcher::dispatch(
+                    $this->messageBus,
+                    new RefreshCharacterSnapshotMessage($characterName, $realmName),
+                );
+            }
             $isQueued = true;
         }
 

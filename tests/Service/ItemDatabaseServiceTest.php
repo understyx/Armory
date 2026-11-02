@@ -10,6 +10,7 @@ use App\Service\ItemDatabaseService;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\DeduplicateStamp;
 
 class ItemDatabaseServiceTest extends TestCase
 {
@@ -109,8 +110,8 @@ class ItemDatabaseServiceTest extends TestCase
         $bus->expects(self::once())
             ->method('dispatch')
             ->with(self::callback(static fn (object $message): bool => $message instanceof EnrichItemTooltipMessage
-                && $message->itemId === 50363))
-            ->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
+                && $message->itemId === 50363), self::callback(static fn (array $stamps): bool => $stamps[0] instanceof DeduplicateStamp))
+            ->willReturnCallback(static fn (object $message, array $stamps): Envelope => new Envelope($message, $stamps));
 
         $result = (new ItemDatabaseService($items, $enrichment, $bus))->getItem(50363);
 

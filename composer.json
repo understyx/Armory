@@ -1,4 +1,6 @@
 {
+    "name": "armorystuff/armorystuff",
+    "description": "World of Warcraft Wrath of the Lich King character armory and guild tools.",
     "type": "project",
     "license": "proprietary",
     "minimum-stability": "stable",
@@ -26,6 +28,7 @@
         "symfony/framework-bundle": "7.3.*",
         "symfony/http-client": "7.3.*",
         "symfony/intl": "7.3.*",
+        "symfony/lock": "7.3.*",
         "symfony/mailer": "7.3.*",
         "symfony/maker-bundle": "^1.64",
         "symfony/mime": "7.3.*",

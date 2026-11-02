@@ -8,6 +8,7 @@ use App\Message\RefreshCharacterSnapshotMessage;
 use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\CharacterApiFormatter;
+use App\Service\DeduplicatingMessageDispatcher;
 use App\Service\CharacterUpdateThrottle;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -92,7 +93,10 @@ class CharacterApiController extends AbstractController
             ], Response::HTTP_TOO_MANY_REQUESTS, ['Retry-After' => (string) $retryAfter]);
         }
 
-        $this->messageBus->dispatch(new RefreshCharacterSnapshotMessage($name, $realm));
+        DeduplicatingMessageDispatcher::dispatch(
+            $this->messageBus,
+            new RefreshCharacterSnapshotMessage($name, $realm),
+        );
 
         return new JsonResponse([
             'status' => 'queued',

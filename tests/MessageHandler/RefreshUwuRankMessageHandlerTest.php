@@ -10,6 +10,7 @@ use App\Service\UwuRankUpdater;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\DeduplicateStamp;
 use Symfony\Component\Messenger\Stamp\DelayStamp;
 
 final class RefreshUwuRankMessageHandlerTest extends TestCase
@@ -22,7 +23,7 @@ final class RefreshUwuRankMessageHandlerTest extends TestCase
         $bus = $this->createMock(MessageBusInterface::class);
         $bus->expects(self::never())->method('dispatch');
 
-        (new RefreshUwuRankMessageHandler($updater, $bus))(new RefreshUwuRankMessage('Imtilted', 'Icecrown', '2'));
+        (new RefreshUwuRankMessageHandler($updater, $bus, self::noPause()))(new RefreshUwuRankMessage('Imtilted', 'Icecrown', '2'));
     }
 
     public function testItAllowsTemporaryUpstreamFailuresToRetry(): void
@@ -32,7 +33,7 @@ final class RefreshUwuRankMessageHandlerTest extends TestCase
 
         $this->expectException(UwuLogsException::class);
 
-        (new RefreshUwuRankMessageHandler($updater, $this->createMock(MessageBusInterface::class)))(
+        (new RefreshUwuRankMessageHandler($updater, $this->createMock(MessageBusInterface::class), self::noPause()))(
             new RefreshUwuRankMessage('Imtilted', 'Icecrown', '1'),
         );
     }
@@ -48,12 +49,14 @@ final class RefreshUwuRankMessageHandlerTest extends TestCase
                 self::assertSame($message, $redispatched);
                 self::assertInstanceOf(DelayStamp::class, $stamps[0]);
                 self::assertSame(35000, $stamps[0]->getDelay());
+                self::assertInstanceOf(DeduplicateStamp::class, $stamps[1]);
+                self::assertSame(3635.0, $stamps[1]->getTtl());
 
                 return new Envelope($redispatched, $stamps);
             },
         );
 
-        (new RefreshUwuRankMessageHandler($updater, $bus))($message);
+        (new RefreshUwuRankMessageHandler($updater, $bus, self::noPause()))($message);
     }
 
     public function testItRequeuesALocalThrottleRejectionAfterOneQueueInterval(): void
@@ -67,11 +70,73 @@ final class RefreshUwuRankMessageHandlerTest extends TestCase
                 self::assertSame($message, $redispatched);
                 self::assertInstanceOf(DelayStamp::class, $stamps[0]);
                 self::assertSame(5000, $stamps[0]->getDelay());
+                self::assertInstanceOf(DeduplicateStamp::class, $stamps[1]);
+                self::assertSame(3605.0, $stamps[1]->getTtl());
 
                 return new Envelope($redispatched, $stamps);
             },
         );
 
-        (new RefreshUwuRankMessageHandler($updater, $bus))($message);
+        (new RefreshUwuRankMessageHandler($updater, $bus, self::noPause()))($message);
+    }
+
+    public function testItPausesForFiveSecondsAfterContactingUwuLogs(): void
+    {
+        $updater = $this->createMock(UwuRankUpdater::class);
+        $updater->method('getOrRefresh')->willReturn(['cached' => false]);
+        $pauses = [];
+
+        (new RefreshUwuRankMessageHandler(
+            $updater,
+            $this->createMock(MessageBusInterface::class),
+            static function (int $microseconds) use (&$pauses): void { $pauses[] = $microseconds; },
+        ))(new RefreshUwuRankMessage('Imtilted', 'Icecrown', '1'));
+
+        self::assertSame([5_000_000], $pauses);
+    }
+
+    public function testItPausesAfterAFailedUwuLogsRequest(): void
+    {
+        $updater = $this->createMock(UwuRankUpdater::class);
+        $updater->method('getOrRefresh')->willThrowException(new UwuLogsException('Unavailable', 502));
+        $pauses = [];
+
+        try {
+            (new RefreshUwuRankMessageHandler(
+                $updater,
+                $this->createMock(MessageBusInterface::class),
+                static function (int $microseconds) use (&$pauses): void { $pauses[] = $microseconds; },
+            ))(new RefreshUwuRankMessage('Imtilted', 'Icecrown', '1'));
+            self::fail('The upstream failure should be rethrown for retry.');
+        } catch (UwuLogsException) {
+            self::assertSame([5_000_000], $pauses);
+        }
+    }
+
+    public function testItDoesNotPauseWhenUwuLogsWasNotContacted(): void
+    {
+        $cachedUpdater = $this->createMock(UwuRankUpdater::class);
+        $cachedUpdater->method('getOrRefresh')->willReturn(['cached' => true]);
+        $throttledUpdater = $this->createMock(UwuRankUpdater::class);
+        $throttledUpdater->method('getOrRefresh')->willThrowException(new UwuLogsThrottleException('Local throttle', 429));
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->method('dispatch')->willReturnCallback(
+            static fn (object $message, array $stamps): Envelope => new Envelope($message, $stamps),
+        );
+        $pause = static fn (int $microseconds) => self::fail('No Uwu-logs request was made.');
+
+        foreach ([$cachedUpdater, $throttledUpdater] as $updater) {
+            (new RefreshUwuRankMessageHandler($updater, $bus, $pause))(
+                new RefreshUwuRankMessage('Imtilted', 'Icecrown', '1'),
+            );
+        }
+
+        self::addToAssertionCount(1);
+    }
+
+    private static function noPause(): \Closure
+    {
+        return static function (int $microseconds): void {
+        };
     }
 }

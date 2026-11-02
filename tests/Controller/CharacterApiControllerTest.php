@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\DeduplicateStamp;
 
 class CharacterApiControllerTest extends TestCase
 {
@@ -180,8 +181,8 @@ class CharacterApiControllerTest extends TestCase
             ->method('dispatch')
             ->with(self::callback(static fn(object $message): bool => $message instanceof RefreshCharacterSnapshotMessage
                 && $message->characterName === 'Understyx'
-                && $message->realmName === 'Icecrown'))
-            ->willReturnCallback(static fn(object $message): Envelope => new Envelope($message));
+                && $message->realmName === 'Icecrown'), self::callback(static fn (array $stamps): bool => $stamps[0] instanceof DeduplicateStamp))
+            ->willReturnCallback(static fn(object $message, array $stamps): Envelope => new Envelope($message, $stamps));
 
         $response = $this->createController(throttle: $throttle, bus: $bus)
             ->requestUpdate('Understyx', 'Icecrown');

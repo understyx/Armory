@@ -104,7 +104,10 @@ class ItemDatabaseService
                 && $this->messageBus !== null
                 && $this->tooltipEnrichmentRepository->shouldQueue($itemId)
             ) {
-                $this->messageBus->dispatch(new EnrichItemTooltipMessage($itemId, $setId));
+                DeduplicatingMessageDispatcher::dispatch(
+                    $this->messageBus,
+                    new EnrichItemTooltipMessage($itemId, $setId),
+                );
                 $this->tooltipEnrichmentRepository->markQueued($itemId);
             }
         }

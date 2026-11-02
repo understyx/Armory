@@ -117,7 +117,7 @@ final class CharacterHitExpertiseService
                 'ranged' => 'ranged_hit_rating',
                 default => 'spell_hit_rating',
             };
-            $hitTarget = $role === 'caster' ? 17.0 : 8.0;
+            $hitTarget = $role === 'caster' ? 14.0 : 8.0;
             $ratingHit = (float) ($stats['ratings'][$hitStat]['ratingPercent'] ?? 0.0);
             $talentHit = $this->relevantTalentHit(
                 $class,
@@ -130,6 +130,7 @@ final class CharacterHitExpertiseService
             // https://www.wowhead.com/wotlk/spell=6562/heroic-presence
             $personalDraeneiHit = strcasecmp(trim($race), 'Draenei') === 0 ? 1.0 : 0.0;
             $hitValue = $ratingHit + $talentHit + $personalDraeneiHit;
+            $displayedHitValue = round($hitValue, 2);
 
             $row = [
                 'specName' => $specName,
@@ -140,9 +141,9 @@ final class CharacterHitExpertiseService
                     'ranged' => 'Ranged Hit',
                     default => 'Spell Hit',
                 },
-                'hitValue' => round($hitValue, 2),
+                'hitValue' => $displayedHitValue,
                 'hitTarget' => $hitTarget,
-                'hitMet' => $hitValue + 0.000001 >= $hitTarget,
+                'hitMet' => $displayedHitValue + 0.000001 >= $hitTarget,
                 'hitTooltip' => $this->hitTooltip($class, $specName, $role),
             ];
 
@@ -376,7 +377,7 @@ final class CharacterHitExpertiseService
         };
 
         return sprintf(
-            '%s specialization spells. Includes hit rating from gear, gems, enchants, applicable talents, and your personal Heroic Presence if Draenei. Party Heroic Presence and Misery/Improved Faerie Fire target debuffs are excluded.',
+            '%s specialization spells. Includes hit rating from gear, gems, enchants, applicable talents, and your personal Heroic Presence if Draenei. Party Heroic Presence is excluded. 14%% assumes Misery or Improved Faerie Fire (3%%) on the target; 17%% without it.',
             $school,
         );
     }
