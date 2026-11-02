@@ -20,6 +20,7 @@ final class CharacterHitExpertiseServiceTest extends TestCase
         self::assertSame('melee', $melee[0]['role']);
         self::assertSame('Melee Hit', $melee[0]['hitLabel']);
         self::assertSame(8.0, $melee[0]['hitTarget']);
+        self::assertSame(0.0, $melee[0]['hitRaidDebuff']);
         self::assertSame(0.0, $melee[0]['hitValue']);
         self::assertFalse($melee[0]['hitMet']);
         self::assertSame('ranged', $ranged[0]['role']);
@@ -27,7 +28,8 @@ final class CharacterHitExpertiseServiceTest extends TestCase
         self::assertSame(8.0, $ranged[0]['hitTarget']);
         self::assertSame('caster', $caster[0]['role']);
         self::assertSame('Spell Hit', $caster[0]['hitLabel']);
-        self::assertSame(14.0, $caster[0]['hitTarget']);
+        self::assertSame(17.0, $caster[0]['hitTarget']);
+        self::assertSame(3.0, $caster[0]['hitRaidDebuff']);
         self::assertSame([], $healer);
     }
 
@@ -50,13 +52,13 @@ final class CharacterHitExpertiseServiceTest extends TestCase
         ]], $talents);
 
         self::assertSame(14.0, $met[0]['hitValue']);
-        self::assertSame(14.0, $met[0]['hitTarget']);
+        self::assertSame(17.0, $met[0]['hitTarget']);
         self::assertTrue($met[0]['hitMet']);
         self::assertSame(13.99, $unmet[0]['hitValue']);
-        self::assertSame(14.0, $unmet[0]['hitTarget']);
+        self::assertSame(17.0, $unmet[0]['hitTarget']);
         self::assertFalse($unmet[0]['hitMet']);
         self::assertStringContainsString(
-            '14% assumes Misery or Improved Faerie Fire (3%) on the target; 17% without it.',
+            '+3% is Misery or Improved Faerie Fire on the target; they do not stack.',
             $met[0]['hitTooltip'],
         );
     }
@@ -93,9 +95,10 @@ final class CharacterHitExpertiseServiceTest extends TestCase
 
         self::assertSame(8.02, $melee[0]['hitValue']);
         self::assertSame(8.0, $melee[0]['hitTarget']);
+        self::assertSame(0.0, $melee[0]['hitRaidDebuff']);
         self::assertTrue($melee[0]['hitMet']);
         self::assertSame(17.0, $spell[0]['hitValue']);
-        self::assertSame(14.0, $spell[0]['hitTarget']);
+        self::assertSame(17.0, $spell[0]['hitTarget']);
         self::assertTrue($spell[0]['hitMet']);
     }
 

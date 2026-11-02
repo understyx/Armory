@@ -375,7 +375,7 @@
                     <div class="hit-expertise-heading">
                         <div>
                             <h3 id="hit-expertise-title">Hit &amp; Expertise</h3>
-                            <p>From gear and talents; your permanent racials are included. Party buffs are excluded; caster targets assume the 3% spell-hit raid debuff.</p>
+                            <p>From gear and talents; your permanent racials are included. Party buffs are excluded; +3% on casters is the Improved Faerie Fire or Misery raid debuff.</p>
                         </div>
                     </div>
                     <div class="hit-expertise-rows">
@@ -390,7 +390,7 @@
                                 <div class="hit-expertise-metric" title="{{ row.hitTooltip }}">
                                     <span>{{ row.hitLabel }}</span>
                                     <strong class="{{ row.hitMet ? 'hit-expertise-met' : 'hit-expertise-unmet' }}">
-                                        {{ row.hitValue|number_format(2) }}% <small>vs {{ row.hitTarget|number_format(0) }}%</small>
+                                        {{ row.hitValue|number_format(2) }}%{% if row.hitRaidDebuff > 0 %} + {{ row.hitRaidDebuff|number_format(0) }}%{% endif %} <small>{% if row.hitRaidDebuff > 0 %}(Imp FF or Misery) {% endif %}vs {{ row.hitTarget|number_format(0) }}%</small>
                                     </strong>
                                 </div>
                                 {% if row.expertise is defined %}

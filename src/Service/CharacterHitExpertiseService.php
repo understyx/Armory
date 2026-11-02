@@ -117,7 +117,9 @@ final class CharacterHitExpertiseService
                 'ranged' => 'ranged_hit_rating',
                 default => 'spell_hit_rating',
             };
-            $hitTarget = $role === 'caster' ? 14.0 : 8.0;
+            $hitTarget = $role === 'caster' ? 17.0 : 8.0;
+            // Misery and Improved Faerie Fire share one 3% spell hit debuff in raids.
+            $hitRaidDebuff = $role === 'caster' ? 3.0 : 0.0;
             $ratingHit = (float) ($stats['ratings'][$hitStat]['ratingPercent'] ?? 0.0);
             $talentHit = $this->relevantTalentHit(
                 $class,
@@ -143,7 +145,8 @@ final class CharacterHitExpertiseService
                 },
                 'hitValue' => $displayedHitValue,
                 'hitTarget' => $hitTarget,
-                'hitMet' => $displayedHitValue + 0.000001 >= $hitTarget,
+                'hitRaidDebuff' => $hitRaidDebuff,
+                'hitMet' => $displayedHitValue + $hitRaidDebuff + 0.000001 >= $hitTarget,
                 'hitTooltip' => $this->hitTooltip($class, $specName, $role),
             ];
 
@@ -377,7 +380,7 @@ final class CharacterHitExpertiseService
         };
 
         return sprintf(
-            '%s specialization spells. Includes hit rating from gear, gems, enchants, applicable talents, and your personal Heroic Presence if Draenei. Party Heroic Presence is excluded. 14%% assumes Misery or Improved Faerie Fire (3%%) on the target; 17%% without it.',
+            '%s specialization spells. Includes hit rating from gear, gems, enchants, applicable talents, and your personal Heroic Presence if Draenei. Party Heroic Presence is excluded. +3%% is Misery or Improved Faerie Fire on the target; they do not stack.',
             $school,
         );
     }

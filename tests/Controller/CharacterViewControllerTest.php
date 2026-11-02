@@ -143,7 +143,7 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
         $this->assertStringContainsString('Understyx', $response->getContent());
         $this->assertStringContainsString(
-            'Party buffs are excluded; caster targets assume the 3% spell-hit raid debuff.',
+            'Party buffs are excluded; +3% on casters is the Improved Faerie Fire or Misery raid debuff.',
             $response->getContent(),
         );
         $this->assertStringContainsString('6000', $response->getContent());
