@@ -77,12 +77,12 @@ final class SpellTooltipHtmlParser
         $seconds = static fn (float $value): string => rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
 
         $text = preg_replace_callback(
-            '/\b(\d{3,})\.\d (sec|seconds)\b/',
+            '/\b(\d{3,})\.\d (sec|secs|seconds)\b/',
             static fn (array $match): string => $seconds((int) $match[1] / 1000).' '.$match[2],
             $text,
         ) ?? $text;
         $text = preg_replace_callback(
-            '/\b(\d{4,}) (sec|seconds)\b/',
+            '/\b(\d{4,}) (sec|secs|seconds)\b/',
             static fn (array $match): string => $seconds((int) $match[1] / 1000).' '.$match[2],
             $text,
         ) ?? $text;

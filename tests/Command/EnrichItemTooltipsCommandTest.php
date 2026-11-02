@@ -103,7 +103,7 @@ class EnrichItemTooltipsCommandTest extends TestCase
         self::assertSame([], $pauseCalls, 'A single item has no gap between candidates.');
     }
 
-    public function testGlyphsOptionPauses300MillisecondsBetweenItems(): void
+    public function testGlyphsOptionPausesTwoSecondsBetweenItems(): void
     {
         $repository = $this->createMock(TooltipEnrichmentRepository::class);
         $repository->method('findCandidateItems')->willReturn([
@@ -120,6 +120,6 @@ class EnrichItemTooltipsCommandTest extends TestCase
         ));
 
         self::assertSame(Command::SUCCESS, $tester->execute(['--glyphs' => true]));
-        self::assertSame([300_000], $pauseCalls);
+        self::assertSame([2_000_000], $pauseCalls);
     }
 }

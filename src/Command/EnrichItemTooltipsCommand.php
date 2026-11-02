@@ -18,7 +18,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 class EnrichItemTooltipsCommand extends Command
 {
-    private const GLYPH_REQUEST_GAP_MICROSECONDS = 300_000;
+    private const GLYPH_REQUEST_GAP_MICROSECONDS = 2_000_000;
 
     private readonly \Closure $pause;
 

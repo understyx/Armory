@@ -56,6 +56,7 @@ final class SpellTooltipHtmlParserTest extends TestCase
         yield 'hundredths' => ['reduces the cast time by 250.2 sec.', 'reduces the cast time by 0.25 sec.'];
         yield 'tenths' => ['Reduces the global cooldown by 500.1 sec.', 'Reduces the global cooldown by 0.5 sec.'];
         yield 'whole seconds' => ['increased by 5000 sec. Following', 'increased by 5 sec. Following'];
+        yield 'plural seconds' => ['is reduced by 1750.1 secs. In', 'is reduced by 1.75 secs. In'];
         yield 'minutes' => ['is reduced by 120000 min.', 'is reduced by 2 min.'];
         yield 'real decimal stays' => ['cast time by 1.5 sec.', 'cast time by 1.5 sec.'];
         yield 'real duration stays' => ['taken for 15 sec.', 'taken for 15 sec.'];
