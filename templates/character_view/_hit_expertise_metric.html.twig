@@ -3,8 +3,8 @@
     <summary title="{{ metric.tooltip }}">
         <span>{{ metric.label }}</span>
         <strong class="{% if metric.met is not null %}{{ metric.met ? 'hit-expertise-met' : 'hit-expertise-unmet' }}{% endif %}">
-            {% if isPercent %}{{ metric.value|number_format(2) }}%{% else %}{{ metric.value }} pts{% endif %}{% if metric.bonus > 0 %} + {{ metric.bonus|number_format(0) }}%{% endif %}
-            {% if metric.target is not null %}<small>{% if metric.bonusLabel %}({{ metric.bonusLabel }}) {% endif %}vs {{ metric.target|number_format(0) }}%</small>{% endif %}
+            {% if isPercent %}{{ metric.value|number_format(2) }}%{% else %}{{ metric.value }} pts{% endif %}{% for bonus in metric.bonuses %} + {{ bonus.value|number_format(0) }}%{% endfor %}
+            {% if metric.target is not null %}<small>{% if metric.bonuses is not empty %}({{ metric.bonuses|map(b => b.label)|join(', ') }}) {% endif %}vs {{ metric.target|number_format(0) }}%</small>{% endif %}
         </strong>
         {% if metric.targets is not empty %}
             <div class="expertise-cap-list">

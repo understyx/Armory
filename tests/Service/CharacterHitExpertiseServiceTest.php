@@ -398,13 +398,18 @@ final class CharacterHitExpertiseServiceTest extends TestCase
         $taunt = $glyphed[0]['spellHitChecks'][0];
         self::assertSame('Taunt Hit (Spell Hit)', $taunt['label']);
         self::assertSame(10.0, $taunt['value']);
-        self::assertSame('Glyph of Righteous Defense', $taunt['bonusLabel']);
-        self::assertSame(8.0, $taunt['bonus']);
+        self::assertSame([
+            ['value' => 3.0, 'label' => 'Imp FF or Misery'],
+            ['value' => 8.0, 'label' => 'Glyph of Righteous Defense'],
+        ], $taunt['bonuses']);
         self::assertSame(17.0, $taunt['target']);
         self::assertTrue($taunt['met']);
-        self::assertSame(['Gear', 'Racial', 'Glyph'], array_column($taunt['sources'], 'category'));
-        self::assertNull($unglyphed[0]['spellHitChecks'][0]['bonusLabel']);
-        self::assertSame(0.0, $unglyphed[0]['spellHitChecks'][0]['bonus']);
+        self::assertSame(['Gear', 'Racial', 'Raid debuff', 'Glyph'], array_column($taunt['sources'], 'category'));
+        self::assertSame(
+            [['value' => 3.0, 'label' => 'Imp FF or Misery']],
+            $unglyphed[0]['spellHitChecks'][0]['bonuses'],
+        );
+        // 9% + 3% raid debuff is short of 17% without the glyph.
         self::assertFalse($unglyphed[0]['spellHitChecks'][0]['met']);
         self::assertSame([], $dps[0]['spellHitChecks']);
     }

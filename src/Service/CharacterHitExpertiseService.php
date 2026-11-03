@@ -86,6 +86,9 @@ final class CharacterHitExpertiseService
      */
     private const TAUNT_GLYPH_HIT = 8.0;
 
+    /** Misery and Improved Faerie Fire share one 3% spell hit debuff in raids. */
+    private const SPELL_HIT_RAID_DEBUFF = 3.0;
+
     /** @var array<string, string> */
     private const TAUNT_GLYPHS = [
         'warrior' => 'Glyph of Taunt',
@@ -156,8 +159,7 @@ final class CharacterHitExpertiseService
                 default => 'spell_hit_rating',
             };
             $hitTarget = $role === 'caster' ? 17.0 : 8.0;
-            // Misery and Improved Faerie Fire share one 3% spell hit debuff in raids.
-            $hitRaidDebuff = $role === 'caster' ? 3.0 : 0.0;
+            $hitRaidDebuff = $role === 'caster' ? self::SPELL_HIT_RAID_DEBUFF : 0.0;
             $talentEffects = $stats['talentModifiers'] ?? [];
             // Draenei Heroic Presence grants personal melee, ranged and spell hit in WotLK.
             // https://www.wowhead.com/wotlk/spell=6562/heroic-presence
@@ -198,8 +200,7 @@ final class CharacterHitExpertiseService
                 'label' => $hitLabel,
                 'unit' => '%',
                 'value' => $displayedHitValue,
-                'bonus' => $hitRaidDebuff,
-                'bonusLabel' => $hitRaidDebuff > 0 ? 'Imp FF or Misery' : null,
+                'bonuses' => $hitRaidDebuff > 0 ? [['value' => $hitRaidDebuff, 'label' => 'Imp FF or Misery']] : [],
                 'target' => $hitTarget,
                 'met' => $hitMet,
                 'targets' => [],
@@ -212,7 +213,7 @@ final class CharacterHitExpertiseService
             if ($classKey === 'rogue') {
                 $row['spellHitChecks'][] = $this->spellHitCheck(
                     'Poison Hit (Spell Hit)',
-                    'Poisons use the spell hit table: 17% against a raid boss. Rogue Precision applies to poisons.',
+                    'Poisons use the spell hit table: 17% against a raid boss, including +3% from Improved Faerie Fire or Misery. Rogue Precision applies to poisons.',
                     $stats,
                     $this->scopedTalentHit($talentEffects, 'Weapon and poison attacks'),
                     $racialHitSources,
@@ -221,7 +222,7 @@ final class CharacterHitExpertiseService
             if ($classKey === 'death knight') {
                 $row['spellHitChecks'][] = $this->spellHitCheck(
                     'Disease Hit (Spell Hit)',
-                    'Icy Touch and other disease-applying spells use the spell hit table: 17% against a raid boss. Virulence applies.',
+                    'Icy Touch and other disease-applying spells use the spell hit table: 17% against a raid boss, including +3% from Improved Faerie Fire or Misery. Virulence applies.',
                     $stats,
                     $this->scopedTalentHit($talentEffects, 'Spells'),
                     $racialHitSources,
@@ -230,7 +231,7 @@ final class CharacterHitExpertiseService
             if ($this->isTankSpec($class, $specName)) {
                 $row['spellHitChecks'][] = $this->spellHitCheck(
                     'Taunt Hit (Spell Hit)',
-                    'Taunts use the spell hit table: 17% against a raid boss. Melee hit talents do not apply; your taunt glyph adds 8% when it is in this spec\'s major glyphs.',
+                    'Taunts use the spell hit table: 17% against a raid boss, including +3% from Improved Faerie Fire or Misery. Melee hit talents do not apply; your taunt glyph adds 8% when it is in this spec\'s major glyphs.',
                     $stats,
                     // Death Knight Virulence raises spell hit, which covers Dark Command.
                     // https://wotlk.evowow.com/?spell=48962
@@ -277,8 +278,7 @@ final class CharacterHitExpertiseService
                     'label' => 'Expertise',
                     'unit' => 'pts',
                     'value' => $expertise,
-                    'bonus' => 0.0,
-                    'bonusLabel' => null,
+                    'bonuses' => [],
                     'target' => null,
                     'met' => null,
                     'targets' => $row['expertiseTargets'],
@@ -493,18 +493,19 @@ final class CharacterHitExpertiseService
     ): array {
         $sources = [...$this->ratingHitSources($stats, 'spell_hit_rating'), ...$talentSources, ...$racialSources];
         $value = $this->sourceTotal($sources);
-        $glyphHit = $glyph !== null ? self::TAUNT_GLYPH_HIT : 0.0;
+        $bonuses = [['value' => self::SPELL_HIT_RAID_DEBUFF, 'label' => 'Imp FF or Misery']];
+        $sources[] = $this->source('Raid debuff', 'Improved Faerie Fire or Misery', self::SPELL_HIT_RAID_DEBUFF);
         if ($glyph !== null) {
-            $sources[] = $this->source('Glyph', $glyph, $glyphHit);
+            $bonuses[] = ['value' => self::TAUNT_GLYPH_HIT, 'label' => $glyph];
+            $sources[] = $this->source('Glyph', $glyph, self::TAUNT_GLYPH_HIT);
         }
 
         return [
             'label' => $label,
             'value' => $value,
-            'bonus' => $glyphHit,
-            'bonusLabel' => $glyph,
+            'bonuses' => $bonuses,
             'target' => 17.0,
-            'met' => $value + $glyphHit + 0.000001 >= 17.0,
+            'met' => $value + array_sum(array_column($bonuses, 'value')) + 0.000001 >= 17.0,
             'tooltip' => $tooltip,
             'sources' => $sources,
         ];

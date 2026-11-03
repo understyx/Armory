@@ -1568,7 +1568,7 @@ body {
 }
 
 .hit-expertise-metric strong small {
-    white-space: nowrap;
+    display: block;
     color: var(--text-muted);
     font-size: 0.66rem;
     font-weight: 500;
