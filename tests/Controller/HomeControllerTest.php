@@ -54,6 +54,14 @@ class HomeControllerTest extends WebTestCase
         self::assertSelectorTextContains('.home-search-error', '1–12 letters');
     }
 
+    public function testSearchAcceptsWarmaneRenamePlaceholders(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/characters?character=C_10383265&realm=Icecrown');
+
+        self::assertResponseRedirects('/characters/C_10383265/Icecrown');
+    }
+
     public function testGuildSearchAllowsNamesLongerThanCharacterNames(): void
     {
         $client = static::createClient();
@@ -77,6 +85,8 @@ class HomeControllerTest extends WebTestCase
         yield 'name too long' => ['/characters/Abcdefghijklm/Icecrown'];
         yield 'name with digits' => ['/characters/Foo1/Icecrown'];
         yield 'name with accents' => ['/characters/F%C3%B6o/Icecrown'];
+        yield 'placeholder without digits' => ['/characters/C_/Icecrown'];
+        yield 'placeholder with letters' => ['/characters/C_123abc/Icecrown'];
         yield 'unknown realm' => ['/characters/Foo/Frostmourne'];
         yield 'api unknown realm' => ['/api/character/Foo/Frostmourne'];
         yield 'guild unknown realm' => ['/guilds/Foo/Frostmourne'];

@@ -11,10 +11,11 @@ final class RouteRequirements
 
     public const REALM = '(?i:Icecrown|Lordaeron|Onyxia|Blackrock)';
 
-    public const CHARACTER_NAME = '[A-Za-z]{1,12}';
+    /** Warmane renames characters to placeholders such as C_10383265 until the owner picks a new name. */
+    public const CHARACTER_NAME = '[A-Za-z]{1,12}|C_[0-9]+';
 
     public static function isCharacterName(string $name): bool
     {
-        return preg_match('/^'.self::CHARACTER_NAME.'$/D', $name) === 1;
+        return preg_match('/^(?:'.self::CHARACTER_NAME.')$/D', $name) === 1;
     }
 }
