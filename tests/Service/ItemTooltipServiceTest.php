@@ -304,6 +304,13 @@ class ItemTooltipServiceTest extends TestCase
             [true, true, false, true, true],
             array_column($tooltip['item_set']['members'], 'equipped')
         );
+        self::assertSame([
+            "Wrathful Gladiator's Leather Tunic",
+            "Wrathful Gladiator's Leather Legguards",
+            "Relentless Gladiator's Leather Helm",
+            "Relentless Gladiator's Leather Spaulders",
+            "Wrathful Gladiator's Leather Gloves",
+        ], array_column($tooltip['item_set']['members'], 'name'));
     }
 
     public function testExpandsGemAndEnchantStatShorthand(): void

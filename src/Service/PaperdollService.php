@@ -127,12 +127,14 @@ class PaperdollService
 
         $itemTooltips = [];
         if ($includeTooltips && $this->itemTooltipService !== null) {
+            $equippedSetSlots = $this->addSetMemberTypes($enrichedItems, $dbItems);
             foreach ($enrichedItems as &$enrichedItem) {
                 $tooltip = $this->itemTooltipService->build(
                     $enrichedItem,
                     $setCounts,
                     $equippedItemIds,
-                    $equippedItemNames
+                    $equippedItemNames,
+                    $equippedSetSlots,
                 );
                 if ($tooltip !== null && $enrichedItem['tooltip_key'] !== null) {
                     $enrichedItem['display_tooltip'] = $tooltip;
@@ -331,6 +333,54 @@ class PaperdollService
             'tooltipPayload' => $includeTooltips ? $this->compactTooltipPayload($itemTooltips) : [],
             'transmogItems' => array_values($transmogItems),
         ];
+    }
+
+    /**
+     * Set data can list a different version of a piece than the one worn, such as
+     * another arena season or tier 9 ilvl, so members are also matched by slot and
+     * the tooltip can name the piece the character actually wears.
+     *
+     * @param array<int, array<string, mixed>> $enrichedItems
+     * @param array<int, array<string, mixed>> $dbItems
+     * @return array<int, array<int, array{item_id: int, name: string}>> worn pieces by set ID and slot
+     */
+    private function addSetMemberTypes(array &$enrichedItems, array $dbItems): array
+    {
+        $equippedSetSlots = [];
+        $missingIds = [];
+        foreach ($enrichedItems as $enrichedItem) {
+            $setId = (int) ($enrichedItem['tooltip']['item_set_id'] ?? 0);
+            if ($setId <= 0) {
+                continue;
+            }
+            $equippedSetSlots[$setId][ItemTooltipService::setSlotKey((int) ($enrichedItem['type'] ?? 0))] ??= [
+                'item_id' => (int) ($enrichedItem['id'] ?? 0),
+                'name' => (string) ($enrichedItem['name'] ?? ''),
+            ];
+            foreach ($enrichedItem['item_set_details']['members'] ?? [] as $member) {
+                $memberId = (int) ($member['item_id'] ?? 0);
+                if ($memberId > 0 && !isset($dbItems[$memberId])) {
+                    $missingIds[$memberId] = $memberId;
+                }
+            }
+        }
+
+        if ($equippedSetSlots === []) {
+            return [];
+        }
+        if ($missingIds !== []) {
+            $dbItems += $this->itemDatabaseService->getItemsBulk(array_values($missingIds));
+        }
+
+        foreach ($enrichedItems as &$enrichedItem) {
+            foreach ($enrichedItem['item_set_details']['members'] ?? [] as $index => $member) {
+                $enrichedItem['item_set_details']['members'][$index]['type']
+                    = $dbItems[(int) ($member['item_id'] ?? 0)]['type'] ?? null;
+            }
+        }
+        unset($enrichedItem);
+
+        return $equippedSetSlots;
     }
 
     /** @param array<string, array<string, mixed>> $tooltips */

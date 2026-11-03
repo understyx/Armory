@@ -25,6 +25,7 @@ class ItemTooltipService
      * @param array<int, int> $setCounts
      * @param int[] $equippedItemIds
      * @param string[] $equippedItemNames
+     * @param array<int, array<int, array{item_id: int, name: string}>> $equippedSetSlots worn pieces by set ID and slot
      * @return array<string, mixed>|null
      */
     public function build(
@@ -32,6 +33,7 @@ class ItemTooltipService
         array $setCounts = [],
         array $equippedItemIds = [],
         array $equippedItemNames = [],
+        array $equippedSetSlots = [],
     ): ?array
     {
         $raw = $item['tooltip'] ?? null;
@@ -129,30 +131,43 @@ class ItemTooltipService
         $setDetails = $item['item_set_details'] ?? null;
         if ($itemSet !== null && is_array($setDetails)) {
             $itemSet['name'] = (string) ($setDetails['name'] ?? sprintf('Item Set #%d', $setId));
-            $equippedNameKeys = array_fill_keys(array_map(
-                self::normalizeSetMemberName(...),
-                $equippedItemNames
-            ), true);
+            $equippedNamesByKey = array_combine(
+                array_map(self::normalizeSetMemberName(...), $equippedItemNames),
+                $equippedItemNames,
+            );
             $currentItemId = (int) ($item['id'] ?? 0);
             $currentItemName = self::normalizeSetMemberName((string) ($item['name'] ?? ''));
             $itemSet['members'] = array_map(
                 static function (array $member) use (
+                    $item,
                     $equippedItemIds,
-                    $equippedNameKeys,
+                    $equippedNamesByKey,
                     $currentItemId,
-                    $currentItemName
+                    $currentItemName,
+                    $equippedSetSlots,
+                    $setId
                 ): array {
                     $memberId = (int) ($member['item_id'] ?? 0);
                     $memberName = (string) ($member['name'] ?? 'Unknown Item');
                     $memberNameKey = self::normalizeSetMemberName($memberName);
+                    $worn = $equippedSetSlots[$setId][self::setSlotKey((int) ($member['type'] ?? 0))] ?? null;
+
+                    // Lit members name the piece that is worn, not the version set data lists.
+                    if ($worn !== null) {
+                        return ['item_id' => $worn['item_id'], 'name' => $worn['name'], 'equipped' => true];
+                    }
+                    if ($currentItemName !== '' && $memberNameKey === $currentItemName) {
+                        return ['item_id' => $currentItemId, 'name' => (string) $item['name'], 'equipped' => true];
+                    }
+                    if ($memberNameKey !== '' && isset($equippedNamesByKey[$memberNameKey])) {
+                        return ['item_id' => $memberId, 'name' => $equippedNamesByKey[$memberNameKey], 'equipped' => true];
+                    }
 
                     return [
                         'item_id' => $memberId,
                         'name' => $memberName,
                         'equipped' => in_array($memberId, $equippedItemIds, true)
-                            || ($currentItemId > 0 && $memberId === $currentItemId)
-                            || ($memberNameKey !== '' && isset($equippedNameKeys[$memberNameKey]))
-                            || ($currentItemName !== '' && $memberNameKey === $currentItemName),
+                            || ($currentItemId > 0 && $memberId === $currentItemId),
                     ];
                 },
                 $setDetails['members'] ?? []
@@ -195,6 +210,12 @@ class ItemTooltipService
             'item_set' => $itemSet,
             'transmog_item' => $item['transmog_item'] ?? null,
         ];
+    }
+
+    /** Robes and chest pieces fill one slot but have different inventory types. */
+    public static function setSlotKey(int $type): int
+    {
+        return $type === ItemTypes::ROBE->value ? ItemTypes::CHEST->value : $type;
     }
 
     private static function normalizeSetMemberName(string $name): string

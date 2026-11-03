@@ -222,6 +222,43 @@ class PaperdollServiceTest extends TestCase
         $this->assertSame([$expectedTransmog], $result['transmogItems']);
     }
 
+    public function testLightsSetMembersWhenAnotherVersionOfThePieceIsWorn(): void
+    {
+        $members = [
+            ['item_id' => 48143, 'name' => "Runetotem's Handguards of Triumph"],
+            ['item_id' => 48144, 'name' => "Runetotem's Headpiece of Triumph"],
+            ['item_id' => 48146, 'name' => "Runetotem's Robe of Triumph"],
+        ];
+        $tooltip = ['item_set_id' => 852, 'sockets' => [], 'socket_bonus_id' => 0];
+        $set = ['name' => "Triumphant Runetotem's Garb", 'members' => $members, 'bonuses' => []];
+        $items = [
+            48154 => ['name' => "Runetotem's Headpiece of Conquest", 'type' => ItemTypes::HEAD->value, 'tooltip' => $tooltip, 'item_set_details' => $set],
+            48156 => ['name' => "Runetotem's Robe of Conquest", 'type' => ItemTypes::ROBE->value, 'tooltip' => $tooltip, 'item_set_details' => $set],
+            48143 => ['name' => $members[0]['name'], 'type' => ItemTypes::GLOVES->value],
+            48144 => ['name' => $members[1]['name'], 'type' => ItemTypes::HEAD->value],
+            48146 => ['name' => $members[2]['name'], 'type' => ItemTypes::CHEST->value],
+        ];
+        $mockItemDb = $this->createMock(ItemDatabaseService::class);
+        $mockItemDb->method('getItemsBulk')->willReturnCallback(
+            static fn (array $ids): array => array_intersect_key($items, array_flip($ids)),
+        );
+
+        $result = (new PaperdollService($mockItemDb, new ItemTooltipService()))->buildPaperdollSlots([
+            ['id' => 48154, 'gems' => []],
+            ['id' => 48156, 'gems' => []],
+        ]);
+
+        $itemSet = $result['slots']['head']['item']['display_tooltip']['item_set'];
+        $this->assertSame(2, $itemSet['equipped_count']);
+        $this->assertSame([false, true, true], array_column($itemSet['members'], 'equipped'));
+        $this->assertSame([
+            "Runetotem's Handguards of Triumph",
+            "Runetotem's Headpiece of Conquest",
+            "Runetotem's Robe of Conquest",
+        ], array_column($itemSet['members'], 'name'));
+        $this->assertSame([48143, 48154, 48156], array_column($itemSet['members'], 'item_id'));
+    }
+
     public function testBuildPaperdollSlotsAssignsItemsByTypesAndFallbacks(): void
     {
         $mockItemDb = $this->createMock(ItemDatabaseService::class);
