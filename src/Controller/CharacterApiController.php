@@ -8,8 +8,10 @@ use App\Message\RefreshCharacterSnapshotMessage;
 use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\CharacterApiFormatter;
+use App\Service\CharacterRefreshTracker;
 use App\Service\DeduplicatingMessageDispatcher;
 use App\Service\CharacterUpdateThrottle;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,6 +27,8 @@ class CharacterApiController extends AbstractController
         private readonly CharacterUpdateThrottle $updateThrottle,
         private readonly MessageBusInterface $messageBus,
         private readonly ?UwuLogRankRepository $uwuLogRankRepository = null,
+        private readonly ?CharacterRefreshTracker $refreshTracker = null,
+        private readonly ?LoggerInterface $logger = null,
     ) {
     }
 
@@ -91,6 +95,12 @@ class CharacterApiController extends AbstractController
                 'retryAfterSeconds' => $retryAfter,
                 'nextUpdateAllowedAt' => $decision->nextAllowedAt->format(\DateTimeInterface::ATOM),
             ], Response::HTTP_TOO_MANY_REQUESTS, ['Retry-After' => (string) $retryAfter]);
+        }
+
+        try {
+            $this->refreshTracker?->markQueued($name, $realm);
+        } catch (\Throwable $exception) {
+            $this->logger?->warning('Unable to record queued character refresh.', ['exception' => $exception]);
         }
 
         DeduplicatingMessageDispatcher::dispatch(

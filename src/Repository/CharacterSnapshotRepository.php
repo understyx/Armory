@@ -128,6 +128,11 @@ class CharacterSnapshotRepository extends ServiceEntityRepository
 
         if ($existing !== null) {
             if ($this->hasSameData($existing, $snapshot)) {
+                // A successful check is still a refresh: the page must not keep
+                // showing an old "Updated" time for a character that has not changed.
+                $existing->setScrapedAt($snapshot->getScrapedAt() ?? new \DateTimeImmutable());
+                $em->flush();
+
                 return false;
             }
 

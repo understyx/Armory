@@ -68,6 +68,15 @@ class ArmoryController extends AbstractController
             );
         }
 
+        if ($existingSnapshot !== null
+            && ($talentHtml === null || ($matchHistoryHtml === null && $existingSnapshot->getMatchHistory()))) {
+            return $this->buildJsonResponse(
+                $existingSnapshot,
+                true,
+                'Warmane did not return every page. Returning cached snapshot.',
+            );
+        }
+
         $characterDetails = $this->armoryScraperService->extractLevelRaceClass($profileHtml);
         $guild = $this->armoryScraperService->extractGuild($profileHtml);
         $professions = $this->armoryScraperService->extractProfessions($profileHtml);

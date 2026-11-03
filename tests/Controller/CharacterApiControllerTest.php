@@ -10,6 +10,7 @@ use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\ArmoryScraperService;
 use App\Service\CharacterApiFormatter;
+use App\Service\CharacterRefreshTracker;
 use App\Service\CharacterStatCalculator;
 use App\Service\CharacterUpdateThrottle;
 use App\Service\CharacterUpdateThrottleDecision;
@@ -191,6 +192,36 @@ class CharacterApiControllerTest extends TestCase
         self::assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
         self::assertSame('queued', $payload['status']);
         self::assertSame($nextAllowedAt->format(\DateTimeInterface::ATOM), $payload['nextUpdateAllowedAt']);
+    }
+
+    public function testRequestUpdateRecordsQueuedBeforeDispatch(): void
+    {
+        $queued = false;
+        $tracker = $this->createMock(CharacterRefreshTracker::class);
+        $tracker->expects(self::once())->method('markQueued')->willReturnCallback(static function () use (&$queued): void {
+            $queued = true;
+        });
+        $throttle = $this->createMock(CharacterUpdateThrottle::class);
+        $throttle->method('claim')->willReturn(new CharacterUpdateThrottleDecision(true, new \DateTimeImmutable('+5 minutes')));
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->expects(self::once())->method('dispatch')->willReturnCallback(
+            static function (object $message, array $stamps) use (&$queued): Envelope {
+                self::assertTrue($queued);
+
+                return new Envelope($message, $stamps);
+            },
+        );
+        $controller = new CharacterApiController(
+            $this->createMock(CharacterSnapshotRepository::class),
+            new CharacterApiFormatter(),
+            $throttle,
+            $bus,
+            refreshTracker: $tracker,
+        );
+
+        $response = $controller->requestUpdate('Understyx', 'Icecrown');
+
+        self::assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
     }
 
     public function testRequestUpdateReturns429DuringCooldown(): void

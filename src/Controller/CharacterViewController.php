@@ -13,6 +13,7 @@ use App\Service\CharacterTooltipEnrichmentQueue;
 use App\Service\CharacterHitExpertiseService;
 use App\Service\DeduplicatingMessageDispatcher;
 use App\Service\CharacterRefreshResult;
+use App\Service\CharacterRefreshTracker;
 use App\Service\CharacterSnapshotUpdater;
 use App\Service\CharacterStatCalculator;
 use App\Service\CharacterUpdateThrottle;
@@ -50,6 +51,7 @@ class CharacterViewController extends AbstractController
         private readonly ?CharacterHitExpertiseService $characterHitExpertiseService = null,
         private readonly ?CharacterPageTooltipService $characterPageTooltipService = null,
         private readonly ?CharacterTooltipEnrichmentQueue $tooltipEnrichmentQueue = null,
+        private readonly ?CharacterRefreshTracker $refreshTracker = null,
     ) {
     }
 
@@ -195,10 +197,30 @@ class CharacterViewController extends AbstractController
 
     #[Route('/characters/{characterName}/{realmName}/refresh', name: 'app_character_refresh', methods: ['POST'])]
     #[Route('/character/{characterName}/{realmName}/refresh', name: 'app_character_refresh_legacy', methods: ['POST'])]
-    public function refreshCharacter(string $characterName, string $realmName): Response
+    public function refreshCharacter(string $characterName, string $realmName, ?Request $request = null): Response
     {
+        $request ??= new Request();
+        $wantsJson = in_array('application/json', $request->getAcceptableContentTypes(), true);
         $decision = $this->updateThrottle->claim($characterName, $realmName);
         if (!$decision->accepted) {
+            if ($wantsJson) {
+                $status = $this->readRefreshStatus($characterName, $realmName);
+                if (in_array($status['state'], ['queued', 'running'], true)) {
+                    $status['retryAfterSeconds'] = $decision->retryAfterSeconds();
+
+                    return new JsonResponse($status);
+                }
+
+                $retryAfter = $decision->retryAfterSeconds();
+
+                return new JsonResponse([
+                    'state' => 'throttled',
+                    'position' => null,
+                    'etaSeconds' => null,
+                    'retryAfterSeconds' => $retryAfter,
+                ], Response::HTTP_TOO_MANY_REQUESTS, ['Retry-After' => (string) $retryAfter]);
+            }
+
             $retryMinutes = max(1, (int) ceil($decision->retryAfterSeconds() / 60));
             $this->addFlash('warning', sprintf(
                 'Character data can only be refreshed once every five minutes. Try again in about %d %s.',
@@ -215,16 +237,38 @@ class CharacterViewController extends AbstractController
         $hasSnapshot = $this->snapshotRepository->existsByNameAndRealm($characterName, $realmName);
 
         if ($this->messageBus !== null) {
+            $this->markRefreshQueued($characterName, $realmName);
             DeduplicatingMessageDispatcher::dispatch(
                 $this->messageBus,
                 new RefreshCharacterSnapshotMessage($characterName, $realmName),
             );
 
             if (!$hasSnapshot) {
+                if ($wantsJson) {
+                    return new JsonResponse([
+                        'state' => 'loading',
+                        'redirect' => $this->generateUrl('app_character_view', [
+                            'characterName' => $characterName,
+                            'realmName' => $realmName,
+                        ]),
+                    ], Response::HTTP_ACCEPTED);
+                }
+
                 return $this->renderLoadingPage($characterName, $realmName);
             }
 
-            $this->addFlash('success', 'Character refresh queued. Showing saved data while it updates.');
+            $status = $this->readRefreshStatus($characterName, $realmName);
+            $status['state'] = $status['state'] === 'idle' ? 'queued' : $status['state'];
+            $status['position'] ??= 1;
+            $status['etaSeconds'] ??= 20;
+            $retryAfter = $decision->retryAfterSeconds();
+
+            if ($wantsJson) {
+                return new JsonResponse($status + ['retryAfterSeconds' => $retryAfter], Response::HTTP_ACCEPTED);
+            }
+
+            $eta = $this->formatRefreshEta((int) $status['etaSeconds']);
+            $this->addFlash('success', 'Character refresh queued. Showing saved data while it updates. Estimated wait: '.$eta.'.');
 
             return $this->redirectToRoute('app_character_view', [
                 'characterName' => $characterName,
@@ -233,6 +277,21 @@ class CharacterViewController extends AbstractController
         }
 
         $scrapeResult = $this->scrapeAndSave($characterName, $realmName);
+
+        if ($wantsJson) {
+            $state = match ($scrapeResult['status']) {
+                'success' => 'updated',
+                'unchanged' => 'unchanged',
+                default => $hasSnapshot ? 'source_unavailable' : 'not_found',
+            };
+
+            return new JsonResponse([
+                'state' => $state,
+                'position' => null,
+                'etaSeconds' => null,
+                'retryAfterSeconds' => $decision->retryAfterSeconds(),
+            ], $state === 'not_found' ? Response::HTTP_NOT_FOUND : Response::HTTP_OK);
+        }
 
         if ($scrapeResult['status'] === 'error') {
             if ($hasSnapshot) {
@@ -262,6 +321,17 @@ class CharacterViewController extends AbstractController
             'characterName' => $characterName,
             'realmName' => $realmName,
         ]);
+    }
+
+    #[Route('/characters/{characterName}/{realmName}/refresh-status', name: 'app_character_refresh_status', methods: ['GET'])]
+    #[Route('/character/{characterName}/{realmName}/refresh-status', name: 'app_character_refresh_status_legacy', methods: ['GET'])]
+    public function refreshStatus(string $characterName, string $realmName): JsonResponse
+    {
+        return new JsonResponse(
+            $this->readRefreshStatus($characterName, $realmName),
+            Response::HTTP_OK,
+            ['Cache-Control' => 'no-store'],
+        );
     }
 
     #[Route('/characters/{characterName}/{realmName}/match-details/{gameId}', name: 'app_character_match_details', methods: ['GET'])]
@@ -463,6 +533,7 @@ class CharacterViewController extends AbstractController
 
     private function scrapeAndSave(string $characterName, string $realmName): array
     {
+        $existingSnapshot = $this->snapshotRepository->findByNameAndRealm($characterName, $realmName);
         $profileHtml = $this->armoryScraperService->fetchArmoryHtml($characterName, $realmName, 'summary');
 
         if ($profileHtml === null || !$this->armoryScraperService->checkCharacterExists($profileHtml)) {
@@ -472,6 +543,10 @@ class CharacterViewController extends AbstractController
         $talentHtml = $this->armoryScraperService->fetchArmoryHtml($characterName, $realmName, 'talents');
         $matchHistoryHtml = $this->armoryScraperService->fetchArmoryHtml($characterName, $realmName, 'match-history');
 
+        if ($existingSnapshot !== null
+            && ($talentHtml === null || ($matchHistoryHtml === null && $existingSnapshot->getMatchHistory()))) {
+            return ['status' => 'error'];
+        }
 
         $characterDetails = $this->armoryScraperService->extractLevelRaceClass($profileHtml);
         $guild = $this->armoryScraperService->extractGuild($profileHtml);
@@ -548,6 +623,7 @@ class CharacterViewController extends AbstractController
         $isQueued = false;
         if ($decision->accepted) {
             if ($this->messageBus !== null) {
+                $this->markRefreshQueued($characterName, $realmName);
                 DeduplicatingMessageDispatcher::dispatch(
                     $this->messageBus,
                     new RefreshCharacterSnapshotMessage($characterName, $realmName),
@@ -557,6 +633,46 @@ class CharacterViewController extends AbstractController
         }
 
         return $this->renderLoadingPage($characterName, $realmName, $targetRoute, $isRefresh, $isQueued);
+    }
+
+    /** @return array{state: string, position: ?int, etaSeconds: ?int} */
+    private function readRefreshStatus(string $characterName, string $realmName): array
+    {
+        if ($this->refreshTracker === null) {
+            return ['state' => 'idle', 'position' => null, 'etaSeconds' => null];
+        }
+
+        try {
+            return $this->refreshTracker->status($characterName, $realmName);
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Unable to read character refresh status.', ['exception' => $exception]);
+
+            return ['state' => 'idle', 'position' => null, 'etaSeconds' => null];
+        }
+    }
+
+    private function markRefreshQueued(string $characterName, string $realmName): void
+    {
+        if ($this->refreshTracker === null) {
+            return;
+        }
+
+        try {
+            $this->refreshTracker->markQueued($characterName, $realmName);
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Unable to record queued character refresh.', ['exception' => $exception]);
+        }
+    }
+
+    private function formatRefreshEta(int $seconds): string
+    {
+        if ($seconds < 60) {
+            return 'less than a minute';
+        }
+
+        $minutes = (int) ceil($seconds / 60);
+
+        return sprintf('about %d %s', $minutes, $minutes === 1 ? 'minute' : 'minutes');
     }
 
     private function renderLoadingPage(

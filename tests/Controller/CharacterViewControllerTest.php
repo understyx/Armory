@@ -10,6 +10,7 @@ use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\ArmoryScraperService;
 use App\Service\CharacterRefreshResult;
+use App\Service\CharacterRefreshTracker;
 use App\Service\CharacterSnapshotUpdater;
 use App\Service\CharacterUpdateThrottle;
 use App\Service\CharacterUpdateThrottleDecision;
@@ -841,6 +842,167 @@ class CharacterViewControllerTest extends KernelTestCase
         self::assertSame(
             ['Character data can only be refreshed once every five minutes. Try again in about 2 minutes.'],
             $session->getFlashBag()->peek('warning'),
+        );
+    }
+
+    public function testRefreshStatusReturnsIdleWithoutCaching(): void
+    {
+        $tracker = $this->createMock(CharacterRefreshTracker::class);
+        $tracker->expects(self::once())->method('status')->with('Missing', 'Icecrown')->willReturn([
+            'state' => 'idle', 'position' => null, 'etaSeconds' => null,
+        ]);
+        $controller = new CharacterViewController(
+            $this->createMock(ArmoryScraperService::class),
+            $this->createMock(CharacterSnapshotRepository::class),
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $this->createMock(CharacterUpdateThrottle::class),
+            refreshTracker: $tracker,
+        );
+
+        $response = $controller->refreshStatus('Missing', 'Icecrown');
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+        self::assertSame([
+            'state' => 'idle', 'position' => null, 'etaSeconds' => null,
+        ], json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR));
+    }
+
+    public function testJsonRefreshMarksQueuedBeforeDispatchAndReturnsEta(): void
+    {
+        $markedQueued = false;
+        $tracker = $this->createMock(CharacterRefreshTracker::class);
+        $tracker->expects(self::once())->method('markQueued')->willReturnCallback(static function () use (&$markedQueued): void {
+            $markedQueued = true;
+        });
+        $tracker->method('status')->willReturn(['state' => 'queued', 'position' => 2, 'etaSeconds' => 40]);
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->expects(self::once())->method('dispatch')->willReturnCallback(
+            static function (object $message, array $stamps) use (&$markedQueued): Envelope {
+                self::assertTrue($markedQueued, 'The queued state must be saved before dispatch.');
+                self::assertInstanceOf(RefreshCharacterSnapshotMessage::class, $message);
+                self::assertInstanceOf(DeduplicateStamp::class, $stamps[0]);
+
+                return new Envelope($message, $stamps);
+            },
+        );
+        $throttle = $this->createMock(CharacterUpdateThrottle::class);
+        $throttle->method('claim')->willReturn(new CharacterUpdateThrottleDecision(true, new \DateTimeImmutable('+5 minutes')));
+        $repository = $this->createMock(CharacterSnapshotRepository::class);
+        $repository->method('existsByNameAndRealm')->willReturn(true);
+        $controller = new CharacterViewController(
+            $this->createMock(ArmoryScraperService::class),
+            $repository,
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $throttle,
+            messageBus: $bus,
+            refreshTracker: $tracker,
+        );
+        $controller->setContainer(self::getContainer());
+        $request = new Request(server: ['HTTP_ACCEPT' => 'application/json']);
+
+        $response = $controller->refreshCharacter('Understyx', 'Icecrown', $request);
+        $payload = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
+        self::assertSame('queued', $payload['state']);
+        self::assertSame(2, $payload['position']);
+        self::assertSame(40, $payload['etaSeconds']);
+        self::assertArrayHasKey('retryAfterSeconds', $payload);
+    }
+
+    public function testJsonRefreshReturnsThrottledWhenNoJobIsActive(): void
+    {
+        $tracker = $this->createMock(CharacterRefreshTracker::class);
+        $tracker->method('status')->willReturn(['state' => 'idle', 'position' => null, 'etaSeconds' => null]);
+        $throttle = $this->createMock(CharacterUpdateThrottle::class);
+        $throttle->method('claim')->willReturn(new CharacterUpdateThrottleDecision(false, new \DateTimeImmutable('+2 minutes')));
+        $controller = new CharacterViewController(
+            $this->createMock(ArmoryScraperService::class),
+            $this->createMock(CharacterSnapshotRepository::class),
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $throttle,
+            refreshTracker: $tracker,
+        );
+
+        $response = $controller->refreshCharacter('Understyx', 'Icecrown', new Request(server: ['HTTP_ACCEPT' => 'application/json']));
+        $payload = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $response->getStatusCode());
+        self::assertSame('throttled', $payload['state']);
+        self::assertGreaterThan(0, $payload['retryAfterSeconds']);
+    }
+
+    public function testJsonRefreshReturnsAnActiveJobWhenThrottled(): void
+    {
+        $tracker = $this->createMock(CharacterRefreshTracker::class);
+        $tracker->method('status')->willReturn(['state' => 'running', 'position' => 1, 'etaSeconds' => 20]);
+        $throttle = $this->createMock(CharacterUpdateThrottle::class);
+        $throttle->method('claim')->willReturn(new CharacterUpdateThrottleDecision(false, new \DateTimeImmutable('+2 minutes')));
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->expects(self::never())->method('dispatch');
+        $controller = new CharacterViewController(
+            $this->createMock(ArmoryScraperService::class),
+            $this->createMock(CharacterSnapshotRepository::class),
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $throttle,
+            messageBus: $bus,
+            refreshTracker: $tracker,
+        );
+
+        $response = $controller->refreshCharacter('Understyx', 'Icecrown', new Request(server: ['HTTP_ACCEPT' => 'application/json']));
+        $payload = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertSame('running', $payload['state']);
+        self::assertSame(1, $payload['position']);
+    }
+
+    public function testNonJsonQueuedRefreshFlashIncludesARoughEta(): void
+    {
+        $tracker = $this->createMock(CharacterRefreshTracker::class);
+        $tracker->method('status')->willReturn(['state' => 'queued', 'position' => 1, 'etaSeconds' => 20]);
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->method('dispatch')->willReturnCallback(static fn (object $message, array $stamps): Envelope => new Envelope($message, $stamps));
+        $throttle = $this->createMock(CharacterUpdateThrottle::class);
+        $throttle->method('claim')->willReturn(new CharacterUpdateThrottleDecision(true, new \DateTimeImmutable('+5 minutes')));
+        $repository = $this->createMock(CharacterSnapshotRepository::class);
+        $repository->method('existsByNameAndRealm')->willReturn(true);
+        $controller = new CharacterViewController(
+            $this->createMock(ArmoryScraperService::class),
+            $repository,
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $this->createMock(LoggerInterface::class),
+            $throttle,
+            messageBus: $bus,
+            refreshTracker: $tracker,
+        );
+        $container = self::getContainer();
+        $session = new Session(new MockArraySessionStorage());
+        $request = new Request();
+        $request->setSession($session);
+        $container->get('request_stack')->push($request);
+        $controller->setContainer($container);
+
+        try {
+            $response = $controller->refreshCharacter('Understyx', 'Icecrown', $request);
+        } finally {
+            $container->get('request_stack')->pop();
+        }
+
+        self::assertSame(Response::HTTP_FOUND, $response->getStatusCode());
+        self::assertSame(
+            ['Character refresh queued. Showing saved data while it updates. Estimated wait: less than a minute.'],
+            $session->getFlashBag()->peek('success'),
         );
     }
 }

@@ -33,26 +33,38 @@ class CharacterSnapshotUpdater
         $guild = $this->armoryScraperService->extractGuild($profileHtml);
         $professions = $this->armoryScraperService->extractProfessions($profileHtml);
         $specializations = $this->armoryScraperService->extractSpecializations($profileHtml);
-        $glyphs = $this->armoryScraperService->extractGlyphs($talentHtml ?? '');
+        // Warmane randomly answers 429 for single pages. Keep saved sections for those
+        // pages instead of blanking them or discarding the pages that did arrive.
+        $keepTalents = $existingSnapshot !== null && $talentHtml === null;
+        $keepMatchHistory = $existingSnapshot !== null && $matchHistoryHtml === null;
+        $glyphs = $keepTalents
+            ? $existingSnapshot->getGlyphs()
+            : $this->armoryScraperService->extractGlyphs($talentHtml ?? '');
         $equippedItems = $this->armoryScraperService->extractEquippedItemsData($profileHtml);
         $characterModel = $this->armoryScraperService->extractCharacterModelData($profileHtml);
 
         $generalKills = [];
         $killCountHtmlJson = $this->armoryScraperService->fetchArmoryHtml($characterName, $realmName, 'kills');
-        if ($killCountHtmlJson) {
+        $keepKills = $existingSnapshot !== null && $killCountHtmlJson === null;
+        if ($keepKills) {
+            $generalKills = $existingSnapshot->getKillStats();
+        } elseif ($killCountHtmlJson) {
             $generalKills = $this->armoryScraperService->extractKillCount($killCountHtmlJson, 'general_kills');
         }
 
         $matchHistory = [];
-        if ($matchHistoryHtml) {
+        if ($keepMatchHistory) {
+            $matchHistory = $existingSnapshot->getMatchHistory() ?? [];
+        } elseif ($matchHistoryHtml) {
             $matchHistory = $this->armoryScraperService->extractMatchHistory($matchHistoryHtml);
         }
 
-        $talentStrings = $this->armoryScraperService->extractTalentPointsString(
-            $talentHtml ?? '',
-            $characterDetails['class'] ?? null,
-        );
-        $talentTreesData = $this->armoryScraperService->extractTalentTrees($talentHtml ?? '');
+        $talentStrings = $keepTalents
+            ? $existingSnapshot->getTalentStrings()
+            : $this->armoryScraperService->extractTalentPointsString($talentHtml ?? '', $characterDetails['class'] ?? null);
+        $talentTreesData = $keepTalents
+            ? ($existingSnapshot->getTalentTreesData() ?? [])
+            : $this->armoryScraperService->extractTalentTrees($talentHtml ?? '');
         $gearScore = $this->armoryScraperService->calculateGearScore($equippedItems);
         $avgIlvl = $this->armoryScraperService->calculateAvgIlvl($equippedItems);
 
@@ -84,11 +96,14 @@ class CharacterSnapshotUpdater
             ->setScrapedAt(new \DateTimeImmutable());
 
         $updated = $this->snapshotRepository->upsert($newSnapshot);
-        if (!$updated && $existingSnapshot !== null) {
-            return new CharacterRefreshResult(CharacterRefreshResult::UNCHANGED, $existingSnapshot);
-        }
         if ($updated) {
             $this->tooltipEnrichmentQueue?->queueAfterRefresh($newSnapshot);
+        }
+        if ($keepTalents || $keepMatchHistory || $keepKills) {
+            return new CharacterRefreshResult(CharacterRefreshResult::PARTIAL, $existingSnapshot);
+        }
+        if (!$updated && $existingSnapshot !== null) {
+            return new CharacterRefreshResult(CharacterRefreshResult::UNCHANGED, $existingSnapshot);
         }
 
         return new CharacterRefreshResult(CharacterRefreshResult::UPDATED, $newSnapshot);

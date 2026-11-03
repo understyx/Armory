@@ -2,6 +2,7 @@
 
 namespace App\Tests\Service;
 
+use App\Entity\CharacterSnapshot;
 use App\Repository\CharacterSnapshotRepository;
 use App\Service\ArmoryScraperService;
 use App\Service\CharacterRefreshResult;
@@ -66,4 +67,54 @@ class CharacterSnapshotUpdaterTest extends TestCase
         self::assertSame(CharacterRefreshResult::SOURCE_UNAVAILABLE, $result->status);
         self::assertNull($result->snapshot);
     }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('missingPageProvider')]
+    public function testItKeepsSavedSectionsForMissingPagesAndSavesTheRest(string $missingPage, callable $saved): void
+    {
+        $existing = (new CharacterSnapshot())->setName('Understyx')->setRealm('Icecrown')
+            ->setTalentTreesData(['saved-trees'])
+            ->setTalentStrings(['0' => 'saved-string'])
+            ->setGlyphs(['0' => ['Major Glyphs' => ['Saved']]])
+            ->setKillStats(['saved-kills'])
+            ->setMatchHistory([['gameId' => 'saved']]);
+        $stored = null;
+        $repository = $this->createMock(CharacterSnapshotRepository::class);
+        $repository->method('findByNameAndRealm')->willReturn($existing);
+        $repository->expects(self::once())->method('upsert')->willReturnCallback(
+            static function (CharacterSnapshot $snapshot) use (&$stored): bool {
+                $stored = $snapshot;
+
+                return true;
+            },
+        );
+        $scraper = $this->createMock(ArmoryScraperService::class);
+        $scraper->method('fetchArmoryHtml')->willReturnCallback(
+            static fn (string $name, string $realm, string $page): ?string => $page === $missingPage ? null : '<html>page</html>',
+        );
+        $scraper->method('checkCharacterExists')->willReturn(true);
+        $scraper->method('extractEquippedItemsData')->willReturn([['id' => 1]]);
+
+        $result = (new CharacterSnapshotUpdater($scraper, $repository))->refresh('Understyx', 'Icecrown');
+
+        self::assertSame(CharacterRefreshResult::PARTIAL, $result->status);
+        self::assertSame([['id' => 1]], $stored->getEquippedItems());
+        $saved($stored);
+    }
+
+    /** @return iterable<string, array{string, callable}> */
+    public static function missingPageProvider(): iterable
+    {
+        yield 'talents' => ['talents', static function (CharacterSnapshot $stored): void {
+            self::assertSame(['saved-trees'], $stored->getTalentTreesData());
+            self::assertSame(['0' => 'saved-string'], $stored->getTalentStrings());
+            self::assertSame(['0' => ['Major Glyphs' => ['Saved']]], $stored->getGlyphs());
+        }];
+        yield 'kills' => ['kills', static function (CharacterSnapshot $stored): void {
+            self::assertSame(['saved-kills'], $stored->getKillStats());
+        }];
+        yield 'match history' => ['match-history', static function (CharacterSnapshot $stored): void {
+            self::assertSame([['gameId' => 'saved']], $stored->getMatchHistory());
+        }];
+    }
+
 }

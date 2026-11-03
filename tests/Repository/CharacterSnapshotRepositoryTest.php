@@ -71,20 +71,21 @@ class CharacterSnapshotRepositoryTest extends TestCase
         }
     }
 
-    public function testUpsertDoesNotAdvanceTimestampWhenScrapedDataIsUnchanged(): void
+    public function testUpsertRecordsTheCheckWhenScrapedDataIsUnchanged(): void
     {
         $storedAt = new \DateTimeImmutable('2026-08-20 10:00:00');
+        $checkedAt = new \DateTimeImmutable('2026-08-20 11:00:00');
         $existing = $this->createSnapshot($storedAt);
-        $scraped = $this->createSnapshot(new \DateTimeImmutable('2026-08-20 11:00:00'));
+        $scraped = $this->createSnapshot($checkedAt);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects($this->never())->method('persist');
-        $entityManager->expects($this->never())->method('flush');
+        $entityManager->expects($this->once())->method('flush');
 
         $repository = $this->createRepository($existing, $entityManager);
 
         self::assertFalse($repository->upsert($scraped));
-        self::assertSame($storedAt, $existing->getScrapedAt());
+        self::assertSame($checkedAt, $existing->getScrapedAt());
     }
 
     public function testUpsertPersistsPvpAndMatchHistoryChanges(): void

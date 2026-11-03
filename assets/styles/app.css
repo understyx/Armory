@@ -3957,6 +3957,20 @@ body {
     flex-wrap: wrap;
 }
 
+.refresh-status-banner {
+    grid-column: 1 / -1;
+    padding: 10px 14px;
+    border: 1px solid var(--border-accent);
+    border-radius: 8px;
+    background: var(--bg-slot);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.refresh-status-banner[hidden] {
+    display: none;
+}
+
 .header-actions form {
     flex: 0 0 auto;
 }
