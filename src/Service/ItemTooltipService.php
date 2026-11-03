@@ -201,9 +201,10 @@ class ItemTooltipService
     {
         $name = strtolower(trim(str_replace(['‘', '’'], "'", $name)));
 
-        // Tier 10 upgrades keep the same set membership while adding this prefix.
-        // Set data can list the base item names even when the equipped pieces are upgraded.
-        return (string) preg_replace('/^sanctified\s+/i', '', $name);
+        // Tier 10 upgrades keep the same set membership while adding "Sanctified". Arena
+        // seasons share one set under different prefixes, e.g. Wrathful and Relentless.
+        // Set data can list only one version of each piece, whichever one is equipped.
+        return (string) preg_replace('/^(?:sanctified\s+|\S+\s+(?=gladiator\'s\s))/i', '', $name);
     }
 
     /**

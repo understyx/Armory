@@ -263,6 +263,49 @@ class ItemTooltipServiceTest extends TestCase
         );
     }
 
+    public function testMatchesArenaSetPiecesAcrossSeasons(): void
+    {
+        $tooltip = (new ItemTooltipService())->build([
+            'id' => 41684,
+            'name' => "Relentless Gladiator's Leather Spaulders",
+            'quality' => 4,
+            'item_set_details' => [
+                'name' => "Relentless Gladiator's Vestments",
+                'members' => [
+                    ['item_id' => 41651, 'name' => "Relentless Gladiator's Leather Tunic"],
+                    ['item_id' => 41656, 'name' => "Relentless Gladiator's Leather Legguards"],
+                    ['item_id' => 41673, 'name' => "Relentless Gladiator's Leather Helm"],
+                    ['item_id' => 41684, 'name' => "Relentless Gladiator's Leather Spaulders"],
+                    ['item_id' => 41768, 'name' => "Relentless Gladiator's Leather Gloves"],
+                ],
+                'bonuses' => [],
+            ],
+            'tooltip' => [
+                'flags' => 0,
+                'bonding' => 1,
+                'max_count' => 0,
+                'stats' => [],
+                'damage' => [],
+                'sockets' => [],
+                'socket_bonus_id' => 0,
+                'sell_price' => 0,
+                'description' => '',
+                'item_set_id' => 776,
+            ],
+        ], [776 => 4], [41684, 51492, 51493, 51495], [
+            "Relentless Gladiator's Leather Spaulders",
+            "Wrathful Gladiator's Leather Tunic",
+            "Wrathful Gladiator's Leather Gloves",
+            "Wrathful Gladiator's Leather Legguards",
+        ]);
+
+        self::assertNotNull($tooltip);
+        self::assertSame(
+            [true, true, false, true, true],
+            array_column($tooltip['item_set']['members'], 'equipped')
+        );
+    }
+
     public function testExpandsGemAndEnchantStatShorthand(): void
     {
         $tooltip = (new ItemTooltipService())->build([
