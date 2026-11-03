@@ -156,7 +156,7 @@ php bin/console asset-map:compile
 php bin/console cache:clear
 ```
 
-Ensure the web-server user can write to `var/`. Run `php bin/console app:purge-snapshots` periodically if old character snapshots should be removed automatically.
+Ensure the web-server user can write to `var/`. Run `php bin/console app:purge-snapshots` periodically to delete character snapshots not updated for 60 days (`--days=N` to change, `--dry-run` to only count).
 
 ## Public character API
 

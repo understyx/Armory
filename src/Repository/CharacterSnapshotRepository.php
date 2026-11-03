@@ -195,13 +195,29 @@ class CharacterSnapshotRepository extends ServiceEntityRepository
         $this->getEntityManager()->flush();
     }
 
-    public function purgeOlderThan(\DateTimeImmutable $cutoff): int
+    public function countOlderThan(\DateTimeImmutable $cutoff): int
     {
-        return $this->createQueryBuilder('c')
-            ->delete()
+        return (int) $this->createQueryBuilder('c')
+            ->select('COUNT(c.id)')
             ->where('c.scrapedAt < :cutoff')
             ->setParameter('cutoff', $cutoff)
             ->getQuery()
-            ->execute();
+            ->getSingleScalarResult();
+    }
+
+    /** Deletes in batches so a large purge does not hold one long lock on the table. */
+    public function purgeOlderThan(\DateTimeImmutable $cutoff, int $batchSize = 1000): int
+    {
+        $connection = $this->getEntityManager()->getConnection();
+        $deleted = 0;
+        do {
+            $batch = $connection->executeStatement(
+                sprintf('DELETE FROM character_snapshots WHERE scraped_at < ? LIMIT %d', max(1, $batchSize)),
+                [$cutoff->format('Y-m-d H:i:s')],
+            );
+            $deleted += $batch;
+        } while ($batch > 0);
+
+        return $deleted;
     }
 }
