@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Http\ConditionalResponse;
 use App\Repository\CharacterSnapshotRepository;
+use App\Routing\RouteRequirements;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,19 +13,20 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 class HomeController extends AbstractController
 {
-    private const REALMS = ['Icecrown', 'Lordaeron', 'Onyxia', 'Blackrock'];
-
     #[Route('/', name: 'app_homepage', methods: ['GET'])]
     #[Route('/characters', name: 'app_characters', methods: ['GET'])]
     public function index(Request $request, CharacterSnapshotRepository $snapshotRepository): Response
     {
         $characterName = trim($request->query->getString('character'));
-        $realmName = $request->query->getString('realm', self::REALMS[0]);
+        $realmName = $request->query->getString('realm', RouteRequirements::REALMS[0]);
         $searchType = $request->query->getString('type', 'character');
+        $searchError = null;
 
-        if ($characterName !== '') {
-            if (!in_array($realmName, self::REALMS, true)) {
-                $realmName = self::REALMS[0];
+        if ($characterName !== '' && $searchType !== 'guild' && !RouteRequirements::isCharacterName($characterName)) {
+            $searchError = 'Character names are 1–12 letters (A–Z) only.';
+        } elseif ($characterName !== '') {
+            if (!in_array($realmName, RouteRequirements::REALMS, true)) {
+                $realmName = RouteRequirements::REALMS[0];
             }
 
             if ($searchType === 'guild') {
@@ -41,9 +43,15 @@ class HomeController extends AbstractController
         }
 
         $response = $this->render('home/index.html.twig', [
-            'realms' => self::REALMS,
+            'realms' => RouteRequirements::REALMS,
             'recentCharacters' => $snapshotRepository->findRecentlyViewed(10),
+            'searchError' => $searchError,
         ]);
+        if ($searchError !== null) {
+            $response->setStatusCode(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+            return $response;
+        }
 
         return ConditionalResponse::apply($response, $request, [
             __FILE__,

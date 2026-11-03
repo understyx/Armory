@@ -3,3 +3,8 @@ controllers:
         path: ../src/Controller/
         namespace: App\Controller
     type: attribute
+    requirements:
+        realmName: !php/const App\Routing\RouteRequirements::REALM
+        realm: !php/const App\Routing\RouteRequirements::REALM
+        characterName: !php/const App\Routing\RouteRequirements::CHARACTER_NAME
+        name: !php/const App\Routing\RouteRequirements::CHARACTER_NAME

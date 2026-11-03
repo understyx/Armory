@@ -52,6 +52,10 @@
                 </button>
             </form>
 
+            {% if searchError %}
+                <p class="home-search-error" role="alert">{{ searchError }}</p>
+            {% endif %}
+
             {% if recentCharacters is not empty %}
                 <section class="recent-searches" aria-labelledby="recent-searches-title">
                     <h2 id="recent-searches-title" class="recent-searches-title">Recently updated</h2>

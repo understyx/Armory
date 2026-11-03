@@ -87,6 +87,13 @@ body {
     text-align: center;
 }
 
+.home-search-error {
+    margin: 12px 0 0;
+    color: var(--accent-red);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
 .landing-title {
     margin: 0 0 28px;
     color: var(--text-primary);
