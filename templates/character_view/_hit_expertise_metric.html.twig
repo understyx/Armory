@@ -1,0 +1,30 @@
+{% set isPercent = metric.unit == '%' %}
+<details class="hit-expertise-metric">
+    <summary title="{{ metric.tooltip }}">
+        <span>{{ metric.label }}</span>
+        <strong class="{% if metric.met is not null %}{{ metric.met ? 'hit-expertise-met' : 'hit-expertise-unmet' }}{% endif %}">
+            {% if isPercent %}{{ metric.value|number_format(2) }}%{% else %}{{ metric.value }} pts{% endif %}{% if metric.bonus > 0 %} + {{ metric.bonus|number_format(0) }}%{% endif %}
+            {% if metric.target is not null %}<small>{% if metric.bonusLabel %}({{ metric.bonusLabel }}) {% endif %}vs {{ metric.target|number_format(0) }}%</small>{% endif %}
+        </strong>
+        {% if metric.targets is not empty %}
+            <div class="expertise-cap-list">
+                {% for target in metric.targets %}
+                    <span class="expertise-cap {{ target.met ? 'hit-expertise-met' : 'hit-expertise-unmet' }}">
+                        {{ target.value }} {{ target.label }}
+                    </span>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </summary>
+    <ul class="hit-expertise-sources">
+        {% for source in metric.sources %}
+            <li>
+                <span class="hit-expertise-source-category">{{ source.category }}</span>
+                <span class="hit-expertise-source-label">{{ source.label }}</span>
+                <span class="hit-expertise-source-value">+{% if isPercent %}{{ source.value|number_format(2) }}%{% else %}{{ source.value }}{% endif %}</span>
+            </li>
+        {% else %}
+            <li class="hit-expertise-source-empty">No contributions</li>
+        {% endfor %}
+    </ul>
+</details>

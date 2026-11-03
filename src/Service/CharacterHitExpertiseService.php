@@ -45,6 +45,20 @@ final class CharacterHitExpertiseService
         50117 => 1,
     ];
 
+    /** @var array<int, string> */
+    private const EXPERTISE_TALENT_NAMES = [
+        31858 => 'Combat Expertise',
+        48409 => 'Primal Precision',
+        30919 => 'Weapon Expertise',
+        46865 => 'Strength of Arms',
+        29140 => 'Vitality',
+        30802 => 'Unleashed Rage',
+        49006 => 'Veteran of the Third War',
+        49471 => 'Veteran of the Third War',
+        49202 => 'Tundra Stalker',
+        50117 => 'Rage of Rivendare',
+    ];
+
     /** @var array<int, int> */
     private const EXPERTISE_TALENT_RANK_ALIASES = [
         31859 => 31858, 31860 => 31858,
@@ -59,6 +73,27 @@ final class CharacterHitExpertiseService
         50118 => 50117, 50119 => 50117, 50120 => 50117, 50121 => 50117,
     ];
 
+    /**
+     * Glyph of Seal of Vengeance grants 10 expertise while Seal of Vengeance or Corruption is active.
+     * https://wotlk.evowow.com/?spell=56416
+     */
+    private const SEAL_OF_VENGEANCE_GLYPH_EXPERTISE = 10;
+
+    /**
+     * Each class's taunt glyph adds 8% hit chance to its taunt.
+     * https://wotlk.evowow.com/?spell=58353 (Taunt), https://wotlk.evowow.com/?spell=54929 (Righteous Defense),
+     * https://wotlk.evowow.com/?spell=54812 (Growl), https://wotlk.evowow.com/?spell=58613 (Dark Command)
+     */
+    private const TAUNT_GLYPH_HIT = 8.0;
+
+    /** @var array<string, string> */
+    private const TAUNT_GLYPHS = [
+        'warrior' => 'Glyph of Taunt',
+        'paladin' => 'Glyph of Righteous Defense',
+        'druid' => 'Glyph of Growl',
+        'death knight' => 'Glyph of Dark Command',
+    ];
+
     public function __construct(private readonly CharacterStatCalculator $statCalculator)
     {
     }
@@ -67,6 +102,7 @@ final class CharacterHitExpertiseService
      * @param array<int, array<string, mixed>> $parsedSpecs
      * @param array<int, array<string, mixed>> $items Paperdoll-enriched equipment.
      * @param array<int|string, mixed> $talentTreesData
+     * @param array<int|string, array<string, list<string>>> $glyphs Glyph names by spec ID.
      * @return list<array<string, mixed>>
      */
     public function build(
@@ -76,6 +112,7 @@ final class CharacterHitExpertiseService
         array $parsedSpecs,
         array $items,
         array $talentTreesData,
+        array $glyphs = [],
     ): array {
         if ($level < 80 || $parsedSpecs === [] || $talentTreesData === []) {
             return [];
@@ -95,6 +132,7 @@ final class CharacterHitExpertiseService
                 continue;
             }
 
+            $majorGlyphs = $glyphs[$specId]['Major Glyphs'] ?? $glyphs[(int) $specId]['Major Glyphs'] ?? [];
             $weaponItems = $this->weaponItems($items, $role);
             if ($weaponItems === []) {
                 continue;
@@ -120,42 +158,110 @@ final class CharacterHitExpertiseService
             $hitTarget = $role === 'caster' ? 17.0 : 8.0;
             // Misery and Improved Faerie Fire share one 3% spell hit debuff in raids.
             $hitRaidDebuff = $role === 'caster' ? 3.0 : 0.0;
-            $ratingHit = (float) ($stats['ratings'][$hitStat]['ratingPercent'] ?? 0.0);
-            $talentHit = $this->relevantTalentHit(
-                $class,
-                $specName,
-                $role,
-                $stats['hitBonuses'] ?? [],
-                $weaponItems,
-            );
+            $talentEffects = $stats['talentModifiers'] ?? [];
             // Draenei Heroic Presence grants personal melee, ranged and spell hit in WotLK.
             // https://www.wowhead.com/wotlk/spell=6562/heroic-presence
-            $personalDraeneiHit = strcasecmp(trim($race), 'Draenei') === 0 ? 1.0 : 0.0;
-            $hitValue = $ratingHit + $talentHit + $personalDraeneiHit;
-            $displayedHitValue = round($hitValue, 2);
+            $racialHitSources = strcasecmp(trim($race), 'Draenei') === 0
+                ? [$this->source('Racial', 'Heroic Presence', 1.0)]
+                : [];
+            $hitSources = [
+                ...$this->ratingHitSources($stats, $hitStat),
+                ...$this->relevantTalentHit($class, $specName, $role, $talentEffects, $weaponItems),
+                ...$racialHitSources,
+            ];
+            $displayedHitValue = $this->sourceTotal($hitSources);
+            if ($hitRaidDebuff > 0) {
+                $hitSources[] = $this->source('Raid debuff', 'Improved Faerie Fire or Misery', $hitRaidDebuff);
+            }
+            $hitLabel = match ($role) {
+                'melee' => 'Melee Hit',
+                'ranged' => 'Ranged Hit',
+                default => 'Spell Hit',
+            };
+            $hitMet = $displayedHitValue + $hitRaidDebuff + 0.000001 >= $hitTarget;
+            $hitTooltip = $this->hitTooltip($class, $specName, $role);
 
             $row = [
                 'specName' => $specName,
                 'specLabel' => (string) ($spec['label'] ?? ''),
                 'role' => $role,
-                'hitLabel' => match ($role) {
-                    'melee' => 'Melee Hit',
-                    'ranged' => 'Ranged Hit',
-                    default => 'Spell Hit',
-                },
+                'hitLabel' => $hitLabel,
                 'hitValue' => $displayedHitValue,
                 'hitTarget' => $hitTarget,
                 'hitRaidDebuff' => $hitRaidDebuff,
-                'hitMet' => $displayedHitValue + $hitRaidDebuff + 0.000001 >= $hitTarget,
-                'hitTooltip' => $this->hitTooltip($class, $specName, $role),
+                'hitMet' => $hitMet,
+                'hitTooltip' => $hitTooltip,
+                'hitSources' => $hitSources,
+                'spellHitChecks' => [],
             ];
+            $metrics = [[
+                'label' => $hitLabel,
+                'unit' => '%',
+                'value' => $displayedHitValue,
+                'bonus' => $hitRaidDebuff,
+                'bonusLabel' => $hitRaidDebuff > 0 ? 'Imp FF or Misery' : null,
+                'target' => $hitTarget,
+                'met' => $hitMet,
+                'targets' => [],
+                'tooltip' => $hitTooltip,
+                'sources' => $hitSources,
+            ]];
+
+            // Poisons, disease-applying spells and taunts roll on the spell hit table.
+            $classKey = strtolower(trim($class));
+            if ($classKey === 'rogue') {
+                $row['spellHitChecks'][] = $this->spellHitCheck(
+                    'Poison Hit (Spell Hit)',
+                    'Poisons use the spell hit table: 17% against a raid boss. Rogue Precision applies to poisons.',
+                    $stats,
+                    $this->scopedTalentHit($talentEffects, 'Weapon and poison attacks'),
+                    $racialHitSources,
+                );
+            }
+            if ($classKey === 'death knight') {
+                $row['spellHitChecks'][] = $this->spellHitCheck(
+                    'Disease Hit (Spell Hit)',
+                    'Icy Touch and other disease-applying spells use the spell hit table: 17% against a raid boss. Virulence applies.',
+                    $stats,
+                    $this->scopedTalentHit($talentEffects, 'Spells'),
+                    $racialHitSources,
+                );
+            }
+            if ($this->isTankSpec($class, $specName)) {
+                $row['spellHitChecks'][] = $this->spellHitCheck(
+                    'Taunt Hit (Spell Hit)',
+                    'Taunts use the spell hit table: 17% against a raid boss. Melee hit talents do not apply; your taunt glyph adds 8% when it is in this spec\'s major glyphs.',
+                    $stats,
+                    // Death Knight Virulence raises spell hit, which covers Dark Command.
+                    // https://wotlk.evowow.com/?spell=48962
+                    $classKey === 'death knight' ? $this->scopedTalentHit($talentEffects, 'Spells') : [],
+                    $racialHitSources,
+                    $this->tauntGlyph($class, $majorGlyphs),
+                );
+            }
+            foreach ($row['spellHitChecks'] as $check) {
+                $metrics[] = [...$check, 'unit' => '%', 'targets' => []];
+            }
 
             if ($role === 'melee') {
                 $expertiseRating = (int) ($stats['ratings']['expertise_rating']['rating'] ?? 0);
-                $expertise = (int) floor($expertiseRating / self::EXPERTISE_RATING_AT_LEVEL_80)
-                    + $this->talentExpertise($rawSpec)
-                    + $this->weaponRacialExpertise($race, $weaponItems);
+                $expertiseSources = [];
+                if ($expertiseRating > 0) {
+                    $expertiseSources[] = $this->source(
+                        'Gear',
+                        sprintf('Expertise rating (%d)', $expertiseRating),
+                        (int) floor($expertiseRating / self::EXPERTISE_RATING_AT_LEVEL_80),
+                    );
+                }
+                $expertiseSources = [
+                    ...$expertiseSources,
+                    ...$this->talentExpertise($rawSpec),
+                    ...$this->weaponRacialExpertise($race, $weaponItems),
+                    ...$this->glyphExpertise($class, $majorGlyphs),
+                ];
+                $expertise = (int) $this->sourceTotal($expertiseSources);
                 $row['expertise'] = $expertise;
+                $row['expertiseSources'] = $expertiseSources;
                 $row['expertiseTargets'] = [
                     ['value' => 26, 'label' => 'dodge soft cap', 'met' => $expertise >= 26],
                 ];
@@ -166,9 +272,22 @@ final class CharacterHitExpertiseService
                         'met' => $expertise >= 56,
                     ];
                 }
-                $row['expertiseTooltip'] = 'Gear expertise rating is rounded down to whole points. Passive talent expertise is included; damage bonuses with target conditions are excluded. Weapon racials use the highest eligible value among equipped melee weapons.';
+                $row['expertiseTooltip'] = 'Gear expertise rating is rounded down to whole points. Passive talent expertise is included; damage bonuses with target conditions are excluded. Weapon racials use the highest eligible value among equipped melee weapons. Glyph of Seal of Vengeance assumes Seal of Vengeance or Corruption is active.';
+                $metrics[] = [
+                    'label' => 'Expertise',
+                    'unit' => 'pts',
+                    'value' => $expertise,
+                    'bonus' => 0.0,
+                    'bonusLabel' => null,
+                    'target' => null,
+                    'met' => null,
+                    'targets' => $row['expertiseTargets'],
+                    'tooltip' => $row['expertiseTooltip'],
+                    'sources' => $expertiseSources,
+                ];
             }
 
+            $row['metrics'] = $metrics;
             $rows[] = $row;
         }
 
@@ -238,14 +357,18 @@ final class CharacterHitExpertiseService
         ));
     }
 
-    /** @param array<string, float> $hitBonuses @param array<int, array<string, mixed>> $weapons */
+    /**
+     * @param list<array<string, mixed>> $talentEffects
+     * @param array<int, array<string, mixed>> $weapons
+     * @return list<array{category: string, label: string, value: float|int}>
+     */
     private function relevantTalentHit(
         string $class,
         string $specName,
         string $role,
-        array $hitBonuses,
+        array $talentEffects,
         array $weapons,
-    ): float {
+    ): array {
         $classKey = strtolower(trim($class));
         $specKey = strtolower(trim($specName));
         $oneHandedWeapon = count(array_filter(
@@ -264,48 +387,55 @@ final class CharacterHitExpertiseService
                 ItemTypes::WEAPON_OFFHAND->value,
             ], true),
         )) >= 2;
-        $bonus = 0.0;
+        $sources = [];
 
-        foreach ($hitBonuses as $scope => $amount) {
-            $applies = match ((string) $scope) {
-                // Warrior Precision rank spells 29590-29592: +1% melee hit per point.
-                // https://wotlk.evowow.com/?spell=29592
-                'Melee weapons' => $role === 'melee' && $classKey === 'warrior',
-                'Weapon and poison attacks' => $role === 'melee' && $classKey === 'rogue',
-                'Melee and ranged attacks' => $role === 'ranged' && $classKey === 'hunter',
-                'Attacks while dual wielding' => $role === 'melee'
-                    && $classKey === 'shaman'
-                    && $specKey === 'enhancement'
-                    && $dualWielding,
-                'One-handed melee weapons' => $role === 'melee' && $classKey === 'death knight' && $oneHandedWeapon,
-                'Shadow spells' => $role === 'caster' && $classKey === 'priest' && $specKey === 'shadow',
-                'Arcane spells' => $role === 'caster' && $classKey === 'mage' && $specKey === 'arcane',
-                'Fire, Frost and Nature spells' => $role === 'caster' && $classKey === 'shaman' && $specKey === 'elemental',
-                'Spells' => match ($classKey) {
-                    'mage' => $role === 'caster', // Mage Precision applies to all spell schools.
-                    // In 3.1, Suppression changed from Affliction-only to all spells.
-                    // https://warcraft.wiki.gg/wiki/Suppression_(warlock_talent)
-                    'warlock' => $role === 'caster',
-                    'druid' => $role === 'caster' && $specKey === 'balance',
+        foreach ($talentEffects as $effect) {
+            $bonus = 0.0;
+            foreach ($effect['hit'] ?? [] as $scope => $amount) {
+                $applies = match ((string) $scope) {
+                    // Warrior Precision rank spells 29590-29592: +1% melee hit per point.
+                    // https://wotlk.evowow.com/?spell=29592
+                    'Melee weapons' => $role === 'melee' && $classKey === 'warrior',
+                    'Weapon and poison attacks' => $role === 'melee' && $classKey === 'rogue',
+                    'Melee and ranged attacks' => $role === 'ranged' && $classKey === 'hunter',
+                    'Attacks while dual wielding' => $role === 'melee'
+                        && $classKey === 'shaman'
+                        && $specKey === 'enhancement'
+                        && $dualWielding,
+                    'One-handed melee weapons' => $role === 'melee' && $classKey === 'death knight' && $oneHandedWeapon,
+                    'Shadow spells' => $role === 'caster' && $classKey === 'priest' && $specKey === 'shadow',
+                    'Arcane spells' => $role === 'caster' && $classKey === 'mage' && $specKey === 'arcane',
+                    'Fire, Frost and Nature spells' => $role === 'caster' && $classKey === 'shaman' && $specKey === 'elemental',
+                    'Spells' => match ($classKey) {
+                        'mage' => $role === 'caster', // Mage Precision applies to all spell schools.
+                        // In 3.1, Suppression changed from Affliction-only to all spells.
+                        // https://warcraft.wiki.gg/wiki/Suppression_(warlock_talent)
+                        'warlock' => $role === 'caster',
+                        'druid' => $role === 'caster' && $specKey === 'balance',
+                        default => false,
+                    },
                     default => false,
-                },
-                default => false,
-            };
-            if ($applies) {
-                $bonus += (float) $amount;
+                };
+                if ($applies) {
+                    $bonus += (float) $amount;
+                }
+            }
+            if ($bonus > 0) {
+                $sources[] = $this->source('Talents', (string) ($effect['name'] ?? 'Talent'), $bonus);
             }
         }
 
-        return $bonus;
+        return $sources;
     }
 
-    private function talentExpertise(mixed $rawSpec): int
+    /** @return list<array{category: string, label: string, value: float|int}> */
+    private function talentExpertise(mixed $rawSpec): array
     {
         if (!is_array($rawSpec)) {
-            return 0;
+            return [];
         }
 
-        $expertise = 0;
+        $sources = [];
         foreach ($rawSpec as $tree) {
             foreach (($tree['tiers'] ?? []) as $tier) {
                 foreach ($tier as $talent) {
@@ -318,16 +448,123 @@ final class CharacterHitExpertiseService
                     $points = preg_match('/^(\d+)\s*\//', (string) ($talent['pointsText'] ?? ''), $match)
                         ? (int) $match[1]
                         : (int) ($talent['allocated'] ?? 0);
-                    $expertise += (self::EXPERTISE_TALENT_POINTS[$spellId] ?? 0) * $points;
+                    $expertise = (self::EXPERTISE_TALENT_POINTS[$spellId] ?? 0) * $points;
+                    if ($expertise > 0) {
+                        $sources[] = $this->source('Talents', self::EXPERTISE_TALENT_NAMES[$spellId], $expertise);
+                    }
                 }
             }
         }
 
-        return $expertise;
+        return $sources;
     }
 
-    /** @param array<int, array<string, mixed>> $weapons */
-    private function weaponRacialExpertise(string $race, array $weapons): int
+    /**
+     * @param array<string, mixed> $stats
+     * @return list<array{category: string, label: string, value: float|int}>
+     */
+    private function ratingHitSources(array $stats, string $hitStat): array
+    {
+        $rating = (int) ($stats['ratings'][$hitStat]['rating'] ?? 0);
+        if ($rating === 0) {
+            return [];
+        }
+
+        return [$this->source(
+            'Gear',
+            sprintf('Hit rating (%d)', $rating),
+            (float) ($stats['ratings'][$hitStat]['ratingPercent'] ?? 0.0),
+        )];
+    }
+
+    /**
+     * @param array<string, mixed> $stats
+     * @param list<array{category: string, label: string, value: float|int}> $talentSources
+     * @param list<array{category: string, label: string, value: float|int}> $racialSources
+     * @return array<string, mixed>
+     */
+    private function spellHitCheck(
+        string $label,
+        string $tooltip,
+        array $stats,
+        array $talentSources,
+        array $racialSources,
+        ?string $glyph = null,
+    ): array {
+        $sources = [...$this->ratingHitSources($stats, 'spell_hit_rating'), ...$talentSources, ...$racialSources];
+        $value = $this->sourceTotal($sources);
+        $glyphHit = $glyph !== null ? self::TAUNT_GLYPH_HIT : 0.0;
+        if ($glyph !== null) {
+            $sources[] = $this->source('Glyph', $glyph, $glyphHit);
+        }
+
+        return [
+            'label' => $label,
+            'value' => $value,
+            'bonus' => $glyphHit,
+            'bonusLabel' => $glyph,
+            'target' => 17.0,
+            'met' => $value + $glyphHit + 0.000001 >= 17.0,
+            'tooltip' => $tooltip,
+            'sources' => $sources,
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $talentEffects
+     * @return list<array{category: string, label: string, value: float|int}>
+     */
+    private function scopedTalentHit(array $talentEffects, string $scope): array
+    {
+        $sources = [];
+        foreach ($talentEffects as $effect) {
+            $amount = (float) ($effect['hit'][$scope] ?? 0.0);
+            if ($amount > 0) {
+                $sources[] = $this->source('Talents', (string) ($effect['name'] ?? 'Talent'), $amount);
+            }
+        }
+
+        return $sources;
+    }
+
+    /**
+     * @param list<string> $majorGlyphs
+     * @return list<array{category: string, label: string, value: float|int}>
+     */
+    private function glyphExpertise(string $class, array $majorGlyphs): array
+    {
+        if (strtolower(trim($class)) !== 'paladin' || !$this->hasGlyph($majorGlyphs, 'Glyph of Seal of Vengeance')) {
+            return [];
+        }
+
+        return [$this->source('Glyph', 'Glyph of Seal of Vengeance', self::SEAL_OF_VENGEANCE_GLYPH_EXPERTISE)];
+    }
+
+    /** @param list<string> $majorGlyphs */
+    private function tauntGlyph(string $class, array $majorGlyphs): ?string
+    {
+        $glyph = self::TAUNT_GLYPHS[strtolower(trim($class))] ?? null;
+
+        return $glyph !== null && $this->hasGlyph($majorGlyphs, $glyph) ? $glyph : null;
+    }
+
+    /** @param list<string> $glyphs */
+    private function hasGlyph(array $glyphs, string $name): bool
+    {
+        foreach ($glyphs as $glyph) {
+            if (strcasecmp(trim((string) $glyph), $name) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $weapons
+     * @return list<array{category: string, label: string, value: float|int}>
+     */
+    private function weaponRacialExpertise(string $race, array $weapons): array
     {
         // WotLK weapon racials are conditional on the equipped weapon subclass.
         // https://www.wowhead.com/wotlk/spell=20597/sword-specialization
@@ -335,19 +572,34 @@ final class CharacterHitExpertiseService
         // https://www.wowhead.com/wotlk/spell=59224/mace-specialization
         // https://www.wowhead.com/wotlk/spell=20574/axe-specialization
         $raceKey = strtolower(trim($race));
-        $expertise = 0;
+        $best = null;
         foreach ($weapons as $weapon) {
             $subclass = (int) ($weapon['subclass'] ?? -1);
-            $weaponExpertise = match (true) {
-                $raceKey === 'human' && in_array($subclass, [4, 5, 7, 8], true) => 3,
-                $raceKey === 'dwarf' && in_array($subclass, [4, 5], true) => 5,
-                $raceKey === 'orc' && in_array($subclass, [0, 1], true) => 5,
-                default => 0,
+            $racial = match (true) {
+                $raceKey === 'human' && in_array($subclass, [7, 8], true) => ['Sword Specialization', 3],
+                $raceKey === 'human' && in_array($subclass, [4, 5], true) => ['Mace Specialization', 3],
+                $raceKey === 'dwarf' && in_array($subclass, [4, 5], true) => ['Mace Specialization', 5],
+                $raceKey === 'orc' && in_array($subclass, [0, 1], true) => ['Axe Specialization', 5],
+                default => null,
             };
-            $expertise = max($expertise, $weaponExpertise);
+            if ($racial !== null && ($best === null || $racial[1] > $best[1])) {
+                $best = $racial;
+            }
         }
 
-        return $expertise;
+        return $best !== null ? [$this->source('Racial', $best[0], $best[1])] : [];
+    }
+
+    /** @return array{category: string, label: string, value: float|int} */
+    private function source(string $category, string $label, float|int $value): array
+    {
+        return ['category' => $category, 'label' => $label, 'value' => $value];
+    }
+
+    /** @param list<array{category: string, label: string, value: float|int}> $sources */
+    private function sourceTotal(array $sources): float
+    {
+        return round(array_sum(array_column($sources, 'value')), 2);
     }
 
     private function isTankSpec(string $class, string $specName): bool

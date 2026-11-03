@@ -378,7 +378,7 @@
                     <div class="hit-expertise-heading">
                         <div>
                             <h3 id="hit-expertise-title">Hit &amp; Expertise</h3>
-                            <p>From gear and talents; your permanent racials are included. Party buffs are excluded; +3% on casters is the Improved Faerie Fire or Misery raid debuff.</p>
+                            <p>From gear, talents, glyphs and your permanent racials; select a value to see its sources. Party buffs are excluded; +3% on casters is the Improved Faerie Fire or Misery raid debuff.</p>
                         </div>
                     </div>
                     <div class="hit-expertise-rows">
@@ -390,25 +390,11 @@
                                         <span>{{ row.specLabel }}</span>
                                     {% endif %}
                                 </div>
-                                <div class="hit-expertise-metric" title="{{ row.hitTooltip }}">
-                                    <span>{{ row.hitLabel }}</span>
-                                    <strong class="{{ row.hitMet ? 'hit-expertise-met' : 'hit-expertise-unmet' }}">
-                                        {{ row.hitValue|number_format(2) }}%{% if row.hitRaidDebuff > 0 %} + {{ row.hitRaidDebuff|number_format(0) }}%{% endif %} <small>{% if row.hitRaidDebuff > 0 %}(Imp FF or Misery) {% endif %}vs {{ row.hitTarget|number_format(0) }}%</small>
-                                    </strong>
+                                <div class="hit-expertise-metrics">
+                                    {% for metric in row.metrics %}
+                                        {% include 'character_view/_hit_expertise_metric.html.twig' with {metric: metric} only %}
+                                    {% endfor %}
                                 </div>
-                                {% if row.expertise is defined %}
-                                    <div class="hit-expertise-metric" title="{{ row.expertiseTooltip }}">
-                                        <span>Expertise</span>
-                                        <strong>{{ row.expertise }} pts</strong>
-                                        <div class="expertise-cap-list">
-                                            {% for target in row.expertiseTargets %}
-                                                <span class="expertise-cap {{ target.met ? 'hit-expertise-met' : 'hit-expertise-unmet' }}">
-                                                    {{ target.value }} {{ target.label }}
-                                                </span>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                {% endif %}
                             </div>
                         {% endfor %}
                     </div>

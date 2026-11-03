@@ -739,6 +739,7 @@ class CharacterViewController extends AbstractController
             $parsedSpecs,
             $paperdollData['enrichedItems'],
             $snapshot->getTalentTreesData() ?? [],
+            $snapshot->getGlyphs(),
         ) ?? [];
 
         $response = $this->render('character_view/index.html.twig', [

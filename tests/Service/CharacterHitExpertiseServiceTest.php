@@ -366,6 +366,95 @@ final class CharacterHitExpertiseServiceTest extends TestCase
     }
 
     /** @return array<string, mixed> */
+    public function testPaladinSealOfVengeanceGlyphAddsTenExpertise(): void
+    {
+        $service = new CharacterHitExpertiseService(new CharacterStatCalculator());
+        $glyphs = ['0' => ['Major Glyphs' => ['Glyph of Seal of Vengeance'], 'Minor Glyphs' => []]];
+
+        $glyphed = $service->build('Human', 'Paladin', 80, [$this->spec('Retribution')], $this->weapons(), $this->talents(), $glyphs);
+        $unglyphed = $service->build('Human', 'Paladin', 80, [$this->spec('Retribution')], $this->weapons(), $this->talents());
+        $warrior = $service->build('Human', 'Warrior', 80, [$this->spec('Arms')], $this->weapons(), $this->talents(), $glyphs);
+
+        self::assertSame($unglyphed[0]['expertise'] + 10, $glyphed[0]['expertise']);
+        self::assertSame(0, $warrior[0]['expertise']);
+    }
+
+    public function testTankSpecsShowTauntHitWithGlyph(): void
+    {
+        $service = new CharacterHitExpertiseService(new CharacterStatCalculator());
+        $gear = [[
+            'class' => 2,
+            'type' => 17,
+            'subclass' => 10,
+            'tooltip' => ['stats' => [['type' => 31, 'value' => 236]]],
+        ]];
+        $glyphs = ['0' => ['Major Glyphs' => ['Glyph of Righteous Defense'], 'Minor Glyphs' => []]];
+
+        $glyphed = $service->build('Draenei', 'Paladin', 80, [$this->spec('Protection')], $gear, $this->talents(), $glyphs);
+        $unglyphed = $service->build('Human', 'Warrior', 80, [$this->spec('Protection')], $gear, $this->talents(), $glyphs);
+        $dps = $service->build('Human', 'Warrior', 80, [$this->spec('Arms')], $gear, $this->talents());
+
+        // 236 hit rating is 9% spell hit at level 80; Draenei adds 1%.
+        $taunt = $glyphed[0]['spellHitChecks'][0];
+        self::assertSame('Taunt Hit (Spell Hit)', $taunt['label']);
+        self::assertSame(10.0, $taunt['value']);
+        self::assertSame('Glyph of Righteous Defense', $taunt['bonusLabel']);
+        self::assertSame(8.0, $taunt['bonus']);
+        self::assertSame(17.0, $taunt['target']);
+        self::assertTrue($taunt['met']);
+        self::assertSame(['Gear', 'Racial', 'Glyph'], array_column($taunt['sources'], 'category'));
+        self::assertNull($unglyphed[0]['spellHitChecks'][0]['bonusLabel']);
+        self::assertSame(0.0, $unglyphed[0]['spellHitChecks'][0]['bonus']);
+        self::assertFalse($unglyphed[0]['spellHitChecks'][0]['met']);
+        self::assertSame([], $dps[0]['spellHitChecks']);
+    }
+
+    public function testRoguePoisonAndDeathKnightDiseaseHitUseSpellHit(): void
+    {
+        $service = new CharacterHitExpertiseService(new CharacterStatCalculator());
+        $rogue = $service->build('Human', 'Rogue', 80, [$this->spec('Combat')], $this->weapons(), $this->talents([
+            ['spellId' => 13845, 'pointsText' => '5/5'], // Precision: weapons and poisons.
+        ]));
+        $deathKnight = $service->build('Human', 'Death Knight', 80, [$this->spec('Blood')], $this->weapons(), $this->talents([
+            ['spellId' => 49568, 'pointsText' => '3/3'], // Virulence: spells.
+        ]));
+
+        self::assertSame('Poison Hit (Spell Hit)', $rogue[0]['spellHitChecks'][0]['label']);
+        self::assertSame(5.0, $rogue[0]['spellHitChecks'][0]['value']);
+        self::assertSame(5.0, $rogue[0]['hitValue']);
+        self::assertSame(
+            ['Disease Hit (Spell Hit)', 'Taunt Hit (Spell Hit)'],
+            array_column($deathKnight[0]['spellHitChecks'], 'label'),
+        );
+        self::assertSame(3.0, $deathKnight[0]['spellHitChecks'][0]['value']);
+        self::assertSame(0.0, $deathKnight[0]['hitValue']);
+    }
+
+    public function testMetricsListContributionSources(): void
+    {
+        $service = new CharacterHitExpertiseService(new CharacterStatCalculator());
+        $gear = [[
+            'class' => 2,
+            'type' => 17,
+            'subclass' => 7,
+            'tooltip' => ['stats' => [['type' => 37, 'value' => 82]]],
+        ]];
+        $glyphs = ['0' => ['Major Glyphs' => ['Glyph of Seal of Vengeance'], 'Minor Glyphs' => []]];
+        $rows = $service->build('Human', 'Paladin', 80, [$this->spec('Retribution')], $gear, $this->talents([
+            ['spellId' => 31860, 'pointsText' => '3/3'], // Combat Expertise.
+        ]), $glyphs);
+
+        $expertise = $rows[0]['metrics'][1];
+        self::assertSame('Expertise', $expertise['label']);
+        self::assertSame([
+            ['category' => 'Gear', 'label' => 'Expertise rating (82)', 'value' => 10],
+            ['category' => 'Talents', 'label' => 'Combat Expertise', 'value' => 6],
+            ['category' => 'Racial', 'label' => 'Sword Specialization', 'value' => 3],
+            ['category' => 'Glyph', 'label' => 'Glyph of Seal of Vengeance', 'value' => 10],
+        ], $expertise['sources']);
+        self::assertSame(29, $rows[0]['expertise']);
+    }
+
     private function spec(string $name, string $id = '0'): array
     {
         return [
