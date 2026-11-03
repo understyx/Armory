@@ -1463,7 +1463,7 @@ body {
 
 .hit-expertise-metrics {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     align-items: start;
     gap: 6px 10px;
     min-width: 0;
