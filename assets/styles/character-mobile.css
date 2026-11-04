@@ -1,0 +1,749 @@
+/* Character profiles on phones and small tablets. Loaded after app.css only
+   below 769px so the desktop paperdoll keeps its original layout. */
+
+.character-page {
+    --mobile-gap: 12px;
+    padding: 16px max(12px, env(safe-area-inset-right)) 32px max(12px, env(safe-area-inset-left));
+}
+
+.character-page .site-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.character-page .site-header-brand {
+    width: fit-content;
+    font-size: 1.15rem;
+}
+
+.character-page .site-header-search {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 48px;
+    gap: 4px;
+    padding: 6px;
+    border-radius: 12px;
+}
+
+.character-page .site-header-search .character-search-input {
+    grid-column: 1 / -1;
+    min-height: 46px;
+    padding: 10px;
+    border-bottom: 1px solid var(--border-subtle);
+    border-radius: 6px 6px 0 0;
+    font-size: 1rem;
+}
+
+.character-page .site-header-search .character-search-type,
+.character-page .site-header-search .character-search-realm {
+    min-height: 44px;
+    padding: 8px 20px 8px 8px;
+    font-size: 1rem;
+}
+
+.character-page .site-header-search .character-search-button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
+}
+
+.character-page .site-header-search .character-search-button svg {
+    width: 20px;
+    height: 20px;
+}
+
+.character-page .site-header-search .character-search-button span {
+    display: none;
+}
+
+.character-page .character-header-card {
+    gap: 20px;
+    padding: 18px 16px;
+    margin-bottom: 12px;
+    border-radius: 14px;
+    box-shadow: none;
+}
+
+.character-page .char-main-info {
+    min-width: 0;
+    gap: 10px;
+}
+
+.character-page .char-name-row {
+    gap: 8px;
+}
+
+.character-page .char-name {
+    width: 100%;
+    font-size: clamp(1.8rem, 7vw, 2.2rem);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+.character-page .realm-badge,
+.character-page .expansion-badge {
+    padding: 4px 9px;
+    font-size: 0.7rem;
+}
+
+.character-page .char-details-sub {
+    gap: 4px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.character-page .char-race-class-line,
+.character-page .char-guild-line {
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+}
+
+.character-page .header-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px 12px;
+    margin-top: 4px;
+}
+
+.character-page .header-actions form {
+    flex: 0 0 auto;
+    width: auto;
+}
+
+.character-page .btn-refresh {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+}
+
+.character-page .scraped-time {
+    flex: 1 1 100px;
+    font-size: 0.75rem;
+    text-align: left;
+}
+
+.character-page .stats-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.character-page .stat-pill {
+    min-width: 0;
+    min-height: 108px;
+    gap: 4px;
+    padding: 10px 6px;
+    border-radius: 10px;
+}
+
+.character-page .uwu-rank-pill {
+    grid-column: auto;
+}
+
+.character-page .stat-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+}
+
+.character-page .stat-value {
+    font-size: 1.35rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+}
+
+.character-page .stat-rank,
+.character-page .stat-meta {
+    display: block;
+    margin: 0;
+    font-size: 0.7rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+/* Keep the long profile navigable without adding another application screen. */
+.character-page .profile-section-nav {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    margin-bottom: 12px;
+    padding: 6px 0;
+    background: var(--bg-dark);
+    border-bottom: 1px solid var(--border-subtle);
+    scrollbar-width: thin;
+}
+
+.character-page .profile-section-nav a {
+    display: flex;
+    flex: 1 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.character-page .profile-section-nav a:hover,
+.character-page .profile-section-nav a:focus-visible {
+    background: var(--bg-slot);
+    color: var(--text-primary);
+}
+
+.character-page .section-card {
+    min-width: 0;
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: 14px;
+    box-shadow: none;
+    scroll-margin-top: 72px;
+}
+
+.character-page .section-header {
+    gap: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+}
+
+.character-page .section-header h2 {
+    font-size: 1.05rem;
+    line-height: 1.4;
+}
+
+.character-page .gear-header-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.character-page .character-tab-list {
+    grid-column: 1 / -1;
+    gap: 2px;
+    padding: 4px;
+}
+
+.character-page .character-tab {
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 4px;
+    font-size: 0.75rem;
+}
+
+.character-page .model-viewer-setting,
+.character-page .transmog-menu summary.btn-transmog {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 8px;
+    font-size: 0.75rem;
+    opacity: 1;
+}
+
+.character-page .gear-header-actions > [hidden] {
+    display: none;
+}
+
+.character-page .transmog-list {
+    width: min(280px, calc(100vw - 60px));
+    max-height: 50dvh;
+    overflow-y: auto;
+}
+
+.character-page .transmog-list-item {
+    padding: 12px;
+}
+
+/* One equipment list: every icon on the left, every description on the right. */
+.character-page .paperdoll-container {
+    gap: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.character-page .paperdoll-main-layout {
+    gap: 0;
+    min-height: 0;
+    overflow: visible;
+}
+
+.character-page .paperdoll-column,
+.character-page .paperdoll-main-layout.model-off .paperdoll-column {
+    flex: none;
+    gap: 8px;
+    width: 100%;
+    padding: 0;
+}
+
+.character-page .paperdoll-column.right-column {
+    margin-top: 8px;
+}
+
+.character-page .paperdoll-viewport {
+    max-width: 100%;
+    height: 300px;
+    flex: 0 0 300px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-subtle);
+}
+
+.character-page .paperdoll-row,
+.character-page .paperdoll-bottom-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    min-height: 76px;
+    max-width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    background: var(--bg-slot);
+}
+
+.character-page .paperdoll-row.right-row {
+    flex-direction: row-reverse;
+}
+
+.character-page .paperdoll-slot,
+.character-page .slot-icon-box {
+    width: 48px;
+    height: 48px;
+}
+
+.character-page .slot-icon-box {
+    box-shadow: none;
+}
+
+.character-page .slot-info-block {
+    align-items: flex-start;
+    gap: 3px;
+    text-align: left;
+}
+
+.character-page .slot-label {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    line-height: 1.3;
+}
+
+.character-page .slot-info-block .slot-item-name {
+    max-width: 100%;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.character-page .slot-info-block .slot-sub-line {
+    justify-content: flex-start;
+    gap: 4px 8px;
+    max-width: 100%;
+    margin-top: 0;
+}
+
+.character-page .slot-enchant-text,
+.character-page .slot-enchant-missing {
+    font-size: 0.75rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.character-page .gem-icon-link {
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+}
+
+.character-page .gem-icon-img {
+    width: 22px;
+    height: 22px;
+}
+
+.character-page .paperdoll-bottom-row {
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.character-page .gear-audit-status {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    margin-top: 16px;
+}
+
+.character-page .status-card {
+    padding: 12px;
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+}
+
+.character-page .hit-expertise-section {
+    padding: 12px;
+}
+
+.character-page .hit-expertise-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+}
+
+.character-page .hit-expertise-metrics {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+}
+
+.character-page .hit-expertise-metric > summary {
+    min-height: 44px;
+    padding: 6px 18px 6px 0;
+}
+
+.character-page .hit-expertise-spec strong,
+.character-page .hit-expertise-metric strong {
+    font-size: 0.875rem;
+}
+
+/* Keep tree geometry intact and expose the next card as a swipe affordance. */
+.character-page .talent-calculator-layout {
+    gap: 20px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.character-page .talent-trees-container {
+    min-width: 0;
+    gap: 12px;
+}
+
+.character-page .talent-scroll-hint {
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.character-page .talent-trees-grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: min(88%, 300px);
+    align-items: stretch;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 3px 3px 12px;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 3px;
+    scrollbar-color: var(--border-accent) transparent;
+    scrollbar-width: thin;
+}
+
+.character-page .talent-tree-column {
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    background: var(--bg-slot);
+    scroll-snap-align: start;
+}
+
+.character-page .talent-tree-heading {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4px 8px;
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.character-page .talent-tree-heading h3 {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.character-page .talent-tree-heading span {
+    color: var(--accent-gold);
+    font-size: 0.75rem;
+}
+
+.character-page .talent-tree-grid-box {
+    gap: 8px;
+    padding: 8px 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.character-page .talent-tier-row {
+    height: 44px;
+    gap: 4px;
+}
+
+.character-page .talent-icon-box,
+.character-page .talent-slot-cell {
+    width: 40px;
+    height: 40px;
+}
+
+.character-page .talent-trees-footer {
+    display: none;
+}
+
+.character-page .glyphs-sidebar {
+    gap: 20px;
+}
+
+.character-page .glyph-section-header {
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.character-page .glyph-items-list {
+    gap: 4px;
+}
+
+.character-page .glyph-item {
+    min-height: 44px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--bg-slot);
+    font-size: 0.8rem;
+}
+
+.character-page .talent-code-box {
+    min-width: 0;
+    padding: 12px;
+}
+
+.character-page .talent-code-box code {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Detail panels use the same spacing and controls as the equipment view. */
+.character-page .stats-panel-heading,
+.character-page .achievements-panel-heading {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+}
+
+.character-page .stats-spec-tabs {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.character-page .stats-spec-tab {
+    flex: 1 1 120px;
+    min-height: 44px;
+    font-size: 0.8rem;
+}
+
+.character-page .spec-toggle-btn,
+.character-page .raid-group-tab {
+    min-height: 44px;
+    font-size: 0.8rem;
+}
+
+.character-page .secondary-stat-grid,
+.character-page .rating-conversion-grid,
+.character-page .hit-bonus-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.character-page .secondary-stat-card,
+.character-page .rating-conversion-card,
+.character-page .hit-bonus-card {
+    min-width: 0;
+    padding: 12px;
+    overflow-wrap: anywhere;
+}
+
+.character-page .calculated-stat-table-wrap {
+    max-width: 100%;
+    overscroll-behavior-inline: contain;
+}
+
+.character-page .calculated-stat-table th:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--bg-slot);
+}
+
+.character-page .icc-achievement-meta,
+.character-page .icc-achievement-group-heading {
+    flex-wrap: wrap;
+}
+
+.character-page .professions-grid {
+    gap: 8px;
+}
+
+.character-page .profession-card {
+    min-width: 0;
+    padding: 12px;
+    font-size: 0.875rem;
+}
+
+.character-page .prof-name {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.character-page .uwu-logs-actions {
+    gap: 8px;
+}
+
+.character-page .uwu-spec-select,
+.character-page .btn-uwu-logs {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 1rem;
+}
+
+.character-page .btn-uwu-logs {
+    font-size: 0.85rem;
+}
+
+.character-page .uwu-overall-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.character-page .uwu-overall-card:last-child {
+    grid-column: 1 / -1;
+}
+
+.character-page .uwu-rankings-table,
+.character-page .uwu-rankings-table tbody,
+.character-page .match-history-table,
+.character-page .match-history-table tbody {
+    display: block;
+    min-width: 0;
+    width: 100%;
+}
+
+.character-page .uwu-rankings-table thead,
+.character-page .match-history-table thead {
+    display: none;
+}
+
+.character-page .uwu-rankings-table tbody,
+.character-page .match-history-table tbody {
+    display: grid;
+    gap: 12px;
+}
+
+.character-page .uwu-rankings-table tr,
+.character-page .match-history-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    background: var(--bg-slot);
+}
+
+.character-page .uwu-rankings-table td,
+.character-page .match-history-table td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    overflow-wrap: anywhere;
+}
+
+.character-page .uwu-rankings-table td::before,
+.character-page .match-history-table td::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+}
+
+.character-page .match-history-table tr[hidden] {
+    display: none;
+}
+
+.character-page .match-history-table td:nth-child(3),
+.character-page .match-history-table td:nth-child(6),
+.character-page .match-history-table td:last-child {
+    grid-column: 1 / -1;
+}
+
+.character-page .match-history-table .btn-details {
+    width: 100%;
+}
+
+.character-page .uwu-rankings-table td:first-child {
+    grid-column: 1 / -1;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.9rem;
+}
+
+.character-page .uwu-points-trigger {
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    background: var(--bg-card);
+}
+
+.character-page .pvp-header-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.character-page .pvp-stat-pill {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 12px;
+}
+
+.character-page .pvp-stat-pill .lbl {
+    font-size: 0.65rem;
+}
+
+.character-page .arena-team-card {
+    padding: 14px;
+}
+
+.character-page .team-name-link {
+    overflow-wrap: anywhere;
+}
+
+.character-page .data-table:not(.uwu-rankings-table):not(.match-history-table) th,
+.character-page .data-table:not(.uwu-rankings-table):not(.match-history-table) td {
+    padding: 12px 10px;
+    font-size: 0.8rem;
+}
+
+.character-page .btn-details,
+.character-page .btn-expand-matches {
+    min-height: 44px;
+}
+
+.character-page .alert-banner {
+    padding: 12px;
+    font-size: 0.8rem;
+}

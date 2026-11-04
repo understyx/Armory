@@ -80,9 +80,17 @@ const renderDeferredSpec = (spec) => {
     const layout = makeElement('div', 'talent-calculator-layout');
     const treesContainer = makeElement('div', 'talent-trees-container');
     const treeGrid = makeElement('div', 'talent-trees-grid');
+    treeGrid.setAttribute('role', 'region');
+    treeGrid.setAttribute('aria-label', 'Talent trees');
+    treeGrid.tabIndex = 0;
 
     (spec.trees || []).forEach((tree) => {
         const column = makeElement('div', 'talent-tree-column');
+        const heading = makeElement('div', 'talent-tree-heading');
+        heading.append(
+            makeElement('h3', '', tree.name || 'Talent tree'),
+            makeElement('span', '', `${tree.points || 0} points`),
+        );
         const gridBox = makeElement('div', 'talent-tree-grid-box');
 
         if (Array.isArray(tree.tiers) && tree.tiers.length > 0) {
@@ -132,7 +140,7 @@ const renderDeferredSpec = (spec) => {
             gridBox.appendChild(fallback);
         }
 
-        column.appendChild(gridBox);
+        column.append(heading, gridBox);
         treeGrid.appendChild(column);
     });
 
@@ -158,7 +166,11 @@ const renderDeferredSpec = (spec) => {
         );
         footer.appendChild(item);
     });
-    treesContainer.append(treeGrid, footer);
+    treesContainer.append(
+        makeElement('p', 'talent-scroll-hint', 'Swipe to explore talent trees →'),
+        treeGrid,
+        footer,
+    );
     layout.appendChild(treesContainer);
 
     if (renderGlyphs) {

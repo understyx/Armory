@@ -11,6 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('styles/character-mobile.css') }}" media="(max-width: 768px)">
     <script type="module" src="{{ asset('item-tooltip.js') }}"></script>
     <script type="module" src="{{ asset('talent-tree.js') }}"></script>
     <script type="module" src="{{ asset('character-refresh.js') }}"></script>
@@ -101,8 +102,16 @@
 
         </div>
 
+        <nav class="profile-section-nav" aria-label="Profile sections">
+            <a href="#profile-character">Character</a>
+            <a href="#profile-talents">Talents</a>
+            <a href="#profile-rankings">Rankings</a>
+            <a href="#profile-pvp">PvP</a>
+            <a href="#profile-history">History</a>
+        </nav>
+
         {# SECTION 1: CHARACTER EQUIPMENT & ITEMS #}
-        <div class="content-card section-card">
+        <div id="profile-character" class="content-card section-card">
             <div class="section-header gear-section-header">
                 <h2>🛡️ Character</h2>
                 <div class="gear-header-actions">
@@ -112,7 +121,7 @@
                         <a id="achievements-tab" class="character-tab" role="tab" tabindex="-1" aria-selected="false" aria-controls="achievements-panel" href="{{ path('app_character_achievements', {'characterName': characterName, 'realmName': realmName}) }}" data-achievements-url="{{ path('app_character_achievements', {'characterName': characterName, 'realmName': realmName}) }}" onclick="setCharacterTab('achievements', this); return false;">Achievements</a>
                     </div>
                     {% if characterModel %}
-                        <label class="model-viewer-setting" for="model-viewer-enabled">
+                        <label class="model-viewer-setting" for="model-viewer-enabled" data-equipment-action>
                             <span>3D model</span>
                             <input id="model-viewer-enabled" type="checkbox" role="switch" aria-label="Enable 3D model">
                             <span class="model-viewer-setting-track" aria-hidden="true"></span>
@@ -196,6 +205,7 @@
 
                                 <div class="slot-info-block align-left">
                                     {% if slot.item %}
+                                        <span class="slot-label">{{ slot.name }}</span>
                                         <a href="https://wotlk.evowow.com/?item={{ slot.item.id }}"
                                            class="slot-item-name q-{{ slot.item.quality|default(1) }}"
                                            data-item-tooltip="{{ slot.item.tooltip_key }}"
@@ -239,6 +249,7 @@
                             <div class="paperdoll-row right-row">
                                 <div class="slot-info-block align-right">
                                     {% if slot.item %}
+                                        <span class="slot-label">{{ slot.name }}</span>
                                         <a href="https://wotlk.evowow.com/?item={{ slot.item.id }}"
                                            class="slot-item-name q-{{ slot.item.quality|default(1) }}"
                                            data-item-tooltip="{{ slot.item.tooltip_key }}"
@@ -328,6 +339,7 @@
 
                             <div class="slot-info-block align-center">
                                 {% if slot.item %}
+                                    <span class="slot-label">{{ slot.name }}</span>
                                     <a href="https://wotlk.evowow.com/?item={{ slot.item.id }}"
                                        class="slot-item-name q-{{ slot.item.quality|default(1) }}"
                                        data-item-tooltip="{{ slot.item.tooltip_key }}"
@@ -437,7 +449,7 @@
         </div>
 
         {# SECTION 3: SPECIALIZATION & TALENT TREES #}
-        <div class="content-card section-card">
+        <div id="profile-talents" class="content-card section-card">
             <div class="section-header spec-section-header">
                 <h2>⚔️ Specialization & Talent Trees</h2>
                 {% if parsedSpecs|length > 1 %}
@@ -461,9 +473,14 @@
 
                         {# LEFT / CENTER: 3 TALENT TREES COLUMN #}
                         <div class="talent-trees-container">
-                            <div class="talent-trees-grid">
+                            <p class="talent-scroll-hint">Swipe to explore talent trees <span aria-hidden="true">→</span></p>
+                            <div class="talent-trees-grid" role="region" aria-label="Talent trees" tabindex="0">
                                 {% for tree in spec.trees %}
                                     <div class="talent-tree-column">
+                                        <div class="talent-tree-heading">
+                                            <h3>{{ tree.name }}</h3>
+                                            <span>{{ tree.points }} points</span>
+                                        </div>
                                         <div class="talent-tree-grid-box">
                                             {% if tree.tiers is not empty %}
                                                 {% for tier in tree.tiers %}
@@ -596,7 +613,7 @@
         {% set uwuSpecOptions = uwuSpecOptionsByClass[characterDetails.class]|default({'1': 'Specialization 1', '2': 'Specialization 2', '3': 'Specialization 3'}) %}
         {% set activeSpecName = parsedSpecs is not empty ? (parsedSpecs|first).specName|lower : '' %}
 
-        <div class="content-card section-card uwu-logs-section">
+        <div id="profile-rankings" class="content-card section-card uwu-logs-section">
             <div class="section-header uwu-logs-header">
                 <div>
                     <h2>📊 Uwu-logs Raid Rankings</h2>
@@ -697,7 +714,7 @@
         </div>
 
         {# SECTION 6: PVP & ARENA TEAMS #}
-        <div class="content-card section-card">
+        <div id="profile-pvp" class="content-card section-card">
             <div class="section-header">
                 <h2>⚔️ Player vs Player & Arena Teams</h2>
             </div>
@@ -763,7 +780,7 @@
         </div>
 
         {# SECTION 7: MATCH HISTORY #}
-        <div class="content-card section-card">
+        <div id="profile-history" class="content-card section-card">
             <div class="section-header">
                 <h2>📜 Match History</h2>
             </div>
@@ -875,8 +892,9 @@
                 window.history.pushState(null, '', `#${tabName}`);
             }
 
-            const transmogAction = document.querySelector('[data-equipment-action]');
-            if (transmogAction) transmogAction.hidden = tabName !== 'equipment';
+            document.querySelectorAll('[data-equipment-action]').forEach(action => {
+                action.hidden = tabName !== 'equipment';
+            });
 
             if (tabName === 'stats') loadStatsPanel(targetTab);
             if (tabName === 'achievements') loadAchievementsShell(targetTab);
@@ -890,8 +908,10 @@
         const characterTabs = Array.from(document.querySelectorAll('.character-tab'));
         const activateHashTab = () => {
             const requestedTab = window.location.hash.slice(1);
+            // Section links should scroll without changing the selected character tab.
+            if (requestedTab && !['equipment', 'stats', 'achievements'].includes(requestedTab)) return;
             activateCharacterTab(
-                ['equipment', 'stats', 'achievements'].includes(requestedTab) ? requestedTab : 'equipment',
+                requestedTab || 'equipment',
                 null,
                 false,
             );

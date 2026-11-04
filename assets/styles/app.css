@@ -769,7 +769,8 @@ body {
 }
 
 .character-tab-panel[hidden],
-.stats-spec-panel[hidden] {
+.stats-spec-panel[hidden],
+.gear-header-actions > [hidden] {
     display: none;
 }
 
@@ -2877,6 +2878,13 @@ body {
     width: 100%;
 }
 
+.profile-section-nav,
+.slot-label,
+.talent-tree-heading,
+.talent-scroll-hint {
+    display: none;
+}
+
 .paperdoll-row.left-row {
     flex-direction: row;
 }
@@ -4251,15 +4259,6 @@ body {
 
 .paperdoll-main-layout.model-off .slot-item-name {
     max-width: none;
-}
-
-.paperdoll-main-layout.model-off .right-column .slot-info-block.align-right {
-    align-items: flex-start;
-    text-align: left;
-}
-
-.paperdoll-main-layout.model-off .right-column .slot-sub-line {
-    justify-content: flex-start;
 }
 
 .paperdoll-main-layout.model-off .character-model-status {
