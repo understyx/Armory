@@ -348,4 +348,39 @@ class ItemTooltipServiceTest extends TestCase
             $tooltip['sockets'][0]['gem']['effect']
         );
     }
+
+    public function testListsBaseResistancesAfterPrimaryStats(): void
+    {
+        $tooltip = (new ItemTooltipService())->build([
+            'id' => 1,
+            'name' => 'Resistance Test Ring',
+            'quality' => 4,
+            'tooltip' => [
+                'flags' => 0,
+                'bonding' => 1,
+                'max_count' => 0,
+                'stats' => [['type' => 7, 'value' => 40]],
+                'resistances' => [
+                    'holy' => 0,
+                    'fire' => 0,
+                    'nature' => 0,
+                    'frost' => 35,
+                    'shadow' => 35,
+                    'arcane' => 0,
+                ],
+                'damage' => [],
+                'sockets' => [],
+                'socket_bonus_id' => 0,
+                'sell_price' => 0,
+                'description' => '',
+                'item_set_id' => 0,
+            ],
+        ]);
+
+        self::assertNotNull($tooltip);
+        self::assertSame(
+            ['+40 Stamina', '+35 Frost Resistance', '+35 Shadow Resistance'],
+            $tooltip['primary_stats']
+        );
+    }
 }

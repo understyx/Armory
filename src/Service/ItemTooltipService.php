@@ -69,6 +69,14 @@ class ItemTooltipService
             }
         }
 
+        // The game lists base resistances after the primary stats, in this school order.
+        foreach (['holy', 'fire', 'nature', 'frost', 'shadow', 'arcane'] as $school) {
+            $value = (int) ($raw['resistances'][$school] ?? 0);
+            if ($value !== 0) {
+                $primaryStats[] = sprintf('%+d %s Resistance', $value, ucfirst($school));
+            }
+        }
+
         $effects = array_map(
             static fn (string $effect): array => ['type' => 'equip', 'text' => $effect, 'source' => 'trinity'],
             $equipEffects
