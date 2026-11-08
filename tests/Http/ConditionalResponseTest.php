@@ -43,4 +43,17 @@ final class ConditionalResponseTest extends TestCase
         self::assertStringContainsString('private', (string) $response->headers->get('Cache-Control'));
         self::assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
     }
+
+    public function testUserSpecificRepresentationIsPrivateWithoutAConditionalValidator(): void
+    {
+        $request = new Request(server: ['HTTP_IF_NONE_MATCH' => '"previous-validator"']);
+        $response = new Response('a response containing account identity');
+
+        ConditionalResponse::apply($response, $request, userSpecific: true);
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertNull($response->headers->get('ETag'));
+        self::assertStringContainsString('private', (string) $response->headers->get('Cache-Control'));
+        self::assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+    }
 }

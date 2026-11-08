@@ -53,6 +53,26 @@ final class UwuRankUpdaterTest extends TestCase
         self::assertSame(42, $result['overallRank']);
     }
 
+    public function testForcedRefreshBypassesTheFourSecondCacheShortcut(): void
+    {
+        $payload = ['overallRank' => 43, 'bosses' => []];
+        $stored = (new UwuLogRank())
+            ->setName('Imtilted')->setRealm('Icecrown')->setSpec('1')->setOverallRank(43)
+            ->setPayload($payload)->setScrapedAt(new \DateTimeImmutable());
+        $repository = $this->createMock(UwuLogRankRepository::class);
+        $repository->expects(self::never())->method('findCached');
+        $repository->expects(self::once())->method('upsertResult')->with('Imtilted', 'Icecrown', '1', $payload)->willReturn($stored);
+        $service = $this->createMock(UwuLogsService::class);
+        $service->expects(self::once())->method('fetchRankings')->with('Imtilted', 'Icecrown', '1')->willReturn($payload);
+        $throttle = $this->createMock(UwuLogUpdateThrottle::class);
+        $throttle->expects(self::once())->method('claim')->willReturn(new UwuLogUpdateThrottleDecision(true, new \DateTimeImmutable('+4 seconds')));
+
+        $result = (new UwuRankUpdater($service, $repository, $throttle))->getOrRefresh('Imtilted', 'Icecrown', '1', true);
+
+        self::assertFalse($result['cached']);
+        self::assertSame(43, $result['overallRank']);
+    }
+
     public function testItRejectsANewSpecDuringThePerCharacterCooldown(): void
     {
         $repository = $this->createMock(UwuLogRankRepository::class);

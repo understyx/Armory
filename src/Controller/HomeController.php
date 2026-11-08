@@ -46,6 +46,7 @@ class HomeController extends AbstractController
             'realms' => RouteRequirements::REALMS,
             'recentCharacters' => $snapshotRepository->findRecentlyViewed(10),
             'searchError' => $searchError,
+            'flashes' => ConditionalResponse::flashes($request),
         ]);
         if ($searchError !== null) {
             $response->setStatusCode(Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -65,8 +66,6 @@ class HomeController extends AbstractController
     #[IsGranted('ROLE_USER')]
     public function dashboard(): Response
     {
-        return $this->render('home/dashboard.html.twig', [
-            'user' => $this->getUser(),
-        ]);
+        return $this->redirectToRoute('app_account');
     }
 }

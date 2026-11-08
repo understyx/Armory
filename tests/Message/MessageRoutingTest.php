@@ -4,6 +4,7 @@ namespace App\Tests\Message;
 
 use App\Message\RefreshCharacterSnapshotMessage;
 use App\Message\RefreshUwuRankMessage;
+use App\Message\ScanCharacterClaimMessage;
 use App\Message\EnrichSpellTooltipMessage;
 use App\Service\DeduplicatingMessageDispatcher;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -27,6 +28,7 @@ final class MessageRoutingTest extends KernelTestCase
 
             DeduplicatingMessageDispatcher::dispatch($bus, new RefreshUwuRankMessage(' Test ', 'Icecrown', '1'));
             DeduplicatingMessageDispatcher::dispatch($bus, new RefreshUwuRankMessage('test', 'icecrown', '1'));
+            DeduplicatingMessageDispatcher::dispatch($bus, new RefreshUwuRankMessage('Test', 'Icecrown', '1', forceRefresh: true));
             DeduplicatingMessageDispatcher::dispatch($bus, new RefreshUwuRankMessage('Test', 'Icecrown', '2'));
             DeduplicatingMessageDispatcher::dispatch($bus, new RefreshUwuRankMessage('Other', 'Icecrown', '1'));
             DeduplicatingMessageDispatcher::dispatch($bus, new RefreshUwuRankMessage('Test', 'Lordaeron', '1'));
@@ -37,15 +39,19 @@ final class MessageRoutingTest extends KernelTestCase
             DeduplicatingMessageDispatcher::dispatch($bus, new RefreshCharacterSnapshotMessage('Other', 'Icecrown'));
             DeduplicatingMessageDispatcher::dispatch($bus, new EnrichSpellTooltipMessage(56175));
             DeduplicatingMessageDispatcher::dispatch($bus, new EnrichSpellTooltipMessage(56175));
+            DeduplicatingMessageDispatcher::dispatch($bus, new ScanCharacterClaimMessage(77, ScanCharacterClaimMessage::BASELINE));
+            DeduplicatingMessageDispatcher::dispatch($bus, new ScanCharacterClaimMessage(77, ScanCharacterClaimMessage::BASELINE));
 
             $uwuMessages = $container->get('messenger.transport.uwu')->get();
             $asyncMessages = $container->get('messenger.transport.async')->get();
 
-            self::assertCount(4, $uwuMessages);
+            self::assertCount(5, $uwuMessages);
             self::assertInstanceOf(RefreshUwuRankMessage::class, $uwuMessages[0]->getMessage());
-            self::assertCount(4, $asyncMessages);
+            self::assertTrue($uwuMessages[1]->getMessage()->forceRefresh);
+            self::assertCount(5, $asyncMessages);
             self::assertInstanceOf(RefreshCharacterSnapshotMessage::class, $asyncMessages[0]->getMessage());
             self::assertInstanceOf(EnrichSpellTooltipMessage::class, $asyncMessages[3]->getMessage());
+            self::assertInstanceOf(ScanCharacterClaimMessage::class, $asyncMessages[4]->getMessage());
         } finally {
             self::ensureKernelShutdown();
 

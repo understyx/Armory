@@ -1,5 +1,5 @@
 <?php
-// src/Security/DiscordAuthenticator.php - Adjusted for no email scope
+
 namespace App\Security;
 
 use App\Entity\User;
@@ -17,25 +17,19 @@ use Symfony\Component\Security\Http\Authenticator\Passport\Badge\UserBadge;
 use Symfony\Component\Security\Http\Authenticator\Passport\Passport;
 use Symfony\Component\Security\Http\Authenticator\Passport\SelfValidatingPassport;
 use Symfony\Component\Security\Http\EntryPoint\AuthenticationEntryPointInterface;
-use Wohali\OAuth2\Client\Provider\DiscordUser;
+use Symfony\Component\Security\Http\Util\TargetPathTrait;
+use Wohali\OAuth2\Client\Provider\DiscordResourceOwner;
 
-class DiscordAuthenticator extends OAuth2Authenticator implements AuthenticationEntryPointInterface
+final class DiscordAuthenticator extends OAuth2Authenticator implements AuthenticationEntryPointInterface
 {
-    private ClientRegistry $clientRegistry;
-    private EntityManagerInterface $entityManager;
-    private RouterInterface $router;
-    private UserRepository $userRepository;
+    use TargetPathTrait;
 
     public function __construct(
-        ClientRegistry $clientRegistry,
-        EntityManagerInterface $entityManager,
-        RouterInterface $router,
-        UserRepository $userRepository
+        private readonly ClientRegistry $clientRegistry,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly RouterInterface $router,
+        private readonly UserRepository $userRepository,
     ) {
-        $this->clientRegistry = $clientRegistry;
-        $this->entityManager = $entityManager;
-        $this->router = $router;
-        $this->userRepository = $userRepository;
     }
 
     public function supports(Request $request): ?bool
@@ -48,67 +42,46 @@ class DiscordAuthenticator extends OAuth2Authenticator implements Authentication
         $client = $this->clientRegistry->getClient('discord');
         $accessToken = $this->fetchAccessToken($client);
 
-        return new SelfValidatingPassport(
-            new UserBadge($accessToken->getToken(), function () use ($accessToken, $client) {
-                /** @var DiscordUser $discordUser */
-                $discordUser = $client->fetchUserFromToken($accessToken);
+        return new SelfValidatingPassport(new UserBadge($accessToken->getToken(), function () use ($accessToken, $client): User {
+            /** @var DiscordResourceOwner $discordUser */
+            $discordUser = $client->fetchUserFromToken($accessToken);
+            $discordId = (string) $discordUser->getId();
+            if ($discordId === '') {
+                throw new AuthenticationException('Discord did not return a user ID.');
+            }
 
-                // No email requested, so we cannot rely on it for identification or saving.
-                // The Discord ID is now the primary unique identifier.
-                $discordId = $discordUser->getId();
-                $discordUsername = $discordUser->getUsername();
+            $user = $this->userRepository->findOneBy(['discordId' => $discordId]) ?? new User();
+            $user
+                ->setDiscordId($discordId)
+                ->setDiscordUsername($discordUser->getUsername())
+                ->setDiscordAvatarHash($discordUser->getAvatarHash())
+                ->setRoles(['ROLE_USER']);
 
-                if (empty($discordId)) {
-                    throw new AuthenticationException('Discord did not return a user ID. Cannot log in.');
-                }
+            $this->entityManager->persist($user);
+            $this->entityManager->flush();
 
-                $user = $this->userRepository->findOneBy(['discordId' => $discordId]);
-
-                if (!$user) {
-                    // User does not exist in our system by Discord ID, create a new one.
-                    $user = new User();
-                    $user->setDiscordId($discordId);
-                    $user->setDiscordUsername($discordUsername);
-                    $user->setRoles(['ROLE_USER']);
-
-                    // IMPORTANT: If your User entity requires a non-nullable 'email' field
-                    // you MUST set a dummy email here, or change the User entity's email field to nullable.
-                    // For example, using a generated unique email:
-                    $user->setEmail('discord_user_' . $discordId . '@yourdomain.com'); // <--- IMPORTANT if email is non-nullable and unique
-                    // Or, if email is nullable and not strictly unique:
-                    // $user->setEmail(null); // Or leave unset if nullable
-
-                } else {
-                    // Update existing user's Discord username if it changed
-                    $user->setDiscordUsername($discordUsername);
-                    // No email to update as we didn't request it
-                }
-
-                $this->entityManager->persist($user);
-                $this->entityManager->flush();
-
-                return $user;
-            })
-        );
+            return $user;
+        }));
     }
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
-        $targetUrl = $this->router->generate('app_homepage');
-        return new RedirectResponse($targetUrl);
+        $session = $request->getSession();
+        $targetPath = $this->getTargetPath($session, $firewallName);
+        $this->removeTargetPath($session, $firewallName);
+
+        return new RedirectResponse($targetPath ?? $this->router->generate('app_account'));
     }
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        $message = strtr($exception->getMessageKey(), $exception->getMessageData());
-        $request->getSession()->getFlashBag()->add('error', 'Discord Login Failed: ' . $message);
-        return new RedirectResponse($this->router->generate('app_login'));
+        $request->getSession()->getFlashBag()->add('error', 'Discord login failed. Please try again.');
+
+        return new RedirectResponse($this->router->generate('app_homepage'));
     }
 
-    public function start(Request $request, AuthenticationException $authException = null): Response
+    public function start(Request $request, ?AuthenticationException $authException = null): Response
     {
-        return new RedirectResponse(
-            $this->router->generate('connect_discord_start')
-        );
+        return new RedirectResponse($this->router->generate('connect_discord_start'));
     }
 }

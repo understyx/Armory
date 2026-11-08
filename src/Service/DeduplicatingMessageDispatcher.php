@@ -6,6 +6,7 @@ use App\Message\EnrichItemTooltipMessage;
 use App\Message\EnrichSpellTooltipMessage;
 use App\Message\RefreshCharacterSnapshotMessage;
 use App\Message\RefreshUwuRankMessage;
+use App\Message\ScanCharacterClaimMessage;
 use Symfony\Component\Lock\Exception\LockAcquiringException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -23,7 +24,13 @@ final class DeduplicatingMessageDispatcher
                 3600.0,
             ],
             $message instanceof RefreshUwuRankMessage => [
-                self::key('uwu-rank', $message->realmName, $message->characterName, $message->spec),
+                self::key(
+                    'uwu-rank',
+                    $message->realmName,
+                    $message->characterName,
+                    $message->spec,
+                    $message->forceRefresh ? 'force' : 'normal',
+                ),
                 3600.0 + (int) ceil(self::delayMilliseconds($stamps) / 1000),
             ],
             $message instanceof EnrichItemTooltipMessage => [
@@ -36,6 +43,10 @@ final class DeduplicatingMessageDispatcher
             $message instanceof EnrichSpellTooltipMessage => [
                 'spell-tooltip:'.$message->spellId,
                 3600.0,
+            ],
+            $message instanceof ScanCharacterClaimMessage => [
+                'character-claim:'.$message->challengeId.':'.$message->phase,
+                3600.0 + (int) ceil(self::delayMilliseconds($stamps) / 1000),
             ],
             default => throw new \InvalidArgumentException(sprintf('No deduplication key is defined for %s.', $message::class)),
         };

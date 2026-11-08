@@ -6,6 +6,7 @@ use App\Controller\CharacterViewController;
 use App\Entity\CharacterSnapshot;
 use App\Entity\UwuLogRank;
 use App\Message\RefreshCharacterSnapshotMessage;
+use App\Message\RefreshUwuRankMessage;
 use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\ArmoryScraperService;
@@ -23,6 +24,7 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\DeduplicateStamp;
+use Symfony\Component\Messenger\Stamp\DelayStamp;
 
 class CharacterViewControllerTest extends KernelTestCase
 {
@@ -915,10 +917,107 @@ class CharacterViewControllerTest extends KernelTestCase
         self::assertArrayHasKey('retryAfterSeconds', $payload);
     }
 
+    public function testAcceptedRefreshQueuesTheCachedBestUwuSpec(): void
+    {
+        $bestRank = (new UwuLogRank())->setSpec('3');
+        $rankRepository = $this->createMock(UwuLogRankRepository::class);
+        $rankRepository->expects(self::once())->method('findBest')->with('Understyx', 'Icecrown')->willReturn($bestRank);
+        $dispatched = [];
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->expects(self::exactly(2))->method('dispatch')->willReturnCallback(
+            static function (object $message, array $stamps) use (&$dispatched): Envelope {
+                $dispatched[] = [$message, $stamps];
+
+                return new Envelope($message, $stamps);
+            },
+        );
+        $controller = $this->queuedRefreshController($rankRepository, $bus);
+
+        $response = $controller->refreshCharacter('Understyx', 'Icecrown', new Request(server: ['HTTP_ACCEPT' => 'application/json']));
+
+        self::assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
+        self::assertInstanceOf(RefreshCharacterSnapshotMessage::class, $dispatched[0][0]);
+        self::assertInstanceOf(RefreshUwuRankMessage::class, $dispatched[1][0]);
+        self::assertSame('3', $dispatched[1][0]->spec);
+        self::assertTrue($dispatched[1][0]->forceRefresh);
+        self::assertContainsOnlyInstancesOf(DeduplicateStamp::class, array_filter(
+            $dispatched[1][1], static fn (object $stamp): bool => $stamp instanceof DeduplicateStamp,
+        ));
+    }
+
+    public function testAcceptedRefreshQueuesAllSpecsWhenNoUwuRankIsCached(): void
+    {
+        $rankRepository = $this->createMock(UwuLogRankRepository::class);
+        $rankRepository->expects(self::once())->method('findBest')->with('Understyx', 'Icecrown')->willReturn(null);
+        $dispatched = [];
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->expects(self::exactly(4))->method('dispatch')->willReturnCallback(
+            static function (object $message, array $stamps) use (&$dispatched): Envelope {
+                $dispatched[] = [$message, $stamps];
+
+                return new Envelope($message, $stamps);
+            },
+        );
+        $controller = $this->queuedRefreshController($rankRepository, $bus);
+
+        $response = $controller->refreshCharacter('Understyx', 'Icecrown', new Request(server: ['HTTP_ACCEPT' => 'application/json']));
+
+        self::assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
+        self::assertSame(['1', '2', '3'], array_map(
+            static fn (array $entry): string => $entry[0]->spec,
+            array_slice($dispatched, 1),
+        ));
+        self::assertSame([5000, 10000, 15000], array_map(
+            static function (array $entry): int {
+                foreach ($entry[1] as $stamp) {
+                    if ($stamp instanceof DelayStamp) {
+                        return $stamp->getDelay();
+                    }
+                }
+
+                self::fail('The queued Uwu spec needs a spacing delay.');
+            },
+            array_slice($dispatched, 1),
+        ));
+        foreach (array_slice($dispatched, 1) as [$message]) {
+            self::assertInstanceOf(RefreshUwuRankMessage::class, $message);
+            self::assertTrue($message->forceRefresh);
+        }
+    }
+
+    public function testUwuDispatchFailureDoesNotFailTheCharacterRefreshResponse(): void
+    {
+        $rankRepository = $this->createMock(UwuLogRankRepository::class);
+        $rankRepository->method('findBest')->willReturn(null);
+        $bus = $this->createMock(MessageBusInterface::class);
+        $dispatchCount = 0;
+        $bus->expects(self::exactly(2))->method('dispatch')->willReturnCallback(
+            static function (object $message, array $stamps) use (&$dispatchCount): Envelope {
+                if (++$dispatchCount === 2) {
+                    throw new \RuntimeException('Uwu queue unavailable');
+                }
+
+                return new Envelope($message, $stamps);
+            },
+        );
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('warning')->with(
+            'Unable to queue Uwu-logs rank refresh after character refresh.',
+            self::arrayHasKey('exception'),
+        );
+        $controller = $this->queuedRefreshController($rankRepository, $bus, $logger);
+
+        $response = $controller->refreshCharacter('Understyx', 'Icecrown', new Request(server: ['HTTP_ACCEPT' => 'application/json']));
+
+        self::assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
+    }
+
     public function testJsonRefreshReturnsThrottledWhenNoJobIsActive(): void
     {
         $tracker = $this->createMock(CharacterRefreshTracker::class);
         $tracker->method('status')->willReturn(['state' => 'idle', 'position' => null, 'etaSeconds' => null]);
+        $rankRepository = $this->createMock(UwuLogRankRepository::class);
+        $rankRepository->expects(self::never())->method('findBest');
         $throttle = $this->createMock(CharacterUpdateThrottle::class);
         $throttle->method('claim')->willReturn(new CharacterUpdateThrottleDecision(false, new \DateTimeImmutable('+2 minutes')));
         $controller = new CharacterViewController(
@@ -954,6 +1053,7 @@ class CharacterViewControllerTest extends KernelTestCase
             new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
             $this->createMock(LoggerInterface::class),
             $throttle,
+            uwuRankRepository: $rankRepository,
             messageBus: $bus,
             refreshTracker: $tracker,
         );
@@ -1003,6 +1103,28 @@ class CharacterViewControllerTest extends KernelTestCase
         self::assertSame(
             ['Character refresh queued. Showing saved data while it updates. Estimated wait: less than a minute.'],
             $session->getFlashBag()->peek('success'),
+        );
+    }
+
+    private function queuedRefreshController(
+        UwuLogRankRepository $rankRepository,
+        MessageBusInterface $bus,
+        ?LoggerInterface $logger = null,
+    ): CharacterViewController {
+        $throttle = $this->createMock(CharacterUpdateThrottle::class);
+        $throttle->method('claim')->willReturn(new CharacterUpdateThrottleDecision(true, new \DateTimeImmutable('+5 minutes')));
+        $snapshotRepository = $this->createMock(CharacterSnapshotRepository::class);
+        $snapshotRepository->method('existsByNameAndRealm')->willReturn(true);
+
+        return new CharacterViewController(
+            $this->createMock(ArmoryScraperService::class),
+            $snapshotRepository,
+            new \App\Service\TalentTreeService(),
+            new \App\Service\PaperdollService($this->createMock(\App\Service\ItemDatabaseService::class)),
+            $logger ?? $this->createMock(LoggerInterface::class),
+            $throttle,
+            uwuRankRepository: $rankRepository,
+            messageBus: $bus,
         );
     }
 }

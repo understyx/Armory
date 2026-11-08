@@ -16,6 +16,12 @@
         <section class="landing-content" aria-labelledby="armory-title">
             <h1 id="armory-title" class="landing-title">Armory</h1>
 
+            {% for label, messages in flashes %}
+                {% for message in messages %}
+                    <p class="home-search-error" role="status">{{ message }}</p>
+                {% endfor %}
+            {% endfor %}
+
             <form class="character-search home-search" action="{{ path('app_characters') }}" method="get" aria-label="Search characters and guilds">
                 <label class="visually-hidden" for="home-search-name">Character or guild name</label>
                 <input

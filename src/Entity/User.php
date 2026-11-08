@@ -1,7 +1,10 @@
 <?php
+
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -9,7 +12,6 @@ use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
-#[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
 #[UniqueEntity(fields: ['discordId'], message: 'This Discord account is already linked to another user.', errorPath: 'discordId')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
@@ -18,15 +20,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 180, unique: false, nullable: true)]
-    private ?string $email = null;
-
     #[ORM\Column]
     private array $roles = [];
-
-    // No plain password field as we chose 'no' during make:user
-    // #[ORM\Column(length: 255, nullable: true)]
-    // private ?string $password = null;
 
     #[ORM\Column(length: 255, unique: true, nullable: true)]
     private ?string $discordId = null;
@@ -34,40 +29,34 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $discordUsername = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $discordAvatarHash = null;
+
+    /** @var Collection<int, CharacterClaim> */
+    #[ORM\OneToMany(targetEntity: CharacterClaim::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $characterClaims;
+
+    #[ORM\OneToOne(targetEntity: CharacterClaimChallenge::class, mappedBy: 'user', orphanRemoval: true)]
+    private ?CharacterClaimChallenge $claimChallenge = null;
+
+    public function __construct()
+    {
+        $this->characterClaims = new ArrayCollection();
+    }
+
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getEmail(): ?string
-    {
-        return null;
-    }
-
-    public function setEmail(string $email): static
-    {
-        $this->email = $null;
-
-        return $this;
-    }
-
-    /**
-     * A visual identifier that represents this user.
-     *
-     * @see UserInterface
-     */
     public function getUserIdentifier(): string
     {
-        return (string) $this->email;
+        return (string) $this->discordId;
     }
 
-    /**
-     * @see UserInterface
-     */
     public function getRoles(): array
     {
         $roles = $this->roles;
-        // guarantee every user at least has ROLE_USER
         $roles[] = 'ROLE_USER';
 
         return array_unique($roles);
@@ -80,30 +69,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @see PasswordAuthenticatedUserInterface
-     */
     public function getPassword(): ?string
     {
-        // Since we're not using passwords, return null
         return null;
     }
 
-    // We don't have a setPassword method as we're not using passwords
-    // public function setPassword(string $password): static
-    // {
-    //     $this->password = $password;
-    //
-    //     return $this;
-    // }
-
-    /**
-     * @see UserInterface
-     */
     public function eraseCredentials(): void
     {
-        // If you store any temporary, sensitive data on the user, clear it here
-        // $this->plainPassword = null;
     }
 
     public function getDiscordId(): ?string
@@ -126,6 +98,53 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setDiscordUsername(?string $discordUsername): static
     {
         $this->discordUsername = $discordUsername;
+
+        return $this;
+    }
+
+    public function getDiscordAvatarHash(): ?string
+    {
+        return $this->discordAvatarHash;
+    }
+
+    public function setDiscordAvatarHash(?string $discordAvatarHash): static
+    {
+        $this->discordAvatarHash = $discordAvatarHash;
+
+        return $this;
+    }
+
+    /** @return Collection<int, CharacterClaim> */
+    public function getCharacterClaims(): Collection
+    {
+        return $this->characterClaims;
+    }
+
+    public function addCharacterClaim(CharacterClaim $claim): static
+    {
+        if (!$this->characterClaims->contains($claim)) {
+            $this->characterClaims->add($claim);
+            $claim->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCharacterClaim(CharacterClaim $claim): static
+    {
+        $this->characterClaims->removeElement($claim);
+
+        return $this;
+    }
+
+    public function getClaimChallenge(): ?CharacterClaimChallenge
+    {
+        return $this->claimChallenge;
+    }
+
+    public function setClaimChallenge(?CharacterClaimChallenge $claimChallenge): static
+    {
+        $this->claimChallenge = $claimChallenge;
 
         return $this;
     }

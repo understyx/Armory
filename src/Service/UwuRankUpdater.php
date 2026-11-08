@@ -8,6 +8,8 @@ use App\Repository\UwuLogRankRepository;
 
 class UwuRankUpdater
 {
+    public const REQUEST_SPACING_MS = 5000;
+
     public function __construct(
         private readonly UwuLogsService $uwuLogsService,
         private readonly UwuLogRankRepository $rankRepository,
@@ -15,19 +17,21 @@ class UwuRankUpdater
     ) {
     }
 
-    public function getOrRefresh(string $characterName, string $realmName, string $spec = '1'): array
+    public function getOrRefresh(string $characterName, string $realmName, string $spec = '1', bool $forceRefresh = false): array
     {
-        $cached = $this->rankRepository->findCached(
-            $characterName,
-            $realmName,
-            $spec,
-            new \DateTimeImmutable('-'.UwuLogUpdateThrottle::COOLDOWN_SECONDS.' seconds'),
-        );
-        if ($cached !== null && $cached->getPayload() !== []) {
-            return $cached->getPayload() + [
-                'cached' => true,
-                'cachedAt' => $cached->getScrapedAt()?->format(\DateTimeInterface::ATOM),
-            ];
+        if (!$forceRefresh) {
+            $cached = $this->rankRepository->findCached(
+                $characterName,
+                $realmName,
+                $spec,
+                new \DateTimeImmutable('-'.UwuLogUpdateThrottle::COOLDOWN_SECONDS.' seconds'),
+            );
+            if ($cached !== null && $cached->getPayload() !== []) {
+                return $cached->getPayload() + [
+                    'cached' => true,
+                    'cachedAt' => $cached->getScrapedAt()?->format(\DateTimeInterface::ATOM),
+                ];
+            }
         }
 
         $decision = $this->updateThrottle->claim($characterName, $realmName);

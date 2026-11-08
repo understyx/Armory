@@ -20,6 +20,13 @@ symfony server:start
 
 The installer prompts for the database connection, application URL, and optional Discord OAuth credentials. It can start the bundled MariaDB container, installs PHP dependencies, creates the database, runs migrations, and optionally imports the item data. It stores local values in `.env.local`, which is ignored by Git.
 
+To enable Discord sign-in, create a Discord application, add the exact callback URL
+`https://your-domain.example/connect/discord/check` under **OAuth2 → Redirects**,
+and set `OAUTH_DISCORD_ID` and `OAUTH_DISCORD_SECRET` in `.env.local` or the
+production environment. The app requests only the `identify` scope. Signed-in
+users can link a Warmane character from `/account` by removing a randomly chosen
+piece of equipped gear during the armory scan challenge.
+
 The default database block is:
 
 ```dotenv
@@ -158,6 +165,11 @@ php bin/console cache:clear
 
 Ensure the web-server user can write to `var/`. Run `php bin/console app:purge-snapshots` periodically to delete character snapshots not updated for 60 days (`--days=N` to change, `--dry-run` to only count).
 
+Character-link scans run only in the `async` Messenger transport. Keep the
+`armorystuff-messenger` worker running while users link characters; temporary
+Warmane armory fetch failures remain pending and retry in the background until
+the one-hour challenge expires.
+
 ## Public character API
 
 Read the most recently cached character snapshot:
@@ -204,8 +216,10 @@ Accepted requests return `202 Accepted`. A character may only be requested once
 every five minutes; requests made during that window return `429 Too Many Requests`
 with a `Retry-After` header. Refreshes are processed by the Messenger worker, so
 production must keep `armorystuff-messenger` (or an equivalent
-`messenger:consume async` process) running. Uwu-logs rank jobs use the separate
-`armorystuff-uwu` worker (`messenger:consume uwu`).
+`messenger:consume async` process) running. Accepted character refreshes also queue
+a Uwu-logs refresh for the cached best specialization, or specs 1, 2, and 3 at
+five-second intervals when no rank exists; these jobs use the separate
+`armorystuff-uwu` worker (`messenger:consume uwu`) and still respect its per-character throttle.
 
 ## Public reference API
 

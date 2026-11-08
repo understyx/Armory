@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\CharacterSnapshot;
 use App\Http\ConditionalResponse;
 use App\Message\RefreshCharacterSnapshotMessage;
+use App\Message\RefreshUwuRankMessage;
 use App\Repository\CharacterSnapshotRepository;
 use App\Repository\UwuLogRankRepository;
 use App\Service\ArmoryScraperService;
@@ -17,6 +18,7 @@ use App\Service\CharacterRefreshTracker;
 use App\Service\CharacterSnapshotUpdater;
 use App\Service\CharacterStatCalculator;
 use App\Service\CharacterUpdateThrottle;
+use App\Service\UwuRankUpdater;
 use App\Service\PaperdollService;
 use App\Service\TalentTreeService;
 use Psr\Log\LoggerInterface;
@@ -26,6 +28,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\DelayStamp;
 use Symfony\Component\Routing\Attribute\Route;
 
 class CharacterViewController extends AbstractController
@@ -150,7 +153,7 @@ class CharacterViewController extends AbstractController
             dirname(__DIR__).'/Entity/CharacterSnapshot.php',
             dirname(__DIR__).'/Service/CharacterStatCalculator.php',
             dirname(__DIR__).'/Service/WotlkBaseStatTable.php',
-        ]);
+        ], userSpecific: $request->hasPreviousSession());
     }
 
     #[Route('/characters/{characterName}/{realmName}/stats-panel', name: 'app_character_stats_panel', methods: ['GET'])]
@@ -192,7 +195,7 @@ class CharacterViewController extends AbstractController
             dirname(__DIR__).'/Entity/CharacterSnapshot.php',
             dirname(__DIR__).'/Service/CharacterStatCalculator.php',
             dirname(__DIR__).'/Service/WotlkBaseStatTable.php',
-        ]);
+        ], userSpecific: $request->hasPreviousSession());
     }
 
     #[Route('/characters/{characterName}/{realmName}/refresh', name: 'app_character_refresh', methods: ['POST'])]
@@ -242,6 +245,7 @@ class CharacterViewController extends AbstractController
                 $this->messageBus,
                 new RefreshCharacterSnapshotMessage($characterName, $realmName),
             );
+            $this->queueUwuRankRefresh($characterName, $realmName);
 
             if (!$hasSnapshot) {
                 if ($wantsJson) {
@@ -664,6 +668,39 @@ class CharacterViewController extends AbstractController
         }
     }
 
+    private function queueUwuRankRefresh(string $characterName, string $realmName): void
+    {
+        if ($this->uwuRankRepository === null || $this->messageBus === null) {
+            return;
+        }
+
+        try {
+            $bestSpec = $this->uwuRankRepository->findBest($characterName, $realmName)?->getSpec();
+            if ($bestSpec !== null) {
+                DeduplicatingMessageDispatcher::dispatch(
+                    $this->messageBus,
+                    new RefreshUwuRankMessage($characterName, $realmName, $bestSpec, forceRefresh: true),
+                );
+
+                return;
+            }
+
+            foreach (['1', '2', '3'] as $index => $spec) {
+                DeduplicatingMessageDispatcher::dispatch(
+                    $this->messageBus,
+                    new RefreshUwuRankMessage($characterName, $realmName, $spec, forceRefresh: true),
+                    [new DelayStamp(($index + 1) * UwuRankUpdater::REQUEST_SPACING_MS)],
+                );
+            }
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Unable to queue Uwu-logs rank refresh after character refresh.', [
+                'character' => $characterName,
+                'realm' => $realmName,
+                'exception' => $exception,
+            ]);
+        }
+    }
+
     private function formatRefreshEta(int $seconds): string
     {
         if ($seconds < 60) {
@@ -795,7 +832,7 @@ class CharacterViewController extends AbstractController
             dirname(__DIR__).'/Service/CharacterStatCalculator.php',
             dirname(__DIR__).'/Service/WotlkBaseStatTable.php',
             dirname(__DIR__, 2).'/assets/styles/app.css',
-        ]);
+        ], userSpecific: $request->hasPreviousSession());
     }
 
     /**

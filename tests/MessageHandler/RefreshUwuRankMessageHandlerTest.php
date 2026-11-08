@@ -18,7 +18,7 @@ final class RefreshUwuRankMessageHandlerTest extends TestCase
     public function testItRefreshesTheQueuedSpec(): void
     {
         $updater = $this->createMock(UwuRankUpdater::class);
-        $updater->expects(self::once())->method('getOrRefresh')->with('Imtilted', 'Icecrown', '2')->willReturn([]);
+        $updater->expects(self::once())->method('getOrRefresh')->with('Imtilted', 'Icecrown', '2', false)->willReturn([]);
 
         $bus = $this->createMock(MessageBusInterface::class);
         $bus->expects(self::never())->method('dispatch');

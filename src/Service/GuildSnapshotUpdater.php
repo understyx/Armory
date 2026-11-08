@@ -10,8 +10,6 @@ use Symfony\Component\Messenger\Stamp\DelayStamp;
 
 class GuildSnapshotUpdater
 {
-    private const UWU_REQUEST_SPACING_MS = 5000;
-
     public function __construct(
         private readonly ArmoryScraperService $armoryScraperService,
         private readonly GuildSnapshotRepository $snapshotRepository,
@@ -45,7 +43,7 @@ class GuildSnapshotUpdater
         $jobIndex = 0;
         foreach ($data['members'] as $member) {
             foreach (['1', '2', '3'] as $spec) {
-                $delay = ++$jobIndex * self::UWU_REQUEST_SPACING_MS;
+                $delay = ++$jobIndex * UwuRankUpdater::REQUEST_SPACING_MS;
                 DeduplicatingMessageDispatcher::dispatch(
                     $this->messageBus,
                     new RefreshUwuRankMessage($member['name'], $realmName, $spec),

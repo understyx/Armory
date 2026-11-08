@@ -33,7 +33,12 @@ final class RefreshUwuRankMessageHandler
         $contactedUwuLogs = true;
 
         try {
-            $rank = $this->updater->getOrRefresh($message->characterName, $message->realmName, $message->spec);
+            $rank = $this->updater->getOrRefresh(
+                $message->characterName,
+                $message->realmName,
+                $message->spec,
+                $message->forceRefresh,
+            );
             $contactedUwuLogs = !($rank['cached'] ?? false);
         } catch (UwuLogsException $exception) {
             if ($exception->getHttpStatus() === 404) {

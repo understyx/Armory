@@ -73,6 +73,7 @@ final class GuildControllerTest extends WebTestCase
         self::assertSelectorTextContains('body', 'One roster refresh is available each day');
         self::assertSelectorExists('.site-header-search select[name="type"]');
         self::assertSelectorExists('.site-header-brand[href="/"]');
+        self::assertSelectorTextContains('.discord-login-button', 'Log in with Discord');
         self::assertSelectorNotExists('.btn-refresh:disabled');
     }
 

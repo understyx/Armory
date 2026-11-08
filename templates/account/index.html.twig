@@ -1,0 +1,110 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Your account — Warmane Armory{% endblock %}
+{% block description %}Manage your Discord account and linked Warmane characters.{% endblock %}
+
+{% block body %}
+    <main class="armory-wrapper account-page" data-claim-status-url="{{ path('account_link_status') }}" data-claim-state="{{ challenge ? challenge.state : 'none' }}" data-claim-revision="{{ challenge ? challenge.stateRevision : 0 }}">
+        {% include '_site_header.html.twig' %}
+
+        {% for label, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="account-alert" role="status">{{ message }}</div>
+            {% endfor %}
+        {% endfor %}
+
+        <section class="account-card" aria-labelledby="account-title">
+            <h1 id="account-title">Your account</h1>
+            <div class="account-identity">
+                {% set discordAvatar = user.discordAvatarHash
+                    ? 'https://cdn.discordapp.com/avatars/' ~ user.discordId ~ '/' ~ user.discordAvatarHash ~ (user.discordAvatarHash starts with 'a_' ? '.gif' : '.png') ~ '?size=96'
+                    : 'https://cdn.discordapp.com/embed/avatars/0.png' %}
+                <img src="{{ discordAvatar }}" alt="" width="48" height="48">
+                <div>
+                    <strong>{{ user.discordUsername|default('Discord user') }}</strong>
+                    <span>Discord account</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="account-card" aria-labelledby="linked-characters-title">
+            <h2 id="linked-characters-title">Linked characters</h2>
+            {% if claims is empty %}
+                <p class="account-muted">No characters are linked yet.</p>
+            {% else %}
+                <ul class="claim-list">
+                    {% for claim in claims %}
+                        <li>
+                            <div>
+                                <a href="{{ path('app_character_view', {characterName: claim.name, realmName: claim.realm}) }}">{{ claim.name }} · {{ claim.realm }}</a>
+                                <span>Verified {{ claim.verifiedAt|date('M j, Y') }}</span>
+                            </div>
+                            <form action="{{ path('account_character_unlink', {id: claim.id}) }}" method="post">
+                                <input type="hidden" name="_token" value="{{ csrf_token('unlink-character-' ~ claim.id) }}">
+                                <button type="submit" class="account-secondary-button">Unlink</button>
+                            </form>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </section>
+
+        <section class="account-card" aria-labelledby="link-character-title">
+            <h2 id="link-character-title">Link a character</h2>
+            <form class="claim-start-form" action="{{ path('account_link_start') }}" method="post">
+                <input type="hidden" name="_token" value="{{ csrf_token('link-character') }}">
+                <label for="claim-name">Character name</label>
+                <input id="claim-name" name="name" type="text" maxlength="12" pattern="(?:[A-Za-z]{1,12}|C_[0-9]+)" required>
+                <label for="claim-realm">Realm</label>
+                <select id="claim-realm" name="realm" required>
+                    {% for realm in realms %}<option value="{{ realm }}">{{ realm }}</option>{% endfor %}
+                </select>
+                <button type="submit" class="account-primary-button">Start link challenge</button>
+            </form>
+        </section>
+
+        {% if challenge %}
+            <section class="account-card claim-challenge" aria-labelledby="claim-challenge-title">
+                <h2 id="claim-challenge-title">Link challenge for {{ challenge.name }} · {{ challenge.realm }}</h2>
+                {% if challenge.state in ['scanning_baseline', 'scanning_verify'] %}
+                    <p class="claim-scan-status" role="status">Scanning Warmane armory…</p>
+                {% elseif challenge.state == 'awaiting_removal' %}
+                    <p>Unequip these items in game, then log out to the character selection screen so Warmane’s armory updates. Then press Verify.</p>
+                    <ul class="challenge-items">
+                        {% for item in challenge.requiredSlots %}
+                            <li>
+                                {% if item.icon %}<img src="https://wow.zamimg.com/images/wow/icons/large/{{ item.icon|lower }}.jpg" alt="" width="36" height="36">{% endif %}
+                                <span>{{ item.name }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <div class="challenge-actions">
+                        <form action="{{ path('account_link_verify') }}" method="post">
+                            <input type="hidden" name="_token" value="{{ csrf_token('verify-character-claim') }}">
+                            <button type="submit" class="account-primary-button">Verify</button>
+                        </form>
+                        <form action="{{ path('account_link_cancel') }}" method="post">
+                            <input type="hidden" name="_token" value="{{ csrf_token('cancel-character-claim') }}">
+                            <button type="submit" class="account-secondary-button">Cancel</button>
+                        </form>
+                    </div>
+                {% elseif challenge.state == 'verified' %}
+                    <p class="claim-success" role="status">Character linked successfully.</p>
+                {% elseif challenge.state == 'not_found' %}
+                    <p role="status">Warmane could not find this character.</p>
+                {% elseif challenge.state == 'no_items' %}
+                    <p role="status">Equip at least one item and start again.</p>
+                {% elseif challenge.state == 'expired' %}
+                    <p role="status">This link challenge expired after one hour. Start again when you are ready.</p>
+                {% endif %}
+                {% if challenge.state != 'scanning_baseline' and challenge.state != 'scanning_verify' and challenge.state != 'awaiting_removal' %}
+                    <form action="{{ path('account_link_cancel') }}" method="post">
+                        <input type="hidden" name="_token" value="{{ csrf_token('cancel-character-claim') }}">
+                        <button type="submit" class="account-secondary-button">Dismiss</button>
+                    </form>
+                {% endif %}
+            </section>
+        {% endif %}
+    </main>
+    <script type="module" src="{{ asset('character-claim-status.js') }}"></script>
+{% endblock %}

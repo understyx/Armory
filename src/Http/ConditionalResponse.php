@@ -24,9 +24,10 @@ final class ConditionalResponse
         int $maxAge = 0,
         int $sharedMaxAge = 60,
         bool $sessionIndependent = false,
+        bool $userSpecific = false,
     ): Response
     {
-        if (!$sessionIndependent && self::hasSessionContent($request)) {
+        if ($userSpecific || (!$sessionIndependent && self::hasSessionContent($request))) {
             $response->setPrivate();
             $response->setMaxAge(0);
             $response->headers->addCacheControlDirective('no-store');

@@ -111,7 +111,7 @@ final class GuildController extends AbstractController
             dirname(__DIR__).'/Repository/UwuLogRankRepository.php',
             dirname(__DIR__).'/Repository/GuildSnapshotRepository.php',
             dirname(__DIR__).'/Service/GuildUpdateThrottle.php',
-        ]);
+        ], userSpecific: $request->hasPreviousSession());
     }
 
     private function renderNotFound(string $guildName, string $realmName): Response

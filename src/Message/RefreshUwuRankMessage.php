@@ -8,6 +8,7 @@ final readonly class RefreshUwuRankMessage
         public string $characterName,
         public string $realmName,
         public string $spec,
+        public bool $forceRefresh = false,
     ) {
     }
 }
