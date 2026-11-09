@@ -57,4 +57,5 @@ final class AccountControllerTest extends WebTestCase
         self::assertStringContainsString('private', (string) $client->getResponse()->headers->get('Cache-Control'));
         self::assertStringContainsString('no-store', (string) $client->getResponse()->headers->get('Cache-Control'));
     }
+
 }

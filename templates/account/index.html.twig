@@ -3,6 +3,11 @@
 {% block title %}Your account — Warmane Armory{% endblock %}
 {% block description %}Manage your Discord account and linked Warmane characters.{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+{% endblock %}
+
 {% block body %}
     <main class="armory-wrapper account-page" data-claim-status-url="{{ path('account_link_status') }}" data-claim-state="{{ challenge ? challenge.state : 'none' }}" data-claim-revision="{{ challenge ? challenge.stateRevision : 0 }}">
         {% include '_site_header.html.twig' %}
@@ -23,6 +28,7 @@
                 <div>
                     <strong>{{ user.discordUsername|default('Discord user') }}</strong>
                     <span>Discord account</span>
+                    {% if user.discordUsername %}<a href="{{ path('app_user_profile', {discordUsername: user.discordUsername}) }}">View public profile</a>{% endif %}
                 </div>
             </div>
         </section>

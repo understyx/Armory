@@ -71,6 +71,11 @@ class UwuLogRank
     }
     public function getSpecName(?string $className): string
     {
+        $className ??= match ((int) ($this->payload['classId'] ?? 0)) {
+            1 => 'Warrior', 2 => 'Paladin', 3 => 'Hunter', 4 => 'Rogue', 5 => 'Priest',
+            6 => 'Death Knight', 7 => 'Shaman', 8 => 'Mage', 9 => 'Warlock', 11 => 'Druid',
+            default => null,
+        };
         $names = [
             'Warrior' => ['1' => 'Arms', '2' => 'Fury', '3' => 'Protection'],
             'Paladin' => ['1' => 'Holy', '2' => 'Protection', '3' => 'Retribution'],

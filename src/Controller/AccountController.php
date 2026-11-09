@@ -9,6 +9,7 @@ use App\Repository\CharacterClaimChallengeRepository;
 use App\Repository\CharacterClaimRepository;
 use App\Routing\RouteRequirements;
 use App\Service\CharacterClaimChallengeManager;
+use App\Service\BestCharacterRankService;
 use App\Service\DeduplicatingMessageDispatcher;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -26,6 +27,7 @@ final class AccountController extends AbstractController
         private readonly CharacterClaimRepository $claimRepository,
         private readonly CharacterClaimChallengeRepository $challengeRepository,
         private readonly CharacterClaimChallengeManager $challengeManager,
+        private readonly BestCharacterRankService $bestCharacterRankService,
         private readonly EntityManagerInterface $entityManager,
         private readonly MessageBusInterface $messageBus,
     ) {
@@ -130,8 +132,7 @@ final class AccountController extends AbstractController
         if ($this->isCsrfTokenValid('unlink-character-'.$id, $request->request->getString('_token'))) {
             $claim = $this->claimRepository->findOneBy(['id' => $id, 'user' => $this->currentUser()]);
             if ($claim !== null) {
-                $this->entityManager->remove($claim);
-                $this->entityManager->flush();
+                $this->bestCharacterRankService->unlinkClaim($claim);
             }
         }
 

@@ -4,6 +4,7 @@ namespace App\Security;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
+use App\Service\BestCharacterRankService;
 use Doctrine\ORM\EntityManagerInterface;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use KnpU\OAuth2ClientBundle\Security\Authenticator\OAuth2Authenticator;
@@ -29,6 +30,7 @@ final class DiscordAuthenticator extends OAuth2Authenticator implements Authenti
         private readonly EntityManagerInterface $entityManager,
         private readonly RouterInterface $router,
         private readonly UserRepository $userRepository,
+        private readonly BestCharacterRankService $bestCharacterRankService,
     ) {
     }
 
@@ -55,10 +57,12 @@ final class DiscordAuthenticator extends OAuth2Authenticator implements Authenti
                 ->setDiscordId($discordId)
                 ->setDiscordUsername($discordUser->getUsername())
                 ->setDiscordAvatarHash($discordUser->getAvatarHash())
+                ->setLastLoginAt(new \DateTimeImmutable())
                 ->setRoles(['ROLE_USER']);
 
             $this->entityManager->persist($user);
             $this->entityManager->flush();
+            $this->bestCharacterRankService->recompute($user);
 
             return $user;
         }));

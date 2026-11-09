@@ -15,6 +15,7 @@
     <script type="module" src="{{ asset('item-tooltip.js') }}"></script>
     <script type="module" src="{{ asset('talent-tree.js') }}"></script>
     <script type="module" src="{{ asset('character-refresh.js') }}"></script>
+    <script type="module" src="{{ asset('character-comments.js') }}"></script>
 </head>
 <body>
     <div class="armory-wrapper character-page">
@@ -108,6 +109,7 @@
             <a href="#profile-rankings">Rankings</a>
             <a href="#profile-pvp">PvP</a>
             <a href="#profile-history">History</a>
+            <a href="#profile-comments">Comments</a>
         </nav>
 
         {# SECTION 1: CHARACTER EQUIPMENT & ITEMS #}
@@ -462,6 +464,15 @@
                     </div>
                 {% endif %}
             </div>
+            {% if wowSimLinks is not empty %}
+                <nav class="wow-sim-links" aria-label="WoWSims links">
+                    {% for spec in parsedSpecs %}
+                        {% if wowSimLinks[spec.specId] is defined %}
+                            <a class="wow-sim-link" href="{{ wowSimLinks[spec.specId] }}" target="_blank" rel="noopener noreferrer">Sim · {{ spec.specName }}</a>
+                        {% endif %}
+                    {% endfor %}
+                </nav>
+            {% endif %}
 
             <div id="talent-spec-panes">
             {% for spec in parsedSpecs %}
@@ -857,6 +868,15 @@
                 <p style="color: var(--text-muted);">No recent arena/battleground match history recorded.</p>
             {% endif %}
         </div>
+
+        <section id="profile-comments" class="content-card section-card character-comments-section" aria-labelledby="profile-comments-title">
+            <div class="section-header">
+                <h2 id="profile-comments-title">Comments</h2>
+            </div>
+            <p class="comment-muted">Comments are loaded when you ask for them.</p>
+            <button type="button" class="comment-more-button" data-comments-load data-url="{{ path('app_character_comments', {characterName: characterName, realmName: realmName}) }}">Load comments</button>
+            <div id="character-comments-content" aria-live="polite"></div>
+        </section>
 
     </div>
 

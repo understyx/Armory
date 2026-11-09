@@ -27,6 +27,10 @@ production environment. The app requests only the `identify` scope. Signed-in
 users can link a Warmane character from `/account` by removing a randomly chosen
 piece of equipped gear during the armory scan challenge.
 
+Character profiles have an optional, paginated comments section; posting requires a linked character with at least 50 Uwu-logs points. Public Discord profiles at `/users/{discordUsername}` list linked characters and their cached ranks.
+
+Comment authors' best linked character is denormalized on the user record and refreshed at Discord login and when claims or rankings change, so loading comments does not query claims or Uwu-logs ranks. Comments are limited to 255 normalized characters; only YouTube and Twitch links are clickable. Supported character talent specs include deterministic "Sim" links to Poli's WoWSims importer, generated from cached snapshot data.
+
 The default database block is:
 
 ```dotenv
@@ -244,4 +248,5 @@ composer validate --no-check-publish
 php bin/phpunit
 php bin/console lint:container
 php bin/console lint:twig templates
+php bin/console doctrine:schema:validate --skip-sync
 ```

@@ -1,0 +1,70 @@
+{% if error %}
+    <p class="comment-error" role="alert">{{ error }}</p>
+{% endif %}
+
+{% if comments is empty %}
+    <p class="comment-muted">No comments yet.</p>
+{% else %}
+    <div class="character-comment-list" data-comment-list>
+        {% for comment in comments %}
+            {% set author = comment.user %}
+            {% set username = author.discordUsername|default('Discord user') %}
+            {% set avatar = author.discordAvatarHash
+                ? 'https://cdn.discordapp.com/avatars/' ~ author.discordId ~ '/' ~ author.discordAvatarHash ~ (author.discordAvatarHash starts with 'a_' ? '.gif' : '.png') ~ '?size=64'
+                : 'https://cdn.discordapp.com/embed/avatars/0.png' %}
+            {% set elapsed = max(0, now.timestamp - comment.createdAt.timestamp) %}
+            <article class="character-comment">
+                <img class="character-comment-avatar" src="{{ avatar }}" alt="" width="40" height="40" loading="lazy">
+                <div class="character-comment-content">
+                    <header class="character-comment-header">
+                        {% if author.discordUsername %}
+                            <a href="{{ path('app_user_profile', {discordUsername: author.discordUsername}) }}">{{ username }}</a>
+                        {% else %}
+                            <strong>{{ username }}</strong>
+                        {% endif %}
+                        <time datetime="{{ comment.createdAt|date('c') }}" title="{{ comment.createdAt|date('M j, Y H:i') }} UTC">
+                            {% if elapsed < 60 %}just now
+                            {% elseif elapsed < 3600 %}{{ (elapsed / 60)|round(0, 'floor') }} min ago
+                            {% elseif elapsed < 86400 %}{{ (elapsed / 3600)|round(0, 'floor') }} hr ago
+                            {% else %}{{ (elapsed / 86400)|round(0, 'floor') }} days ago{% endif %}
+                        </time>
+                        {% if user and (user.id == author.id or is_granted('ROLE_ADMIN')) %}
+                            <form action="{{ path('app_character_comment_delete', {characterName: characterName, realmName: realmName, id: comment.id}) }}" method="post" data-comment-delete>
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete-character-comment-' ~ comment.id) }}">
+                                <button type="submit" class="comment-delete-button">Delete</button>
+                            </form>
+                        {% endif %}
+                    </header>
+                    {% if author.bestCharacterName and author.bestCharacterRealm and author.bestCharacterPoints is not null %}
+                        <p class="character-comment-best">
+                            Best linked character:
+                            <a href="{{ path('app_character_view', {characterName: author.bestCharacterName, realmName: author.bestCharacterRealm}) }}">{{ author.bestCharacterName }} · {{ author.bestCharacterRealm }}</a>
+                            {% if author.bestCharacterSpec %}· {{ author.bestCharacterSpec }}{% endif %}
+                            · {{ author.bestCharacterPoints|number_format(2) }} points
+                        </p>
+                    {% endif %}
+                    <div class="character-comment-body">{{ commentContent.linkify(comment.body)|raw }}</div>
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{% if hasMore %}
+    <button type="button" class="comment-more-button" data-comments-more data-url="{{ path('app_character_comments', {characterName: characterName, realmName: realmName, page: nextPage}) }}">Load more</button>
+{% endif %}
+
+{% if includeForm %}
+    {% if user and canComment %}
+        <form class="character-comment-form" action="{{ path('app_character_comment_create', {characterName: characterName, realmName: realmName}) }}" method="post" data-comment-form>
+            <label for="character-comment-body">Add a comment</label>
+            <textarea id="character-comment-body" name="body" rows="4" maxlength="255" required>{{ draft }}</textarea>
+            <input type="hidden" name="_token" value="{{ csrf_token('comment-post') }}">
+            <button type="submit" class="comment-submit-button">Post comment</button>
+        </form>
+    {% elseif user %}
+        <p class="comment-eligibility-message">Link a character with 50+ Uwu-logs points on your <a href="{{ path('app_account') }}">account page</a> to comment.</p>
+    {% else %}
+        <p class="comment-eligibility-message"><a href="{{ path('app_login', {return: path('app_character_view', {characterName: characterName, realmName: realmName})}) }}">Log in with Discord to comment</a>.</p>
+    {% endif %}
+{% endif %}

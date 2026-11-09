@@ -27,6 +27,37 @@ class CharacterSnapshotRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    /** @param list<array{name: string, realm: string}> $characters @return array<string, array<string, mixed>> */
+    public function findDetailsForCharacters(array $characters): array
+    {
+        if ($characters === []) {
+            return [];
+        }
+
+        $query = $this->createQueryBuilder('c')
+            ->select('c.name AS name, c.realm AS realm, c.class AS characterClass, c.level AS level, c.gearScore AS gearScore');
+        $matches = $query->expr()->orX();
+        foreach (array_values($characters) as $index => $character) {
+            $nameKey = 'characterName'.$index;
+            $realmKey = 'characterRealm'.$index;
+            $matches->add('(c.name = :'.$nameKey.' AND c.realm = :'.$realmKey.')');
+            $query->setParameter($nameKey, ucfirst(trim($character['name'])));
+            $query->setParameter($realmKey, ucfirst(trim($character['realm'])));
+        }
+
+        $rows = $query->where($matches)->getQuery()->getArrayResult();
+        $details = [];
+        foreach ($rows as $row) {
+            $details[self::characterKey((string) $row['name'], (string) $row['realm'])] = [
+                'class' => $row['characterClass'],
+                'level' => $row['level'],
+                'gearScore' => $row['gearScore'],
+            ];
+        }
+
+        return $details;
+    }
+
     /** @return list<array{name: string, realm: string}> */
     public function findRecentlyViewed(int $limit = 10): array
     {
@@ -219,5 +250,10 @@ class CharacterSnapshotRepository extends ServiceEntityRepository
         } while ($batch > 0);
 
         return $deleted;
+    }
+
+    private static function characterKey(string $name, string $realm): string
+    {
+        return strtolower(trim($name))."\0".strtolower(trim($realm));
     }
 }

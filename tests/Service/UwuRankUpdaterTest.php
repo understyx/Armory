@@ -10,6 +10,7 @@ use App\Service\UwuLogsService;
 use App\Service\UwuLogUpdateThrottle;
 use App\Service\UwuLogUpdateThrottleDecision;
 use App\Service\UwuRankUpdater;
+use App\Service\BestCharacterRankService;
 use PHPUnit\Framework\TestCase;
 
 final class UwuRankUpdaterTest extends TestCase
@@ -46,8 +47,10 @@ final class UwuRankUpdaterTest extends TestCase
         $service->expects(self::once())->method('fetchRankings')->willReturn($payload);
         $throttle = $this->createMock(UwuLogUpdateThrottle::class);
         $throttle->method('claim')->willReturn(new UwuLogUpdateThrottleDecision(true, new \DateTimeImmutable('+4 seconds')));
+        $bestCharacter = $this->createMock(BestCharacterRankService::class);
+        $bestCharacter->expects(self::once())->method('refreshForCharacter')->with('Imtilted', 'Icecrown');
 
-        $result = (new UwuRankUpdater($service, $repository, $throttle))->getOrRefresh('Imtilted', 'Icecrown', '1');
+        $result = (new UwuRankUpdater($service, $repository, $throttle, $bestCharacter))->getOrRefresh('Imtilted', 'Icecrown', '1');
 
         self::assertFalse($result['cached']);
         self::assertSame(42, $result['overallRank']);

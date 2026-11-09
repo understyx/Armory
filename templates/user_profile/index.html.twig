@@ -1,0 +1,61 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ profileUser.discordUsername|default('Discord user') }} — Warmane Armory{% endblock %}
+{% block description %}Linked Warmane characters for {{ profileUser.discordUsername|default('a Discord user') }}.{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+{% endblock %}
+
+{% block body %}
+    <main class="armory-wrapper user-profile-page">
+        {% include '_site_header.html.twig' %}
+
+        <section class="user-profile-card" aria-labelledby="user-profile-title">
+            {% set avatar = profileUser.discordAvatarHash
+                ? 'https://cdn.discordapp.com/avatars/' ~ profileUser.discordId ~ '/' ~ profileUser.discordAvatarHash ~ (profileUser.discordAvatarHash starts with 'a_' ? '.gif' : '.png') ~ '?size=128'
+                : 'https://cdn.discordapp.com/embed/avatars/0.png' %}
+            <div class="user-profile-identity">
+                <img src="{{ avatar }}" alt="" width="72" height="72">
+                <div>
+                    <p class="user-profile-kicker">Discord profile</p>
+                    <h1 id="user-profile-title">{{ profileUser.discordUsername|default('Discord user') }}</h1>
+                </div>
+            </div>
+        </section>
+
+        <section class="user-profile-card" aria-labelledby="user-profile-characters-title">
+            <h2 id="user-profile-characters-title">Linked characters</h2>
+            {% if characters is empty %}
+                <p class="comment-muted">No characters are linked to this account.</p>
+            {% else %}
+                <ul class="user-profile-character-list">
+                    {% for character in characters %}
+                        {% set claim = character.claim %}
+                        <li>
+                            <div class="user-profile-character-heading">
+                                <a href="{{ path('app_character_view', {characterName: claim.name, realmName: claim.realm}) }}">{{ claim.name }} · {{ claim.realm }}</a>
+                                <span>Verified {{ claim.verifiedAt|date('M j, Y') }}</span>
+                            </div>
+                            {% if character.snapshot %}
+                                <p>{{ character.snapshot.class|default('Unknown class') }} · Level {{ character.snapshot.level|default('—') }} · GearScore {{ character.snapshot.gearScore|default('—') }}</p>
+                            {% else %}
+                                <p>Character data has not been cached yet.</p>
+                            {% endif %}
+                            {% if character.rank %}
+                                <p class="user-profile-rank">
+                                    Best Uwu-logs rank: {{ character.rank.getSpecName(character.snapshot ? character.snapshot.class : null) }}
+                                    · {{ character.rank.overallPoints|number_format(2) }} points
+                                    {% if character.rank.overallRank > 0 %}· #{{ character.rank.overallRank|number_format }}{% endif %}
+                                </p>
+                            {% else %}
+                                <p class="user-profile-rank">No Uwu-logs rank cached.</p>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </section>
+    </main>
+{% endblock %}

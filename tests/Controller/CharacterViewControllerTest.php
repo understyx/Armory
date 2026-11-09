@@ -138,6 +138,7 @@ class CharacterViewControllerTest extends KernelTestCase
             null,
             null,
             new \App\Service\CharacterHitExpertiseService(new \App\Service\CharacterStatCalculator()),
+            wowSimLinkBuilder: new \App\Service\WowSimLinkBuilder(),
         );
         $controller->setContainer($container);
 
@@ -158,6 +159,8 @@ class CharacterViewControllerTest extends KernelTestCase
         $this->assertStringNotContainsString('Stats at level 80', $response->getContent());
         $this->assertStringNotContainsString('Level growth', $response->getContent());
         $this->assertStringContainsString('Uwu-logs overall points', $response->getContent());
+        $this->assertStringContainsString('Sim · Unholy', $response->getContent());
+        $this->assertStringContainsString('https://poli93.github.io/wotlk/deathknight/?i=gtmc#', $response->getContent());
         $this->assertStringContainsString('data-points="98" data-rank="1525" style="color: #ff3c00">98.00', $response->getContent());
         $this->assertStringContainsString('id="header-uwu-rank" class="stat-rank">#1,525', $response->getContent());
         $this->assertStringContainsString('id="header-uwu-spec" class="stat-meta">Unholy', $response->getContent());

@@ -8,8 +8,8 @@ use App\Enum\ItemTypes;
 use App\Message\ScanCharacterClaimMessage;
 use App\MessageHandler\ScanCharacterClaimMessageHandler;
 use App\Repository\CharacterClaimChallengeRepository;
-use App\Repository\CharacterClaimRepository;
 use App\Service\ArmoryScraperService;
+use App\Service\BestCharacterRankService;
 use App\Service\CharacterClaimSlotPicker;
 use App\Service\CharacterRefreshTracker;
 use App\Service\CharacterSnapshotUpdater;
@@ -102,9 +102,9 @@ final class ScanCharacterClaimMessageHandlerTest extends TestCase
         $owner->setDiscordId('new-owner');
         $challenge = $this->challenge(CharacterClaimChallenge::SCANNING_VERIFY, $owner);
         $challenge->setRequiredSlots([['slot' => 'head', 'id' => 100, 'name' => 'Head: Helm', 'icon' => null]]);
-        $claimRepository = $this->createMock(CharacterClaimRepository::class);
-        $claimRepository->expects(self::once())
-            ->method('transferOwnership')
+        $bestCharacterRankService = $this->createMock(BestCharacterRankService::class);
+        $bestCharacterRankService->expects(self::once())
+            ->method('transferClaim')
             ->with($owner, 'Testchar', 'Icecrown', self::isInstanceOf(\DateTimeImmutable::class));
         $scraper = $this->scraper('<summary>', true, []);
         $bus = $this->createMock(MessageBusInterface::class);
@@ -115,7 +115,7 @@ final class ScanCharacterClaimMessageHandlerTest extends TestCase
         $entityManager->expects(self::once())->method('getConnection')->willReturn($connection);
         $entityManager->expects(self::once())->method('flush');
 
-        $this->handler($challenge, $scraper, $entityManager, $bus, $claimRepository)(new ScanCharacterClaimMessage(5, ScanCharacterClaimMessage::VERIFY));
+        $this->handler($challenge, $scraper, $entityManager, $bus, $bestCharacterRankService)(new ScanCharacterClaimMessage(5, ScanCharacterClaimMessage::VERIFY));
 
         self::assertSame(CharacterClaimChallenge::VERIFIED, $challenge->getState());
     }
@@ -130,12 +130,10 @@ final class ScanCharacterClaimMessageHandlerTest extends TestCase
         $scraper = $this->scraper('<summary>', true, [
             ['id' => 200, 'name' => 'Necklace'],
         ]);
-        $claimRepository = $this->createMock(CharacterClaimRepository::class);
-        $claimRepository->expects(self::never())->method('findOneBy');
         $bus = $this->createMock(MessageBusInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
 
-        $this->handler($challenge, $scraper, $entityManager, $bus, $claimRepository)(new ScanCharacterClaimMessage(5, ScanCharacterClaimMessage::VERIFY));
+        $this->handler($challenge, $scraper, $entityManager, $bus)(new ScanCharacterClaimMessage(5, ScanCharacterClaimMessage::VERIFY));
 
         self::assertSame(CharacterClaimChallenge::AWAITING_REMOVAL, $challenge->getState());
         self::assertSame([['slot' => 'neck', 'id' => 200, 'name' => 'Neck: Necklace', 'icon' => null]], $challenge->getRequiredSlots());
@@ -162,7 +160,7 @@ final class ScanCharacterClaimMessageHandlerTest extends TestCase
         $entityManager->expects(self::never())->method('flush');
         $handler = new ScanCharacterClaimMessageHandler(
             $repository,
-            $this->createMock(CharacterClaimRepository::class),
+            $this->createMock(BestCharacterRankService::class),
             $entityManager,
             $scraper,
             $this->slotPicker(),
@@ -218,7 +216,7 @@ final class ScanCharacterClaimMessageHandlerTest extends TestCase
         ArmoryScraperService $scraper,
         EntityManagerInterface $entityManager,
         MessageBusInterface $bus,
-        ?CharacterClaimRepository $claimRepository = null,
+        ?BestCharacterRankService $bestCharacterRankService = null,
     ): ScanCharacterClaimMessageHandler {
         $repository = $this->createMock(CharacterClaimChallengeRepository::class);
         $repository->method('expireIfNeeded');
@@ -227,7 +225,7 @@ final class ScanCharacterClaimMessageHandlerTest extends TestCase
 
         return new ScanCharacterClaimMessageHandler(
             $repository,
-            $claimRepository ?? $this->createMock(CharacterClaimRepository::class),
+            $bestCharacterRankService ?? $this->createMock(BestCharacterRankService::class),
             $entityManager,
             $scraper,
             $this->slotPicker(),
@@ -245,7 +243,7 @@ final class ScanCharacterClaimMessageHandlerTest extends TestCase
         $entityManager->expects(self::never())->method('flush');
         $handler = new ScanCharacterClaimMessageHandler(
             $repository,
-            $this->createMock(CharacterClaimRepository::class),
+            $this->createMock(BestCharacterRankService::class),
             $entityManager,
             $scraper,
             $this->slotPicker(),

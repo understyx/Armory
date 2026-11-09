@@ -69,6 +69,50 @@ class UwuLogRankRepository extends ServiceEntityRepository
         return $best;
     }
 
+    /**
+     * @param list<array{name: string, realm: string}> $characters
+     * @return array<string, UwuLogRank>
+     */
+    public function findBestForCharactersAndRealms(array $characters): array
+    {
+        if ($characters === []) {
+            return [];
+        }
+
+        $requested = [];
+        $names = [];
+        $realms = [];
+        foreach ($characters as $character) {
+            $name = ucfirst(trim($character['name']));
+            $realm = ucfirst(trim($character['realm']));
+            $requested[self::characterKey($name, $realm)] = true;
+            $names[$name] = $name;
+            $realms[$realm] = $realm;
+        }
+
+        $rows = $this->createQueryBuilder('r')
+            ->where('r.name IN (:names)')
+            ->andWhere('r.realm IN (:realms)')
+            ->setParameter('names', array_values($names))
+            ->setParameter('realms', array_values($realms))
+            ->getQuery()
+            ->getResult();
+
+        $best = [];
+        foreach ($rows as $rank) {
+            $key = self::characterKey((string) $rank->getName(), (string) $rank->getRealm());
+            if (!isset($requested[$key])) {
+                continue;
+            }
+
+            if (!isset($best[$key]) || $rank->isBetterThan($best[$key])) {
+                $best[$key] = $rank;
+            }
+        }
+
+        return $best;
+    }
+
     /** @param list<string> $names @return array<string, GuildRankSummary> */
     public function findBestForCharacters(array $names, string $realm): array
     {
@@ -106,5 +150,10 @@ class UwuLogRankRepository extends ServiceEntityRepository
         }
 
         return $best;
+    }
+
+    private static function characterKey(string $name, string $realm): string
+    {
+        return strtolower(trim($name))."\0".strtolower(trim($realm));
     }
 }

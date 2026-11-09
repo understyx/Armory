@@ -21,6 +21,7 @@ use App\Service\CharacterUpdateThrottle;
 use App\Service\UwuRankUpdater;
 use App\Service\PaperdollService;
 use App\Service\TalentTreeService;
+use App\Service\WowSimLinkBuilder;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -55,6 +56,7 @@ class CharacterViewController extends AbstractController
         private readonly ?CharacterPageTooltipService $characterPageTooltipService = null,
         private readonly ?CharacterTooltipEnrichmentQueue $tooltipEnrichmentQueue = null,
         private readonly ?CharacterRefreshTracker $refreshTracker = null,
+        private readonly ?WowSimLinkBuilder $wowSimLinkBuilder = null,
     ) {
     }
 
@@ -792,6 +794,7 @@ class CharacterViewController extends AbstractController
             'professions' => $snapshot->getProfessions(),
             'glyphs' => $snapshot->getGlyphs(),
             'parsedSpecs' => $parsedSpecs,
+            'wowSimLinks' => $this->wowSimLinkBuilder?->buildLinks($snapshot, $parsedSpecs, $paperdollData['slots']) ?? [],
             'isWotlkServer' => $isWotlkServer,
             'paperdollSlots' => $paperdollData['slots'],
             'hitExpertiseBySpec' => $hitExpertiseBySpec,
@@ -831,6 +834,10 @@ class CharacterViewController extends AbstractController
             dirname(__DIR__).'/Service/CharacterHitExpertiseService.php',
             dirname(__DIR__).'/Service/CharacterStatCalculator.php',
             dirname(__DIR__).'/Service/WotlkBaseStatTable.php',
+            dirname(__DIR__).'/Service/WowSimLinkBuilder.php',
+            dirname(__DIR__, 2).'/data/wowsims/template.json',
+            dirname(__DIR__, 2).'/data/wowsims/spec_overrides.json',
+            dirname(__DIR__, 2).'/data/wowsims/wowsim_pb.json',
             dirname(__DIR__, 2).'/assets/styles/app.css',
         ], userSpecific: $request->hasPreviousSession());
     }

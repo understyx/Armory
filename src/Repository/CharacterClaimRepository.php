@@ -22,6 +22,32 @@ class CharacterClaimRepository extends ServiceEntityRepository
         return $this->findBy(['user' => $user], ['name' => 'ASC', 'realm' => 'ASC']);
     }
 
+    public function findOwnerIdByCharacter(string $name, string $realm): ?int
+    {
+        $ownerId = $this->getEntityManager()->getConnection()->fetchOne(
+            'SELECT user_id FROM character_claims WHERE name = :name AND realm = :realm LIMIT 1',
+            ['name' => ucfirst(trim($name)), 'realm' => ucfirst(trim($realm))],
+        );
+
+        return $ownerId === false ? null : (int) $ownerId;
+    }
+
+    /** @param list<int> $userIds @return list<CharacterClaim> */
+    public function findForUserIds(array $userIds): array
+    {
+        if ($userIds === []) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('c')
+            ->where('IDENTITY(c.user) IN (:userIds)')
+            ->setParameter('userIds', array_values(array_unique($userIds)))
+            ->orderBy('c.name', 'ASC')
+            ->addOrderBy('c.realm', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function transferOwnership(User $user, string $name, string $realm, \DateTimeImmutable $verifiedAt): void
     {
         $userId = $user->getId() ?? throw new \LogicException('A persisted user is required to own a character claim.');

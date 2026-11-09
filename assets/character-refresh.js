@@ -1,13 +1,35 @@
-const form = document.querySelector('[data-character-refresh]');
-const banner = document.querySelector('#character-refresh-status');
+let activeForm = null;
+let cleanupCurrent = null;
 
-if (form && banner) {
+const initialize = () => {
+    const form = document.querySelector('[data-character-refresh]');
+    const banner = document.querySelector('#character-refresh-status');
+
+    if (form && form === activeForm) return;
+    cleanupCurrent?.();
+    cleanupCurrent = null;
+    activeForm = null;
+
+    if (!form || !banner) return;
+
+    const lifecycle = new AbortController();
+    activeForm = form;
     const button = form.querySelector('button[type="submit"]');
     const statusUrl = form.dataset.statusUrl;
     const updatedLabel = document.querySelector('.scraped-relative');
     let pollTimer = null;
     let pollStartedAt = 0;
     let stopped = false;
+
+    const isActive = () => !lifecycle.signal.aborted && form.isConnected;
+
+    const cleanup = () => {
+        stopped = true;
+        if (pollTimer !== null) window.clearTimeout(pollTimer);
+        pollTimer = null;
+        lifecycle.abort();
+    };
+    cleanupCurrent = cleanup;
 
     const etaText = (seconds) => {
         const duration = Math.max(0, Number(seconds) || 20);
@@ -92,7 +114,7 @@ if (form && banner) {
     };
 
     const poll = async () => {
-        if (stopped) return;
+        if (stopped || !isActive()) return;
         if (Date.now() - pollStartedAt >= 10 * 60 * 1000) {
             stopPolling();
             show('Refresh is taking longer than expected. You can reload later to check for updated data.');
@@ -104,9 +126,11 @@ if (form && banner) {
             const response = await fetch(statusUrl, {
                 headers: { Accept: 'application/json' },
                 cache: 'no-store',
+                signal: lifecycle.signal,
             });
             if (!response.ok) throw new Error('Status request failed');
             const status = await response.json();
+            if (!isActive()) return;
             if (status.state === 'queued' || status.state === 'running') {
                 renderActive(status);
                 const delay = Date.now() - pollStartedAt >= 2 * 60 * 1000 ? 10000 : 3000;
@@ -115,7 +139,7 @@ if (form && banner) {
             }
             finish(status.state);
         } catch {
-            if (!stopped) {
+            if (!stopped && isActive()) {
                 const delay = Date.now() - pollStartedAt >= 2 * 60 * 1000 ? 10000 : 3000;
                 pollTimer = window.setTimeout(poll, delay);
             }
@@ -139,8 +163,10 @@ if (form && banner) {
                 method: 'POST',
                 headers: { Accept: 'application/json' },
                 body: new FormData(form),
+                signal: lifecycle.signal,
             });
             const result = await response.json();
+            if (!isActive()) return;
             if (result.state === 'loading' && result.redirect) {
                 window.location.assign(result.redirect);
                 return;
@@ -156,14 +182,21 @@ if (form && banner) {
             }
             finish(result.state, result.retryAfterSeconds);
         } catch {
-            show('Could not start the refresh. Try again in a moment.');
-            setBusy(false);
+            if (isActive()) {
+                show('Could not start the refresh. Try again in a moment.');
+                setBusy(false);
+            }
         }
-    });
+    }, { signal: lifecycle.signal });
 
-    fetch(statusUrl, { headers: { Accept: 'application/json' }, cache: 'no-store' })
+    fetch(statusUrl, {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+        signal: lifecycle.signal,
+    })
         .then((response) => response.ok ? response.json() : Promise.reject(new Error('Status request failed')))
         .then((status) => {
+            if (!isActive()) return;
             if (status.state === 'queued' || status.state === 'running') {
                 setBusy(true);
                 renderActive(status);
@@ -171,4 +204,14 @@ if (form && banner) {
             }
         })
         .catch(() => {});
-}
+};
+
+const stopForCache = () => {
+    cleanupCurrent?.();
+    cleanupCurrent = null;
+    activeForm = null;
+};
+
+initialize();
+document.addEventListener('turbo:load', initialize);
+document.addEventListener('turbo:before-cache', stopForCache);

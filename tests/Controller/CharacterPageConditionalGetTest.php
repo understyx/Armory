@@ -50,6 +50,9 @@ final class CharacterPageConditionalGetTest extends WebTestCase
         $client->request('GET', '/characters/Understyx/Icecrown');
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('.discord-login-button', 'Log in with Discord');
+        self::assertSelectorExists('[data-comments-load]');
+        self::assertStringNotContainsString('data-comment-list', $client->getResponse()->getContent());
+        self::assertStringNotContainsString('data-comment-form', $client->getResponse()->getContent());
         self::assertStringContainsString('public', (string) $client->getResponse()->headers->get('Cache-Control'));
         $etag = $client->getResponse()->headers->get('ETag');
         self::assertNotEmpty($etag);

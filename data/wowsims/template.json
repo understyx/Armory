@@ -1,0 +1,64 @@
+{
+  "player": {
+    "equipment": {
+      "items": []
+    },
+    "healingModel": {},
+    "bonusStats": {
+      "stats": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pseudoStats": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "reactionTimeMs": 200,
+    "nibelungAverageCasts": 11,
+    "itemSwap": {},
+    "glyphs": {}
+  }
+}

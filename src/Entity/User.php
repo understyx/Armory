@@ -32,6 +32,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $discordAvatarHash = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $lastLoginAt = null;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $bestCharacterName = null;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $bestCharacterRealm = null;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $bestCharacterSpec = null;
+
+    #[ORM\Column(type: 'float', nullable: true)]
+    private ?float $bestCharacterPoints = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $bestCharacterRank = null;
+
     /** @var Collection<int, CharacterClaim> */
     #[ORM\OneToMany(targetEntity: CharacterClaim::class, mappedBy: 'user', orphanRemoval: true)]
     private Collection $characterClaims;
@@ -110,6 +128,35 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setDiscordAvatarHash(?string $discordAvatarHash): static
     {
         $this->discordAvatarHash = $discordAvatarHash;
+
+        return $this;
+    }
+
+    public function getLastLoginAt(): ?\DateTimeImmutable
+    {
+        return $this->lastLoginAt;
+    }
+
+    public function setLastLoginAt(?\DateTimeImmutable $lastLoginAt): static
+    {
+        $this->lastLoginAt = $lastLoginAt;
+
+        return $this;
+    }
+
+    public function getBestCharacterName(): ?string { return $this->bestCharacterName; }
+    public function getBestCharacterRealm(): ?string { return $this->bestCharacterRealm; }
+    public function getBestCharacterSpec(): ?string { return $this->bestCharacterSpec; }
+    public function getBestCharacterPoints(): ?float { return $this->bestCharacterPoints; }
+    public function getBestCharacterRank(): ?int { return $this->bestCharacterRank; }
+
+    public function setBestCharacter(?string $name, ?string $realm, ?string $spec, ?float $points, ?int $rank): static
+    {
+        $this->bestCharacterName = $name;
+        $this->bestCharacterRealm = $realm;
+        $this->bestCharacterSpec = $spec;
+        $this->bestCharacterPoints = $points;
+        $this->bestCharacterRank = $rank;
 
         return $this;
     }

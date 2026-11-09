@@ -5,8 +5,8 @@ namespace App\MessageHandler;
 use App\Entity\CharacterClaimChallenge;
 use App\Message\ScanCharacterClaimMessage;
 use App\Repository\CharacterClaimChallengeRepository;
-use App\Repository\CharacterClaimRepository;
 use App\Service\ArmoryScraperService;
+use App\Service\BestCharacterRankService;
 use App\Service\CharacterClaimSlotPicker;
 use App\Service\DeduplicatingMessageDispatcher;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -19,7 +19,7 @@ final readonly class ScanCharacterClaimMessageHandler
 {
     public function __construct(
         private CharacterClaimChallengeRepository $challengeRepository,
-        private CharacterClaimRepository $claimRepository,
+        private BestCharacterRankService $bestCharacterRankService,
         private EntityManagerInterface $entityManager,
         private ArmoryScraperService $armoryScraperService,
         private CharacterClaimSlotPicker $slotPicker,
@@ -107,7 +107,7 @@ final readonly class ScanCharacterClaimMessageHandler
             $connection = $this->entityManager->getConnection();
             $connection->beginTransaction();
             try {
-                $this->claimRepository->transferOwnership(
+                $this->bestCharacterRankService->transferClaim(
                     $owner,
                     (string) $challenge->getName(),
                     (string) $challenge->getRealm(),

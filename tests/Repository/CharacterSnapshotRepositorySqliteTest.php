@@ -84,6 +84,14 @@ final class CharacterSnapshotRepositorySqliteTest extends TestCase
             ['name' => 'Understyx', 'realm' => 'Icecrown'],
             ['name' => 'Older', 'realm' => 'Icecrown'],
         ], $this->repository->findRecentlyViewed(2));
+
+        self::assertSame([
+            'class' => 'Death Knight',
+            'level' => 80,
+            'gearScore' => 6000,
+        ], $this->repository->findDetailsForCharacters([
+            ['name' => 'understyx', 'realm' => 'icecrown'],
+        ])['understyx'."\0".'icecrown']);
     }
 
     public function testFlushingChangedFieldOnPartialSnapshotPreservesUnloadedColumns(): void

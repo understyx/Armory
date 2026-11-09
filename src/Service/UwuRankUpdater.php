@@ -14,6 +14,7 @@ class UwuRankUpdater
         private readonly UwuLogsService $uwuLogsService,
         private readonly UwuLogRankRepository $rankRepository,
         private readonly UwuLogUpdateThrottle $updateThrottle,
+        private readonly ?BestCharacterRankService $bestCharacterRankService = null,
     ) {
     }
 
@@ -55,6 +56,7 @@ class UwuRankUpdater
             throw $exception;
         }
         $stored = $this->rankRepository->upsertResult($characterName, $realmName, $spec, $payload);
+        $this->bestCharacterRankService?->refreshForCharacter($characterName, $realmName);
 
         return $payload + [
             'cached' => false,
